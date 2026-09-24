@@ -1,0 +1,53 @@
+"""Contracts package for Member 4 (AI/NLP/OCR/ER)."""
+
+from .integration_contracts import (
+    AuthorizationContext,
+    AuthorizationViolationError,
+    GraphDataProvider,
+    M3GraphPayloadContract,
+    M5AnalyticsContext,
+)
+from .schemas import (
+    UNAVAILABLE,
+    AssistantResponse,
+    DocumentType,
+    EntityMatchCandidate,
+    EntityType,
+    ExplainabilityTrace,
+    ExtractedEntity,
+    ExtractedRelationship,
+    GraphRelationshipType,
+    MatchingMethod,
+    OCRLanguage,
+    OCRResult,
+    PageOCRSegment,
+    ResolutionDecisionRecord,
+    StructuredExtractionOutput,
+    TextVerificationRecord,
+    VerificationAction,
+)
+
+__all__ = [
+    "UNAVAILABLE",
+    "AuthorizationContext",
+    "AuthorizationViolationError",
+    "GraphDataProvider",
+    "M3GraphPayloadContract",
+    "M5AnalyticsContext",
+    "AssistantResponse",
+    "DocumentType",
+    "EntityMatchCandidate",
+    "EntityType",
+    "ExplainabilityTrace",
+    "ExtractedEntity",
+    "ExtractedRelationship",
+    "GraphRelationshipType",
+    "MatchingMethod",
+    "OCRLanguage",
+    "OCRResult",
+    "PageOCRSegment",
+    "ResolutionDecisionRecord",
+    "StructuredExtractionOutput",
+    "TextVerificationRecord",
+    "VerificationAction",
+]

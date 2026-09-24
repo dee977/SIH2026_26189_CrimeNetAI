@@ -1,0 +1,9 @@
+# Member 4 — AI / NLP / OCR / Entity Resolution Stack (SIH26189 CrimeNet AI)
+spacy>=3.7.0
+transformers>=4.38.0
+pytesseract>=0.3.10
+opencv-python-headless>=4.9.0.80
+PyMuPDF>=1.23.26
+scikit-learn>=1.4.0
+numpy>=1.26.0
+Pillow>=10.2.0
