@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  backend:
+    build: 
+      context: ../../
+      dockerfile: member6_security_evidence_deployment/deployment/Dockerfile.backend
+    ports:
+      - "8000:8000"
+    environment:
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+      - SUPABASE_JWT_SECRET=${SUPABASE_JWT_SECRET}
+    env_file:
+      - .env
+    depends_on:
+      - redis
+    networks:
+      - crimenet_network
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    networks:
+      - crimenet_network
+
+  # Neo4j for Graph Analytics (M4 domain, but deployed here)
+  neo4j:
+    image: neo4j:5.12
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    environment:
+      - NEO4J_AUTH=${NEO4J_USERNAME}/${NEO4J_PASSWORD}
+    volumes:
+      - neo4j_data:/data
+    networks:
+      - crimenet_network
+
+  # Frontend (M3 domain, stubbed)
+  frontend:
+    image: node:20-alpine
+    working_dir: /app
+    command: sh -c "echo 'Frontend container running' && tail -f /dev/null"
+    ports:
+      - "3000:3000"
+    networks:
+      - crimenet_network
+
+volumes:
+  neo4j_data:
+
+networks:
+  crimenet_network:
+    driver: bridge
