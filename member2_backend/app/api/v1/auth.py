@@ -8,30 +8,24 @@ router = APIRouter(prefix='/auth', tags=['Authentication & RBAC Integration'])
 
 @router.post('/login', response_model=ResponseEnvelope[TokenResponse], summary='Investigator Authentication')
 async def login(login_req: UserLoginRequest, m6_client: M6SecurityClient = Depends(get_m6_client)):
-    user = UserProfile(
-        userId='usr_investigator_001',
-        email=login_req.email,
-        fullName='Inspector Rajesh Kumar',
-        badgeNumber='CID-MH-4421',
-        agencyUnit='State Cyber Crime and Narcotics Branch',
-        role='lead_investigator',
-        permissions=[
-            'case:read', 'case:write', 'case:delete',
-            'entity:read', 'entity:write',
-            'graph:read', 'graph:analyze',
-            'search:execute',
-            'timeline:read',
-            'ingest:upload', 'ingest:process',
-            'ai:query',
-            'alert:read', 'alert:manage',
-            'watchlist:read', 'watchlist:manage',
-            'report:generate', 'report:read',
-            'audit:read'
-        ],
-        isActive=True
-    )
+    role = login_req.role or ('System Administrator' if 'admin' in login_req.email.lower() else ('Senior Authority' if 'authority' in login_req.email.lower() else 'Senior Investigator'))
+    token = f'mock-jwt-role:{role.replace(" ", "_")}'
+    user = await m6_client.verify_token(token)
+    if not user:
+        user = UserProfile(
+            userId='usr_investigator_001',
+            email=login_req.email,
+            fullName=f'Authorized Officer ({role})',
+            badgeNumber='CID-MH-4421',
+            agencyUnit='State Cyber Crime and Narcotics Branch',
+            role='super_admin' if 'admin' in role.lower() else 'lead_investigator',
+            grantedRole=role,
+            permissions=['cases', 'graph', 'evidence', 'timeline', 'ai', 'export', 'alerts', 'gis', 'search', 'admin', 'authority'] if 'admin' in role.lower() else ['cases', 'graph', 'evidence', 'timeline', 'ai', 'export', 'alerts', 'gis', 'search'],
+            isActive=True
+        )
+
     token_resp = TokenResponse(
-        accessToken='jwt_mock_token_sih2026_investigator_verified',
+        accessToken=token,
         tokenType='Bearer',
         expiresInSeconds=28800,
         user=user
@@ -42,7 +36,7 @@ async def login(login_req: UserLoginRequest, m6_client: M6SecurityClient = Depen
         'userName': user.fullName,
         'action': 'USER_LOGIN',
         'endpoint': '/api/v1/auth/login',
-        'details': {'email': login_req.email}
+        'details': {'email': login_req.email, 'role': role}
     })
     return ResponseEnvelope(data=token_resp)
 

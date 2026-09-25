@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { UserProfile, UserRole, UserStatus, RegistrationRequest } from '../types/auth';
+import { apiRequest } from '../services/apiClient';
 
 interface AuthState {
   user: UserProfile | null;
@@ -24,6 +25,46 @@ interface AuthState {
   reactivateOfficer: (officerId: string) => void;
 }
 
+export function getPermissionsForRole(role: UserRole): string[] {
+  switch (role) {
+    case 'System Administrator':
+      return [
+        'cases', 'graph', 'evidence', 'timeline', 'ai', 'export', 'alerts', 'gis', 'search',
+        'admin', 'authority', 'community', 'analytics', 'verification', 'watchlist', 'reports',
+        'admin:manage', 'authority:manage', 'authority:approve'
+      ];
+    case 'Senior Authority':
+      return [
+        'cases', 'graph', 'evidence', 'timeline', 'ai', 'export', 'alerts', 'gis', 'search',
+        'authority', 'community', 'analytics', 'verification', 'watchlist', 'reports',
+        'authority:approve'
+      ];
+    case 'Senior Investigator':
+      return [
+        'cases', 'graph', 'evidence', 'timeline', 'ai', 'export', 'alerts', 'gis', 'search',
+        'community', 'analytics', 'verification', 'watchlist', 'reports'
+      ];
+    case 'Investigator':
+      return ['cases', 'graph', 'evidence', 'timeline', 'ai', 'alerts', 'gis', 'search'];
+    case 'Analyst / Viewer':
+      return ['graph', 'timeline', 'gis', 'search'];
+    default:
+      return ['search'];
+  }
+}
+
+const getInitialRole = (): UserRole => {
+  if (typeof localStorage !== 'undefined') {
+    const saved = localStorage.getItem('crimenet_active_role');
+    if (saved && ['System Administrator', 'Senior Authority', 'Senior Investigator', 'Investigator', 'Analyst / Viewer'].includes(saved)) {
+      return saved as UserRole;
+    }
+  }
+  return 'Senior Investigator';
+};
+
+const initialRole = getInitialRole();
+
 const DEFAULT_INVESTIGATOR: UserProfile = {
   id: 'USR-7729',
   name: 'Inspector Vikramaditya Rao',
@@ -31,10 +72,10 @@ const DEFAULT_INVESTIGATOR: UserProfile = {
   phone: '+91-98200-11223',
   officerId: 'LEO-7729',
   organization: 'Special Crime Branch, CID Maharashtra',
-  requestedRole: 'Senior Investigator',
-  grantedRole: 'Senior Investigator',
+  requestedRole: initialRole,
+  grantedRole: initialRole,
   status: 'APPROVED',
-  permissions: ['cases', 'graph', 'evidence', 'timeline', 'ai', 'export', 'alerts', 'gis', 'search'],
+  permissions: getPermissionsForRole(initialRole),
   createdAt: '2024-01-15',
   lastLogin: '2024-08-25 08:30:00'
 };
@@ -80,32 +121,63 @@ const INITIAL_PENDING_OFFICERS: UserProfile[] = [
 
 export const useAuthStore = create<AuthState>((set, get) => ({
   user: DEFAULT_INVESTIGATOR,
-  token: 'mock-jwt-token-m6-contract',
+  token: `mock-jwt-role:${initialRole.replace(/ /g, '_')}`,
   isAuthenticated: true,
   isPendingApproval: false,
   isSessionExpired: false,
   pendingRegistration: null,
   pendingOfficers: INITIAL_PENDING_OFFICERS,
 
-  login: (emailOrPhone, role = 'Senior Investigator') => {
+  login: async (emailOrPhone, role = 'Senior Investigator') => {
+    const mockToken = `mock-jwt-role:${role.replace(/ /g, '_')}`;
+    localStorage.setItem('crimenet_auth_token', mockToken);
+    localStorage.setItem('crimenet_active_role', role);
+    const rolePerms = getPermissionsForRole(role);
     const updatedUser: UserProfile = {
       ...DEFAULT_INVESTIGATOR,
       email: emailOrPhone.includes('@') ? emailOrPhone : 'v.rao@cid.police.gov.in',
       phone: !emailOrPhone.includes('@') ? emailOrPhone : '+91-98200-11223',
       requestedRole: role,
       grantedRole: role,
-      permissions: getPermissionsForRole(role)
+      permissions: rolePerms
     };
     set({
       user: updatedUser,
-      token: 'jwt-auth-session-valid',
+      token: mockToken,
       isAuthenticated: true,
       isPendingApproval: false,
       isSessionExpired: false
     });
+
+    try {
+      const response = await apiRequest<any>('/auth/me');
+      const bData = response.data?.data || response.data;
+      if (response.success && bData) {
+        set(state => {
+          const cur = state.user || updatedUser;
+          return {
+            user: {
+              ...cur,
+              id: bData.userId || bData.id || cur.id,
+              name: bData.fullName || bData.name || cur.name,
+              email: bData.email || cur.email,
+              officerId: bData.badgeNumber || bData.officerId || cur.officerId,
+              organization: bData.agencyUnit || bData.organization || cur.organization,
+              grantedRole: (bData.grantedRole as UserRole) || role,
+              requestedRole: role,
+              permissions: Array.from(new Set([...rolePerms, ...(bData.permissions || [])]))
+            }
+          };
+        });
+      }
+    } catch (e) {
+      console.warn('Backend unavailable, using fallback profile', e);
+    }
   },
 
   logout: () => {
+    localStorage.removeItem('crimenet_auth_token');
+    localStorage.removeItem('crimenet_active_role');
     set({
       user: null,
       token: null,
@@ -151,16 +223,47 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({ isSessionExpired: false });
   },
 
-  switchRole: (role: UserRole) => {
+  switchRole: async (role: UserRole) => {
     const currentUser = get().user;
     if (currentUser) {
+      const mockToken = `mock-jwt-role:${role.replace(/ /g, '_')}`;
+      localStorage.setItem('crimenet_auth_token', mockToken);
+      localStorage.setItem('crimenet_active_role', role);
+      const rolePerms = getPermissionsForRole(role);
       set({
+        token: mockToken,
         user: {
           ...currentUser,
           grantedRole: role,
-          permissions: getPermissionsForRole(role)
+          requestedRole: role,
+          permissions: rolePerms
         }
       });
+
+      try {
+        const response = await apiRequest<any>('/auth/me');
+        const bData = response.data?.data || response.data;
+        if (response.success && bData) {
+          set(state => {
+            const cur = state.user || currentUser;
+            return {
+              user: {
+                ...cur,
+                id: bData.userId || bData.id || cur.id,
+                name: bData.fullName || bData.name || cur.name,
+                email: bData.email || cur.email,
+                officerId: bData.badgeNumber || bData.officerId || cur.officerId,
+                organization: bData.agencyUnit || bData.organization || cur.organization,
+                grantedRole: (bData.grantedRole as UserRole) || role,
+                requestedRole: role,
+                permissions: Array.from(new Set([...rolePerms, ...(bData.permissions || [])]))
+              }
+            };
+          });
+        }
+      } catch (e) {
+        // ignore
+      }
     }
   },
 
@@ -198,20 +301,3 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }));
   }
 }));
-
-function getPermissionsForRole(role: UserRole): string[] {
-  switch (role) {
-    case 'System Administrator':
-      return ['cases', 'graph', 'evidence', 'timeline', 'ai', 'export', 'alerts', 'gis', 'search', 'admin', 'authority'];
-    case 'Senior Authority':
-      return ['cases', 'graph', 'evidence', 'timeline', 'ai', 'export', 'alerts', 'gis', 'search', 'authority'];
-    case 'Senior Investigator':
-      return ['cases', 'graph', 'evidence', 'timeline', 'ai', 'export', 'alerts', 'gis', 'search'];
-    case 'Investigator':
-      return ['cases', 'graph', 'evidence', 'timeline', 'ai', 'alerts', 'gis', 'search'];
-    case 'Analyst / Viewer':
-      return ['graph', 'timeline', 'gis', 'search'];
-    default:
-      return ['search'];
-  }
-}

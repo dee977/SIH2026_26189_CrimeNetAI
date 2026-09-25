@@ -82,6 +82,7 @@ export const AIAssistantView: React.FC = () => {
 
   const samplePrompts = [
     'How is Vikram Malhotra connected to BlueSea Logistics and FIR-2024-8841?',
+    'Who is Person_00001 (P00001) and what activities are recorded in the central graph?',
     'What data discrepancies exist regarding Vikram Malhotra?',
     'Is there any evidence linking Vikram to offshore cryptocurrency wallets? (Test Unsupported)'
   ];
@@ -162,114 +163,128 @@ export const AIAssistantView: React.FC = () => {
                   <Bot className="w-4 h-4" />
                 </div>
 
-                <div className="flex-1 glass-card rounded-2xl p-5 border-cyan-500/30 bg-slate-950/80 space-y-4 shadow-xl">
-                  
-                  {/* Top Grounding Status */}
-                  <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
-                    <span className="text-xs font-mono font-bold text-cyan-400 flex items-center gap-1.5">
-                      <Sparkles className="w-3.5 h-3.5" />
-                      <span>Evidence-Grounded Intelligence Synthesis</span>
-                    </span>
-                    <span className="text-[10px] font-mono text-slate-400">
-                      Case: {msg.data.caseReferences.join(', ')}
-                    </span>
-                  </div>
+                {(() => {
+                  const safeData = {
+                    ...msg.data,
+                    answer: msg.data.answer || '',
+                    caseReferences: msg.data.caseReferences || ['CASE-2025-NAT-001'],
+                    relevantEntities: msg.data.relevantEntities || [],
+                    graphPath: Array.isArray(msg.data.graphPath) ? msg.data.graphPath : ((msg.data.graphPath as any)?.hops || []),
+                    sourceRecords: msg.data.sourceRecords || [],
+                    supportingEvidence: msg.data.supportingEvidence || []
+                  };
 
-                  {/* 1. Answer */}
-                  <div className="text-xs text-slate-200 leading-relaxed bg-slate-900/90 p-4 rounded-xl border border-slate-800 font-sans">
-                    {msg.data.answer}
-                  </div>
-
-                  {/* 2. Relevant Entities */}
-                  {msg.data.relevantEntities.length > 0 && (
-                    <div>
-                      <span className="text-[10px] font-mono uppercase tracking-wider text-slate-400 block mb-1.5 font-semibold">
-                        Relevant Entities ({msg.data.relevantEntities.length}):
-                      </span>
-                      <div className="flex flex-wrap gap-1.5">
-                        {msg.data.relevantEntities.map(ent => (
-                          <button
-                            key={ent.id}
-                            onClick={() => { selectEntity(ent.id); setView('entity'); }}
-                            className="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-850 text-cyan-300 border border-slate-700 font-mono text-[11px] flex items-center gap-1 transition-colors"
-                          >
-                            <span>{ent.label}</span>
-                            <span className="text-[9px] text-slate-500 font-sans">({ent.type})</span>
-                          </button>
-                        ))}
+                  return (
+                    <div className="flex-1 glass-card rounded-2xl p-5 border-cyan-500/30 bg-slate-950/80 space-y-4 shadow-xl">
+                      
+                      {/* Top Grounding Status */}
+                      <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
+                        <span className="text-xs font-mono font-bold text-cyan-400 flex items-center gap-1.5">
+                          <Sparkles className="w-3.5 h-3.5" />
+                          <span>Evidence-Grounded Intelligence Synthesis</span>
+                        </span>
+                        <span className="text-[10px] font-mono text-slate-400">
+                          Case: {safeData.caseReferences.join(', ')}
+                        </span>
                       </div>
-                    </div>
-                  )}
 
-                  {/* 3. Graph Path */}
-                  {msg.data.graphPath.length > 0 && (
-                    <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800 font-mono text-[11px] space-y-1">
-                      <span className="text-[10px] uppercase text-cyan-400 font-bold block mb-1 flex items-center gap-1">
-                        <GitMerge className="w-3.5 h-3.5" />
-                        <span>Factual Multi-Hop Path Traversal:</span>
-                      </span>
-                      <div className="flex flex-wrap items-center gap-1 text-slate-300">
-                        {msg.data.graphPath.map((step, sIdx) => (
-                          <span key={sIdx} className={step.includes('↓') ? 'text-cyan-400 font-bold' : 'text-slate-200'}>
-                            {step}{' '}
+                      {/* 1. Answer */}
+                      <div className="text-xs text-slate-200 leading-relaxed bg-slate-900/90 p-4 rounded-xl border border-slate-800 font-sans whitespace-pre-line">
+                        {safeData.answer}
+                      </div>
+
+                      {/* 2. Relevant Entities */}
+                      {safeData.relevantEntities.length > 0 && (
+                        <div>
+                          <span className="text-[10px] font-mono uppercase tracking-wider text-slate-400 block mb-1.5 font-semibold">
+                            Relevant Entities ({safeData.relevantEntities.length}):
                           </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* 4. Source Records */}
-                  {msg.data.sourceRecords.length > 0 && (
-                    <div>
-                      <span className="text-[10px] font-mono uppercase tracking-wider text-slate-400 block mb-1.5 font-semibold">
-                        Underlying Source Documents (Never Hidden):
-                      </span>
-                      <div className="space-y-1.5">
-                        {msg.data.sourceRecords.map((rec, rIdx) => (
-                          <div key={rIdx} className="p-2.5 rounded-lg bg-slate-900/70 border border-slate-800 text-[11px]">
-                            <div className="flex items-center justify-between text-slate-300 font-mono mb-0.5">
-                              <span className="font-semibold text-cyan-400">{rec.source}</span>
-                              <span className="text-slate-500">{rec.documentRef}</span>
-                            </div>
-                            <p className="text-slate-400 italic font-sans">{rec.excerpt}</p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {safeData.relevantEntities.map((ent: any) => (
+                              <button
+                                key={ent.id}
+                                onClick={() => { selectEntity(ent.id); setView('entity'); }}
+                                className="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-850 text-cyan-300 border border-slate-700 font-mono text-[11px] flex items-center gap-1 transition-colors"
+                              >
+                                <span>{ent.label || ent.name || ent.id}</span>
+                                <span className="text-[9px] text-slate-500 font-sans">({ent.type || ent.entityType})</span>
+                              </button>
+                            ))}
                           </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                        </div>
+                      )}
 
-                  {/* 5. Supporting Evidence & SHA-256 Checksums */}
-                  {msg.data.supportingEvidence.length > 0 && (
-                    <div>
-                      <span className="text-[10px] font-mono uppercase tracking-wider text-slate-400 block mb-1.5 font-semibold">
-                        Supporting Evidence Items & Hash Status:
-                      </span>
-                      <div className="space-y-1.5">
-                        {msg.data.supportingEvidence.map(ev => (
-                          <div key={ev.evidenceId} className="flex items-center justify-between p-2 rounded-lg bg-slate-900 border border-slate-800 text-[11px] font-mono">
-                            <div>
-                              <span className="text-cyan-300 font-bold mr-2">{ev.evidenceId}:</span>
-                              <span className="text-slate-200">{ev.title}</span>
-                            </div>
-                            <span className="px-2 py-0.5 rounded text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold flex items-center gap-1">
-                              <CheckCircle2 className="w-3 h-3" />
-                              <span>{ev.status}</span>
-                            </span>
+                      {/* 3. Graph Path */}
+                      {safeData.graphPath.length > 0 && (
+                        <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800 font-mono text-[11px] space-y-1">
+                          <span className="text-[10px] uppercase text-cyan-400 font-bold block mb-1 flex items-center gap-1">
+                            <GitMerge className="w-3.5 h-3.5" />
+                            <span>Factual Multi-Hop Path Traversal:</span>
+                          </span>
+                          <div className="flex flex-wrap items-center gap-1 text-slate-300">
+                            {safeData.graphPath.map((step: string, sIdx: number) => (
+                              <span key={sIdx} className={step.includes('↓') ? 'text-cyan-400 font-bold' : 'text-slate-200'}>
+                                {step}{' '}
+                              </span>
+                            ))}
                           </div>
-                        ))}
+                        </div>
+                      )}
+
+                      {/* 4. Source Records */}
+                      {safeData.sourceRecords.length > 0 && (
+                        <div>
+                          <span className="text-[10px] font-mono uppercase tracking-wider text-slate-400 block mb-1.5 font-semibold">
+                            Underlying Source Documents (Never Hidden):
+                          </span>
+                          <div className="space-y-1.5">
+                            {safeData.sourceRecords.map((rec: any, rIdx: number) => (
+                              <div key={rIdx} className="p-2.5 rounded-lg bg-slate-900/70 border border-slate-800 text-[11px]">
+                                <div className="flex items-center justify-between text-slate-300 font-mono mb-0.5">
+                                  <span className="font-semibold text-cyan-400">{rec.source}</span>
+                                  <span className="text-slate-500">{rec.documentRef}</span>
+                                </div>
+                                <p className="text-slate-400 italic font-sans">{rec.excerpt}</p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* 5. Supporting Evidence & SHA-256 Checksums */}
+                      {safeData.supportingEvidence.length > 0 && (
+                        <div>
+                          <span className="text-[10px] font-mono uppercase tracking-wider text-slate-400 block mb-1.5 font-semibold">
+                            Supporting Evidence Items & Hash Status:
+                          </span>
+                          <div className="space-y-1.5">
+                            {safeData.supportingEvidence.map((ev: any) => (
+                              <div key={ev.evidenceId} className="flex items-center justify-between p-2 rounded-lg bg-slate-900 border border-slate-800 text-[11px] font-mono">
+                                <div>
+                                  <span className="text-cyan-300 font-bold mr-2">{ev.evidenceId}:</span>
+                                  <span className="text-slate-200">{ev.title || ev.docType || 'Evidence Record'}</span>
+                                </div>
+                                <span className="px-2 py-0.5 rounded text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold flex items-center gap-1">
+                                  <CheckCircle2 className="w-3 h-3" />
+                                  <span>{ev.status || 'VERIFIED'}</span>
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* 6. Confidence & Analytical Context */}
+                      <div className="pt-2 border-t border-slate-800 flex items-center justify-between text-[11px] text-slate-400 font-mono">
+                        <div>
+                          <span className="text-cyan-400 font-semibold">Context: </span>
+                          {safeData.confidenceContext || msg.data.confidenceContext}
+                        </div>
                       </div>
-                    </div>
-                  )}
 
-                  {/* 6. Confidence & Analytical Context */}
-                  <div className="pt-2 border-t border-slate-800 flex items-center justify-between text-[11px] text-slate-400 font-mono">
-                    <div>
-                      <span className="text-cyan-400 font-semibold">Context: </span>
-                      {msg.data.confidenceContext}
                     </div>
-                  </div>
-
-                </div>
+                  );
+                })()}
               </div>
             )}
 

@@ -20,33 +20,84 @@ class M6SecurityClient:
             except Exception:
                 pass
 
-        # Valid fallback investigator user
+        # Parse mock token to enforce role-based access locally
+        role = 'Senior Investigator'
+        if token.startswith('mock-jwt-role:'):
+            role_part = token.split(':', 1)[1].replace('_', ' ').strip()
+            if 'admin' in role_part.lower():
+                role = 'System Administrator'
+            elif 'authority' in role_part.lower():
+                role = 'Senior Authority'
+            elif 'senior' in role_part.lower() and 'investigator' in role_part.lower():
+                role = 'Senior Investigator'
+            elif 'investigator' in role_part.lower():
+                role = 'Investigator'
+            elif 'analyst' in role_part.lower() or 'viewer' in role_part.lower():
+                role = 'Analyst / Viewer'
+            else:
+                role = role_part
+        elif 'admin' in token.lower() or 'super' in token.lower():
+            role = 'System Administrator'
+        elif 'authority' in token.lower():
+            role = 'Senior Authority'
+
+        # Map role to permissions based on M6 matrix
+        role_map = {
+            'System Administrator': {
+                'sys_role': 'super_admin',
+                'perms': ['case:read', 'case:write', 'case:delete', 'entity:read', 'entity:write', 'graph:read', 'graph:analyze', 'search:execute', 'timeline:read', 'ingest:upload', 'ingest:process', 'ai:query', 'alert:read', 'alert:manage', 'watchlist:read', 'watchlist:manage', 'report:generate', 'report:read', 'audit:read', 'admin:manage', 'authority:manage']
+            },
+            'Senior Authority': {
+                'sys_role': 'senior_authority',
+                'perms': ['case:read', 'case:write', 'entity:read', 'graph:read', 'graph:analyze', 'search:execute', 'timeline:read', 'ai:query', 'alert:read', 'watchlist:read', 'report:read', 'audit:read', 'authority:approve']
+            },
+            'Senior Investigator': {
+                'sys_role': 'lead_investigator',
+                'perms': ['case:read', 'case:write', 'case:delete', 'entity:read', 'entity:write', 'graph:read', 'graph:analyze', 'search:execute', 'timeline:read', 'ingest:upload', 'ingest:process', 'ai:query', 'alert:read', 'alert:manage', 'watchlist:read', 'watchlist:manage', 'report:generate', 'report:read']
+            },
+            'Investigator': {
+                'sys_role': 'investigator',
+                'perms': ['case:read', 'entity:read', 'graph:read', 'graph:analyze', 'search:execute', 'timeline:read', 'ai:query', 'alert:read', 'watchlist:read', 'report:read', 'report:generate']
+            },
+            'Analyst / Viewer': {
+                'sys_role': 'analyst',
+                'perms': ['case:read', 'entity:read', 'graph:read', 'search:execute', 'timeline:read']
+            }
+        }
+        
+        user_info = role_map.get(role, role_map['Senior Investigator'])
+
+        # Ensure frontend UI short-code permissions are also included so the Sidebar can unhide menus
+        ui_perms = {
+            'System Administrator': ['cases', 'graph', 'evidence', 'timeline', 'ai', 'export', 'alerts', 'gis', 'search', 'admin', 'authority', 'community', 'analytics', 'verification', 'watchlist', 'reports'],
+            'Senior Authority': ['cases', 'graph', 'evidence', 'timeline', 'ai', 'export', 'alerts', 'gis', 'search', 'authority', 'community', 'analytics', 'verification', 'watchlist', 'reports'],
+            'Senior Investigator': ['cases', 'graph', 'evidence', 'timeline', 'ai', 'export', 'alerts', 'gis', 'search', 'community', 'analytics', 'verification', 'watchlist', 'reports'],
+            'Investigator': ['cases', 'graph', 'evidence', 'timeline', 'ai', 'alerts', 'gis', 'search'],
+            'Analyst / Viewer': ['graph', 'timeline', 'gis', 'search']
+        }
+        
+        combined_perms = list(set(user_info['perms'] + ui_perms.get(role, [])))
+
         return UserProfile(
             userId='usr_investigator_001',
             email='rajesh.kumar@cid.gov.in',
-            fullName='Inspector Rajesh Kumar',
+            fullName=f'Inspector Rajesh Kumar ({role})',
             badgeNumber='CID-MH-4421',
             agencyUnit='State Cyber Crime and Narcotics Branch',
-            role='lead_investigator',
-            permissions=[
-                'case:read', 'case:write', 'case:delete',
-                'entity:read', 'entity:write',
-                'graph:read', 'graph:analyze',
-                'search:execute',
-                'timeline:read',
-                'ingest:upload', 'ingest:process',
-                'ai:query',
-                'alert:read', 'alert:manage',
-                'watchlist:read', 'watchlist:manage',
-                'report:generate', 'report:read',
-                'audit:read'
-            ],
+            role=user_info['sys_role'],
+            grantedRole=role,
+            permissions=combined_perms,
             isActive=True
         )
 
     async def log_audit_event(self, event_dict: Dict[str, Any]) -> bool:
-        if 'timestamp' not in event_dict:
-            event_dict['timestamp'] = datetime.now(timezone.utc).isoformat()
+        import uuid
+        event_dict.setdefault('logId', f"LOG-{uuid.uuid4().hex[:8].upper()}")
+        event_dict.setdefault('userId', 'usr_investigator_001')
+        event_dict.setdefault('userName', event_dict.get('officer', 'Inspector Rajesh Kumar'))
+        event_dict.setdefault('endpoint', '/api/v1/ingest/upload')
+        event_dict.setdefault('timestamp', datetime.now(timezone.utc).isoformat())
+        event_dict.setdefault('details', {})
         self._audit_logs.insert(0, event_dict)
 
         if not self.fallback_mode:

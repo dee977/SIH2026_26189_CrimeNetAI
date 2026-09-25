@@ -47,4 +47,19 @@ class Settings(BaseSettings):
 
     DOWNSTREAM_FALLBACK_MODE: bool = True
 
+    # Ingestion & File Storage Configuration
+    UPLOAD_DIR: str = '/app/uploads'
+    MAX_UPLOAD_SIZE_BYTES: int = 50 * 1024 * 1024  # 50 MB
+    ALLOWED_EXTENSIONS: List[str] = ['.csv', '.pdf', '.png', '.jpg', '.jpeg', '.tiff']
+    ALLOWED_MIME_TYPES: List[str] = [
+        'text/csv',
+        'text/plain',
+        'application/vnd.ms-excel',
+        'application/pdf',
+        'image/png',
+        'image/jpeg',
+        'image/tiff',
+        'application/octet-stream'
+    ]
+
 settings = Settings()

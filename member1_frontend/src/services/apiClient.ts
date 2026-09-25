@@ -31,7 +31,7 @@ export async function apiRequest<T>(
 
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 3500); // 3.5s timeout for snappy response
+    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout for graph/cypher queries
 
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       ...options,
@@ -45,7 +45,11 @@ export async function apiRequest<T>(
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
-    const data = await response.json();
+    const json = await response.json();
+    const data = (json && typeof json === 'object' && json.success !== undefined && json.data !== undefined) 
+      ? json.data 
+      : json;
+
     return {
       success: true,
       data,

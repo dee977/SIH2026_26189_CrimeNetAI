@@ -24,7 +24,12 @@ export const AdminDashboardView: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'datasets' | 'ledger' | 'settings'>('overview');
 
   // Permission check
-  const isAdmin = user?.grantedRole === 'System Administrator' || user?.permissions.includes('admin');
+  const isAdmin = 
+    user?.grantedRole === 'System Administrator' || 
+    user?.permissions?.includes('admin') || 
+    user?.permissions?.includes('admin:manage') ||
+    (user as any)?.role === 'super_admin' ||
+    (user as any)?.role === 'System Administrator';
 
   if (!isAdmin) {
     return (

@@ -36,6 +36,7 @@ import { AIAssistantView } from './components/assistant/AIAssistantView';
 import { AuthorityDashboardView } from './components/authority/AuthorityDashboardView';
 import { AdminDashboardView } from './components/admin/AdminDashboardView';
 import { ReportView } from './components/reports/ReportView';
+import { ImportCenterView } from './components/ingestion/ImportCenterView';
 
 export const App: React.FC = () => {
   const { currentView, setView } = useNavigationStore();
@@ -87,6 +88,7 @@ export const App: React.FC = () => {
             {currentView === 'assistant' && <AIAssistantView />}
             {currentView === 'authority' && <AuthorityDashboardView />}
             {currentView === 'admin' && <AdminDashboardView />}
+            {currentView === 'ingestion' && <ImportCenterView />}
             {currentView === 'reports' && <ReportView />}
           </div>
         </main>

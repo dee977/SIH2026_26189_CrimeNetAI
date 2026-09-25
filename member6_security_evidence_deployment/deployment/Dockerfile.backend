@@ -4,17 +4,20 @@ WORKDIR /app
 
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
+ENV PYTHONPATH /app
 
 RUN apt-get update && apt-get install -y \
     build-essential \
     libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
-COPY requirements.txt .
+COPY member2_backend/requirements.txt ./member2_backend/
+COPY member3_data_graph/requirements.txt ./member3_data_graph/
+COPY member4_ai_nlp/requirements.txt ./member4_ai_nlp/
 
-# Assuming the root requirements.txt is copied or mounted
-RUN pip install --no-cache-dir -r requirements.txt || echo "FastAPI, Supabase, PyJWT, ReportLab, etc. dependencies expected"
+RUN pip install --no-cache-dir -r member2_backend/requirements.txt -r member3_data_graph/requirements.txt -r member4_ai_nlp/requirements.txt networkx
 
 COPY . .
 
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+WORKDIR /app/member2_backend
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

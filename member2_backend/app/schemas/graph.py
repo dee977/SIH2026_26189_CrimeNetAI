@@ -5,6 +5,8 @@ class GraphNode(BaseModel):
     id: str
     label: str
     type: str
+    entityType: Optional[str] = None
+    entityId: Optional[str] = None
     properties: Dict[str, Any] = Field(default_factory=dict)
     source: str = 'M3_GRAPH_DATA'
     caseId: Optional[str] = None
@@ -16,6 +18,7 @@ class GraphEdge(BaseModel):
     source: str
     target: str
     relationshipType: str
+    relationType: Optional[str] = None
     properties: Dict[str, Any] = Field(default_factory=dict)
     timestamp: Optional[str] = None
     sourceDoc: Optional[str] = None

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigationStore } from '../../store/navigationStore';
 import { useAuthStore } from '../../store/authStore';
+import { apiRequest } from '../../services/apiClient';
 import { 
   ALL_ENTITIES, 
   SYNTHETIC_CASES, 
@@ -37,23 +38,32 @@ import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip } from 'rec
 export const InvestigatorDashboard: React.FC = () => {
   const { setView, selectEntity, selectCase, selectEvidence, isBackendConnected } = useNavigationStore();
   const { user } = useAuthStore();
+  const [stats, setStats] = useState<any>(null);
 
-  // Metrics computation from data
+  useEffect(() => {
+    apiRequest<any>('/dashboard/stats').then(res => {
+      if (res.success && res.data) {
+        setStats(res.data);
+      }
+    }).catch(() => {});
+  }, []);
+
+  // Metrics computation from real backend stats or fallback data
   const counts = {
-    persons: ALL_ENTITIES.filter(e => e.type === 'Person').length,
-    phones: ALL_ENTITIES.filter(e => e.type === 'Phone').length,
-    bankAccounts: ALL_ENTITIES.filter(e => e.type === 'BankAccount').length,
-    vehicles: ALL_ENTITIES.filter(e => e.type === 'Vehicle').length,
-    locations: ALL_ENTITIES.filter(e => e.type === 'Location').length,
-    firs: ALL_ENTITIES.filter(e => e.type === 'FIR').length,
-    crimes: ALL_ENTITIES.filter(e => e.type === 'Crime').length,
-    organizations: ALL_ENTITIES.filter(e => e.type === 'Organization').length,
-    communications: ALL_ENTITIES.filter(e => e.type === 'Communication').length,
-    transactions: ALL_ENTITIES.filter(e => e.type === 'Transaction').length,
-    activeCases: SYNTHETIC_CASES.filter(c => c.status === 'Active').length,
-    evidenceItems: SYNTHETIC_EVIDENCE_RECORDS.length,
-    watchlistAlerts: SYNTHETIC_ALERTS.filter(a => a.category === 'Watchlist Match').length,
-    criticalAlerts: SYNTHETIC_ALERTS.filter(a => a.severity === 'CRITICAL').length
+    persons: stats?.totalPersons ?? ALL_ENTITIES.filter(e => e.type === 'Person').length,
+    phones: stats?.totalPhones ?? ALL_ENTITIES.filter(e => e.type === 'Phone').length,
+    bankAccounts: stats?.totalBankAccounts ?? ALL_ENTITIES.filter(e => e.type === 'BankAccount').length,
+    vehicles: stats?.totalVehicles ?? ALL_ENTITIES.filter(e => e.type === 'Vehicle').length,
+    locations: stats?.totalLocations ?? ALL_ENTITIES.filter(e => e.type === 'Location').length,
+    firs: stats?.totalFIRs ?? ALL_ENTITIES.filter(e => e.type === 'FIR').length,
+    crimes: stats?.totalCrimes ?? ALL_ENTITIES.filter(e => e.type === 'Crime').length,
+    organizations: stats?.totalOrganizations ?? ALL_ENTITIES.filter(e => e.type === 'Organization').length,
+    communications: stats?.totalCommunications ?? ALL_ENTITIES.filter(e => e.type === 'Communication').length,
+    transactions: stats?.totalTransactions ?? ALL_ENTITIES.filter(e => e.type === 'Transaction').length,
+    activeCases: stats?.activeInvestigations ?? SYNTHETIC_CASES.filter(c => c.status === 'Active').length,
+    evidenceItems: stats?.recentEvidenceCount ?? SYNTHETIC_EVIDENCE_RECORDS.length,
+    watchlistAlerts: stats?.watchlistItemsCount ?? SYNTHETIC_ALERTS.filter(a => a.category === 'Watchlist Match').length,
+    criticalAlerts: stats?.pendingAlertsCount ?? SYNTHETIC_ALERTS.filter(a => a.severity === 'CRITICAL').length
   };
 
   // Sparkline data for temporal activity
@@ -119,7 +129,7 @@ export const InvestigatorDashboard: React.FC = () => {
             Indexed Multi-Modal Intelligence Entities (10 Types + Cases & Evidence)
           </h3>
           <span className="text-[11px] text-cyan-400 font-mono">
-            Total Entities: {ALL_ENTITIES.length}
+            Total Entities: {stats?.networkStatistics?.totalNodes ? stats.networkStatistics.totalNodes.toLocaleString() : ALL_ENTITIES.length}
           </span>
         </div>
 

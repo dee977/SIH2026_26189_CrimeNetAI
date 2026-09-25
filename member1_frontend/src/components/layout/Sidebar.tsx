@@ -21,7 +21,8 @@ import {
   Settings,
   ChevronRight,
   Shield,
-  Layers
+  Layers,
+  UploadCloud
 } from 'lucide-react';
 
 interface NavItem {
@@ -38,7 +39,23 @@ export const Sidebar: React.FC = () => {
   const { user } = useAuthStore();
 
   const userPermissions = user?.permissions || [];
-  const userRole = user?.grantedRole || 'Senior Investigator';
+  const userRole = user?.grantedRole || ((user as any)?.role === 'super_admin' ? 'System Administrator' : 'Senior Investigator');
+
+  const isSysAdmin = 
+    userRole === 'System Administrator' || 
+    user?.grantedRole === 'System Administrator' || 
+    (user as any)?.role === 'super_admin' || 
+    userPermissions.includes('admin') ||
+    userPermissions.includes('admin:manage');
+
+  const isSeniorAuthority =
+    isSysAdmin ||
+    userRole === 'Senior Authority' ||
+    user?.grantedRole === 'Senior Authority' ||
+    (user as any)?.role === 'senior_authority' ||
+    userPermissions.includes('authority') ||
+    userPermissions.includes('authority:manage') ||
+    userPermissions.includes('authority:approve');
 
   const navItems: NavItem[] = [
     // Core Investigation
@@ -46,6 +63,7 @@ export const Sidebar: React.FC = () => {
     { id: 'search', label: 'Global Search', icon: <Search className="w-4 h-4" />, category: 'core' },
     { id: 'cases', label: 'Cases & Dossiers', icon: <Briefcase className="w-4 h-4" />, category: 'core', badge: '2 Active' },
     { id: 'entity', label: 'Entity Explorer', icon: <Database className="w-4 h-4" />, category: 'core', badge: '11 Types' },
+    { id: 'ingestion', label: 'Import Center', icon: <UploadCloud className="w-4 h-4" />, category: 'core', badge: 'CSV / PDF' },
 
     // Intelligence & Network Analysis
     { id: 'graph', label: 'Network Graph', icon: <Share2 className="w-4 h-4" />, category: 'intelligence' },
@@ -67,8 +85,11 @@ export const Sidebar: React.FC = () => {
   ];
 
   const hasAccess = (item: NavItem) => {
+    if (isSysAdmin) return true;
+    if (item.id === 'authority' && isSeniorAuthority) return true;
     if (!item.requiredPermission) return true;
-    return userPermissions.includes(item.requiredPermission);
+    return userPermissions.includes(item.requiredPermission) || 
+           userPermissions.includes(`${item.requiredPermission}:manage`);
   };
 
   return (

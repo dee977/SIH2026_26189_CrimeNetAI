@@ -92,3 +92,97 @@ class DataIngestor:
             self.ingest_relationships(records)
         except Exception as e:
             print(f"Failed to process relationships {file_path}: {e}")
+
+    def ingest_repository_datasets(self, datasets_dir: str = None):
+        """
+        Loads the primary real datasets from member3_data_graph/datasets:
+        - persons.csv -> :Person nodes
+        - criminal_relationships.csv -> :FIR nodes & :CO_ACCUSED_WITH, :NAMED_IN_FIR edges
+        - financial_transactions.csv -> :Transaction nodes & :TRANSFERRED_FUNDS edges
+        - communication_links.csv -> :Communication nodes & :COMMUNICATED_WITH edges
+        """
+        import os
+        if not datasets_dir:
+            base_dir = os.path.dirname(os.path.abspath(__file__))
+            datasets_dir = os.path.join(base_dir, "datasets")
+
+        print(f"[M3 Ingestion] Ingesting primary real datasets from {datasets_dir}...")
+        
+        # 1. Setup constraints & indexes
+        with self.driver.session() as session:
+            session.run("CREATE CONSTRAINT person_id_unique IF NOT EXISTS FOR (p:Person) REQUIRE p.id IS UNIQUE")
+            session.run("CREATE CONSTRAINT fir_id_unique IF NOT EXISTS FOR (f:FIR) REQUIRE f.id IS UNIQUE")
+            session.run("CREATE CONSTRAINT transaction_id_unique IF NOT EXISTS FOR (t:Transaction) REQUIRE t.id IS UNIQUE")
+            session.run("CREATE CONSTRAINT communication_id_unique IF NOT EXISTS FOR (c:Communication) REQUIRE c.id IS UNIQUE")
+            session.run("CREATE INDEX person_name IF NOT EXISTS FOR (p:Person) ON (p.name)")
+            session.run("CREATE INDEX person_city IF NOT EXISTS FOR (p:Person) ON (p.city)")
+            session.run("CREATE INDEX person_role IF NOT EXISTS FOR (p:Person) ON (p.role)")
+
+        # 2. Persons
+        persons_csv = os.path.join(datasets_dir, "persons.csv")
+        if os.path.exists(persons_csv):
+            print(f"[M3 Ingestion] Ingesting persons from {persons_csv}...")
+            df_p = pd.read_csv(persons_csv)
+            records = []
+            for _, r in df_p.iterrows():
+                records.append({
+                    "id": str(r["person_id"]),
+                    "name": str(r["name"]),
+                    "canonicalName": str(r["name"]),
+                    "age": int(r["age"]) if pd.notnull(r["age"]) else None,
+                    "city": str(r["city"]) if pd.notnull(r["city"]) else None,
+                    "role": str(r["role"]) if pd.notnull(r["role"]) else None,
+                    "entityType": "Person",
+                    "source": "persons.csv"
+                })
+            self.ingest_nodes("Person", records)
+
+        # 3. Criminal Relationships
+        crim_csv = os.path.join(datasets_dir, "criminal_relationships.csv")
+        if os.path.exists(crim_csv):
+            print(f"[M3 Ingestion] Ingesting criminal relationships & FIRs from {crim_csv}...")
+            df_c = pd.read_csv(crim_csv)
+            fir_records = []
+            seen_firs = set()
+            for _, r in df_c.iterrows():
+                fid = str(r["fir_id"])
+                if fid not in seen_firs:
+                    seen_firs.add(fid)
+                    fir_records.append({
+                        "id": fid,
+                        "firNumber": fid,
+                        "canonicalName": f"FIR {fid} ({r['crime_type']} - {r['location']})",
+                        "crime_type": str(r["crime_type"]),
+                        "date": str(r["date"]),
+                        "location": str(r["location"]),
+                        "case_status": str(r["case_status"]),
+                        "entityType": "FIR",
+                        "source": "criminal_relationships.csv"
+                    })
+            self.ingest_nodes("FIR", fir_records)
+
+            rel_records = []
+            for _, r in df_c.iterrows():
+                rel_records.append({
+                    "source_id": str(r["person_a"]),
+                    "target_id": str(r["person_b"]),
+                    "source_label": "Person",
+                    "target_label": "Person",
+                    "rel_type": "CO_ACCUSED_WITH",
+                    "fir_id": str(r["fir_id"]),
+                    "crime_type": str(r["crime_type"]),
+                    "date": str(r["date"]),
+                    "location": str(r["location"]),
+                    "case_status": str(r["case_status"]),
+                    "source": "criminal_relationships.csv"
+                })
+            self.ingest_relationships(rel_records)
+
+        print("[M3 Ingestion] Primary real datasets successfully ingested into Neo4j.")
+
+if __name__ == "__main__":
+    ingestor = DataIngestor()
+    try:
+        ingestor.ingest_repository_datasets()
+    finally:
+        ingestor.close()

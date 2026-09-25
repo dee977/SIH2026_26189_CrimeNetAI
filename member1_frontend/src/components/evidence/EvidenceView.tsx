@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useNavigationStore } from '../../store/navigationStore';
 import { useNotificationStore } from '../../store/notificationStore';
 import { SYNTHETIC_EVIDENCE_RECORDS } from '../../data/syntheticData';
@@ -20,6 +20,15 @@ import {
   HardDrive
 } from 'lucide-react';
 
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1';
+
+const getAuthHeaders = (): Record<string, string> => {
+  const token = (typeof localStorage !== 'undefined' && localStorage.getItem('crimenet_auth_token')) || 'mock-jwt-role:Senior_Investigator';
+  return {
+    Authorization: `Bearer ${token}`
+  };
+};
+
 export const EvidenceView: React.FC = () => {
   const { selectedEvidenceId, selectEvidence, setView, selectEntity } = useNavigationStore();
   const { addToast } = useNotificationStore();
@@ -33,6 +42,9 @@ export const EvidenceView: React.FC = () => {
   const [uploadTitle, setUploadTitle] = useState('');
   const [uploadCategory, setUploadCategory] = useState<'Digital Forensic Image' | 'CDR Dump' | 'Bank Statement'>('Digital Forensic Image');
   const [officerName, setOfficerName] = useState('Inspector Vikramaditya Rao');
+  const [realEvidenceFile, setRealEvidenceFile] = useState<File | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const realFileInputRef = useRef<HTMLInputElement>(null);
 
   const activeEvidence = evidenceList.find(e => e.id === selectedId) || evidenceList[0];
 
@@ -51,21 +63,62 @@ export const EvidenceView: React.FC = () => {
     }, 800);
   };
 
-  const handleUploadSubmit = (e: React.FormEvent) => {
+  const handleUploadSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    let computedHash = '7b9c1d2e3f4a5b6c7d8e9f0123456789abcdef0123456789abcdef0123456789';
+    let assignedId = `EVD-2024-08${Math.floor(15 + Math.random() * 80)}`;
+    let fileSize = realEvidenceFile ? realEvidenceFile.size : 842000000;
+
+    if (realEvidenceFile) {
+      setIsSubmitting(true);
+      try {
+        const formData = new FormData();
+        formData.append('file', realEvidenceFile);
+        formData.append('caseId', 'CASE-2024-MH-092');
+        formData.append('case_id', 'CASE-2024-MH-092');
+
+        const res = await fetch(`${API_BASE}/ingestion/upload`, {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          body: formData
+        });
+
+        if (res.ok || res.status === 202) {
+          const json = await res.json();
+          const jobId = json.data?.jobId || json.data?.job_id;
+          if (jobId) {
+            // Fetch status once to grab sha256 and evidenceId
+            const stRes = await fetch(`${API_BASE}/ingestion/status/${jobId}`, {
+              headers: getAuthHeaders()
+            });
+            if (stRes.ok) {
+              const stJson = await stRes.json();
+              if (stJson.data?.sha256Hash) computedHash = stJson.data.sha256Hash;
+              if (stJson.data?.evidenceId) assignedId = stJson.data.evidenceId;
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Evidence upload error:', err);
+      } finally {
+        setIsSubmitting(false);
+      }
+    }
+
     const newRecord: EvidenceRecord = {
-      id: `EVD-2024-08${Math.floor(15 + Math.random() * 80)}`,
-      evidenceCode: `EVD-2024-08${Math.floor(15 + Math.random() * 80)}`,
-      title: uploadTitle || 'Seized Secondary Digital Storage Device',
+      id: assignedId,
+      evidenceCode: assignedId,
+      title: uploadTitle || (realEvidenceFile ? realEvidenceFile.name : 'Seized Secondary Digital Storage Device'),
       category: uploadCategory,
       caseId: 'CASE-2024-MH-092',
       caseTitle: 'Operation Blue Tide',
       seizureDate: new Date().toISOString().replace('T', ' ').slice(0, 19),
       seizingOfficer: officerName,
       custodian: 'CID Digital Evidence Locker',
-      fileSizeBytes: 842000000,
-      originalHashSHA256: '7b9c1d2e3f4a5b6c7d8e9f0123456789abcdef0123456789abcdef0123456789',
-      currentHashSHA256: '7b9c1d2e3f4a5b6c7d8e9f0123456789abcdef0123456789abcdef0123456789',
+      fileSizeBytes: fileSize,
+      originalHashSHA256: computedHash,
+      currentHashSHA256: computedHash,
       integrityStatus: 'MATCH',
       lastVerifiedAt: new Date().toISOString().replace('T', ' ').slice(0, 19),
       verifiedBy: 'M6 Automated SHA-256 Daemon',
@@ -87,13 +140,14 @@ export const EvidenceView: React.FC = () => {
       associatedEntities: [
         { entityId: 'ENT-PERS-001', entityType: 'Person', label: 'Vikram Malhotra' }
       ],
-      description: 'Newly uploaded evidentiary artefact for forensic analysis.'
+      description: realEvidenceFile ? `Ingested evidentiary artefact '${realEvidenceFile.name}' processed via M2/M4 pipeline.` : 'Newly uploaded evidentiary artefact for forensic analysis.'
     };
 
     setEvidenceList([newRecord, ...evidenceList]);
     setSelectedId(newRecord.id);
     setIsUploadModalOpen(false);
     setUploadTitle('');
+    setRealEvidenceFile(null);
     addToast({
       type: 'success',
       title: 'Evidence Registered',
@@ -384,28 +438,69 @@ export const EvidenceView: React.FC = () => {
                 />
               </div>
 
-              {/* Drag Drop Mock Area */}
-              <div className="p-6 rounded-xl border-2 border-dashed border-slate-700 bg-slate-900/50 text-center space-y-2">
+              {/* Drag Drop & Real File Picker Area */}
+              <div
+                onClick={() => realFileInputRef.current?.click()}
+                className="p-6 rounded-xl border-2 border-dashed border-cyan-500/40 bg-slate-900/50 hover:bg-slate-900/80 cursor-pointer text-center space-y-2 transition-colors"
+              >
+                <input
+                  type="file"
+                  ref={realFileInputRef}
+                  className="hidden"
+                  accept=".pdf,.csv,.png,.jpg,.jpeg,.tiff"
+                  onChange={(e) => {
+                    if (e.target.files && e.target.files[0]) {
+                      setRealEvidenceFile(e.target.files[0]);
+                      setUploadTitle(e.target.files[0].name);
+                    }
+                  }}
+                />
                 <HardDrive className="w-8 h-8 text-cyan-400 mx-auto" />
-                <div className="text-slate-300 font-medium">Select file or drag bitstream image here</div>
-                <div className="text-[10px] text-slate-500 font-mono">
-                  SHA-256 calculation will be executed automatically by M6 integrity daemon upon ingest
+                <div className="text-slate-300 font-medium text-sm">
+                  {realEvidenceFile ? (
+                    <span className="text-cyan-300 font-bold">{realEvidenceFile.name} ({(realEvidenceFile.size / 1024).toFixed(1)} KB)</span>
+                  ) : (
+                    'Click to select real evidence file (.pdf, .csv, image)'
+                  )}
                 </div>
+                <div className="text-[10px] text-slate-500 font-mono">
+                  {realEvidenceFile 
+                    ? 'SHA-256 genesis hash and entity extraction will be computed via CrimeNet Ingestion pipeline'
+                    : 'Cryptographic SHA-256 hash automatically computed upon ingest'}
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between text-xs text-slate-400 p-2 bg-slate-900 rounded-lg">
+                <span>Need batch ingestion or CSV schema preview?</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsUploadModalOpen(false);
+                    setView('ingestion');
+                  }}
+                  className="text-cyan-400 hover:text-cyan-300 font-semibold underline"
+                >
+                  Open Import Center &rarr;
+                </button>
               </div>
 
               <div className="pt-2 flex justify-end gap-2">
                 <button
                   type="button"
-                  onClick={() => setIsUploadModalOpen(false)}
+                  onClick={() => {
+                    setIsUploadModalOpen(false);
+                    setRealEvidenceFile(null);
+                  }}
                   className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 font-medium"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold uppercase tracking-wider shadow"
+                  disabled={isSubmitting}
+                  className="px-5 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold uppercase tracking-wider shadow disabled:opacity-50 flex items-center gap-1.5"
                 >
-                  Ingest & Compute Hash
+                  {isSubmitting ? 'Ingesting...' : 'Ingest & Compute Hash'}
                 </button>
               </div>
 

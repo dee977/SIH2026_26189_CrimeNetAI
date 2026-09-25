@@ -12,6 +12,7 @@ class RoleEnum(str):
 class UserLoginRequest(BaseModel):
     email: str = Field(..., description='Investigator email address')
     password: str = Field(..., description='Investigator password')
+    role: Optional[str] = Field(None, description='Requested role')
 
 class TokenResponse(BaseModel):
     accessToken: str
@@ -31,6 +32,7 @@ class UserProfile(BaseModel):
     badgeNumber: Optional[str] = None
     agencyUnit: str
     role: str
+    grantedRole: Optional[str] = None
     permissions: List[str] = Field(default_factory=list)
     isActive: bool = True
 

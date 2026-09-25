@@ -188,7 +188,7 @@ export const LoginPage: React.FC = () => {
             <p className="text-[10px] font-mono uppercase tracking-wider text-slate-400 mb-2 text-center">
               Evaluator Quick Access (Hackathon Demo)
             </p>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-3 gap-2">
               <button
                 type="button"
                 onClick={() => handleQuickDemoLogin('Senior Investigator', 'v.rao@cid.police.gov.in')}
@@ -204,6 +204,14 @@ export const LoginPage: React.FC = () => {
               >
                 <UserCheck className="w-3.5 h-3.5 text-amber-400 shrink-0" />
                 <span className="truncate">Sr. Authority</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleQuickDemoLogin('System Administrator', 'admin@cid.police.gov.in')}
+                className="p-2 rounded-lg bg-slate-900 hover:bg-slate-850 border border-slate-800 text-[11px] text-slate-300 text-left transition-colors flex items-center gap-1.5"
+              >
+                <UserCheck className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+                <span className="truncate">System Admin</span>
               </button>
             </div>
           </div>

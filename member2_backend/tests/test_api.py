@@ -196,11 +196,25 @@ def test_alerts_and_watchlist():
     assert del_resp.status_code == 200
 
 def test_reports_and_dashboard_and_audit():
-    # Reports
-    rpt_resp = client.post('/api/v1/reports/generate', json={'caseId': 'CASE-2024-001'})
+    # Reports Generate
+    rpt_resp = client.post('/api/v1/reports/generate', json={'caseId': 'CASE-2024-MH-092'})
     assert rpt_resp.status_code == 200
     assert len(rpt_resp.json()['data']['sections']) >= 4
     assert rpt_resp.json()['data']['bsaSection65BCertificate'] is not None
+
+    # Reports PDF Export GET
+    pdf_get_resp = client.get('/api/v1/reports/export/CASE-2024-MH-092.pdf')
+    assert pdf_get_resp.status_code == 200
+    assert pdf_get_resp.headers['content-type'] == 'application/pdf'
+    assert len(pdf_get_resp.content) > 10000
+    assert pdf_get_resp.content.startswith(b'%PDF-')
+
+    # Reports PDF Export POST
+    pdf_post_resp = client.post('/api/v1/reports/export/pdf', json={'caseId': 'CASE-2024-MH-092'})
+    assert pdf_post_resp.status_code == 200
+    assert pdf_post_resp.headers['content-type'] == 'application/pdf'
+    assert len(pdf_post_resp.content) > 10000
+    assert pdf_post_resp.content.startswith(b'%PDF-')
 
     # Dashboard
     dash_resp = client.get('/api/v1/dashboard/stats')

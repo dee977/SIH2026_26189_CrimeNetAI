@@ -106,3 +106,70 @@ body {
   0% { box-shadow: 0 0 10px rgba(239, 68, 68, 0.2); }
   100% { box-shadow: 0 0 20px rgba(239, 68, 68, 0.45); }
 }
+
+/* ==========================================================================
+   PRINT MEDIA STYLES FOR CRIME INVESTIGATION DOSSIER
+   Guarantees all pages & sections render without viewport clipping or truncation
+   ========================================================================== */
+@media print {
+  /* Hide application shell, sidebars, headers, toolbars, toasts, floating ribbons */
+  nav,
+  aside,
+  header,
+  .no-print,
+  button,
+  .DemoWalkthroughBar,
+  [role="status"],
+  [aria-live] {
+    display: none !important;
+  }
+
+  /* Break out of root h-screen and overflow-hidden scroll constraints */
+  html,
+  body,
+  #root,
+  .h-screen,
+  .overflow-hidden,
+  .overflow-y-auto,
+  main {
+    overflow: visible !important;
+    height: auto !important;
+    max-height: none !important;
+    min-height: 0 !important;
+    position: static !important;
+    display: block !important;
+    background: #080d1a !important;
+    color: #f1f5f9 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Full width document container */
+  #investigation-report-doc {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
+    background-color: transparent !important;
+  }
+
+  /* Avoid slicing cards or sections across page breaks */
+  .avoid-page-break,
+  .report-card {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  /* Page break rules between major sections */
+  .page-break-before {
+    page-break-before: always !important;
+    break-before: page !important;
+  }
+
+  @page {
+    size: A4 portrait;
+    margin: 15mm 15mm 15mm 15mm;
+  }
+}

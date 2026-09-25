@@ -196,7 +196,7 @@ export const TopNav: React.FC = () => {
                 {user?.officerId || 'LEO-7729'}
               </div>
               <div className="text-[10px] text-cyan-400 font-mono">
-                {user?.grantedRole || 'Senior Investigator'}
+                {user?.grantedRole || ((user as any)?.role === 'super_admin' ? 'System Administrator' : 'Senior Investigator')}
               </div>
             </div>
           </button>
@@ -213,18 +213,22 @@ export const TopNav: React.FC = () => {
                 <p className="px-3 py-1 text-[10px] uppercase font-mono tracking-wider text-slate-400 font-semibold">
                   Switch Active Role (RBAC Demo)
                 </p>
-                {(['Senior Investigator', 'Senior Authority', 'System Administrator', 'Investigator', 'Analyst / Viewer'] as UserRole[]).map(role => (
-                  <button
-                    key={role}
-                    onClick={() => handleRoleChange(role)}
-                    className={`w-full text-left px-3 py-1.5 rounded-lg text-xs flex items-center justify-between transition-colors ${
-                      user?.grantedRole === role ? 'bg-cyan-500/20 text-cyan-300 font-semibold' : 'text-slate-300 hover:bg-slate-900'
-                    }`}
-                  >
-                    <span>{role}</span>
-                    {user?.grantedRole === role && <CheckCircle2 className="w-3.5 h-3.5 text-cyan-400" />}
-                  </button>
-                ))}
+                {(['Senior Investigator', 'Senior Authority', 'System Administrator', 'Investigator', 'Analyst / Viewer'] as UserRole[]).map(role => {
+                  const currentRole = user?.grantedRole || ((user as any)?.role === 'super_admin' ? 'System Administrator' : 'Senior Investigator');
+                  const isSelected = currentRole === role;
+                  return (
+                    <button
+                      key={role}
+                      onClick={() => handleRoleChange(role)}
+                      className={`w-full text-left px-3 py-1.5 rounded-lg text-xs flex items-center justify-between transition-colors ${
+                        isSelected ? 'bg-cyan-500/20 text-cyan-300 font-semibold' : 'text-slate-300 hover:bg-slate-900'
+                      }`}
+                    >
+                      <span>{role}</span>
+                      {isSelected && <CheckCircle2 className="w-3.5 h-3.5 text-cyan-400" />}
+                    </button>
+                  );
+                })}
               </div>
 
               <div className="pt-1 border-t border-slate-800 space-y-1">

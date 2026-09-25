@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigationStore } from '../../store/navigationStore';
 import { ALL_ENTITIES, PERSON_VIKRAM_MALHOTRA } from '../../data/syntheticData';
 import { EntityType, AnyEntity } from '../../types/entities';
+import { fetchEntities, searchEntities, fetchEntityById } from '../../services/entityService';
 import { PersonProfile } from './PersonProfile';
 import { GenericEntityProfile } from './GenericEntityProfile';
 import { 
@@ -18,7 +19,8 @@ import {
   FileCheck,
   Search,
   Filter,
-  ArrowRight
+  ArrowRight,
+  Database
 } from 'lucide-react';
 
 export const EntityExplorer: React.FC = () => {
@@ -26,32 +28,74 @@ export const EntityExplorer: React.FC = () => {
   
   const [activeTab, setActiveTab] = useState<EntityType | 'ALL'>('ALL');
   const [filterQuery, setFilterQuery] = useState('');
+  const [liveEntities, setLiveEntities] = useState<AnyEntity[] | null>(null);
+  const [liveDetail, setLiveDetail] = useState<AnyEntity | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
 
-  const currentEntity = ALL_ENTITIES.find(e => e.id === selectedEntityId) || PERSON_VIKRAM_MALHOTRA;
+  useEffect(() => {
+    let isMounted = true;
+    setIsLoading(true);
+    const filter = activeTab === 'ALL' ? undefined : activeTab;
+
+    if (filterQuery.trim()) {
+      searchEntities(filterQuery, { type: activeTab === 'ALL' ? undefined : activeTab })
+        .then(res => {
+          if (isMounted && res.success && res.data && res.data.length > 0) {
+            setLiveEntities(res.data);
+          }
+        })
+        .finally(() => { if (isMounted) setIsLoading(false); });
+    } else {
+      fetchEntities(filter)
+        .then(res => {
+          if (isMounted && res.success && res.data && res.data.length > 0) {
+            setLiveEntities(res.data);
+          }
+        })
+        .finally(() => { if (isMounted) setIsLoading(false); });
+    }
+
+    return () => { isMounted = false; };
+  }, [activeTab, filterQuery]);
+
+  useEffect(() => {
+    if (!selectedEntityId) return;
+    fetchEntityById(selectedEntityId).then(res => {
+      if (res.success && res.data) {
+        setLiveDetail(res.data);
+      }
+    }).catch(() => {});
+  }, [selectedEntityId]);
+
+  const sourceList = (liveEntities && liveEntities.length > 0) ? liveEntities : ALL_ENTITIES;
 
   const tabs: { type: EntityType | 'ALL'; label: string; count: number }[] = [
-    { type: 'ALL', label: 'All Entities', count: ALL_ENTITIES.length },
-    { type: 'Person', label: 'Persons', count: ALL_ENTITIES.filter(e => e.type === 'Person').length },
-    { type: 'Phone', label: 'Phones', count: ALL_ENTITIES.filter(e => e.type === 'Phone').length },
-    { type: 'BankAccount', label: 'Bank Accounts', count: ALL_ENTITIES.filter(e => e.type === 'BankAccount').length },
-    { type: 'Vehicle', label: 'Vehicles', count: ALL_ENTITIES.filter(e => e.type === 'Vehicle').length },
-    { type: 'Location', label: 'Locations', count: ALL_ENTITIES.filter(e => e.type === 'Location').length },
-    { type: 'Organization', label: 'Organizations', count: ALL_ENTITIES.filter(e => e.type === 'Organization').length },
-    { type: 'FIR', label: 'FIRs', count: ALL_ENTITIES.filter(e => e.type === 'FIR').length },
-    { type: 'Crime', label: 'Crimes', count: ALL_ENTITIES.filter(e => e.type === 'Crime').length },
-    { type: 'Transaction', label: 'Transactions', count: ALL_ENTITIES.filter(e => e.type === 'Transaction').length },
-    { type: 'Communication', label: 'Communications', count: ALL_ENTITIES.filter(e => e.type === 'Communication').length },
-    { type: 'Evidence', label: 'Evidence', count: ALL_ENTITIES.filter(e => e.type === 'Evidence').length },
+    { type: 'ALL', label: 'All Entities', count: sourceList.length },
+    { type: 'Person', label: 'Persons', count: sourceList.filter(e => e.type === 'Person').length },
+    { type: 'Phone', label: 'Phones', count: sourceList.filter(e => e.type === 'Phone').length },
+    { type: 'BankAccount', label: 'Bank Accounts', count: sourceList.filter(e => e.type === 'BankAccount').length },
+    { type: 'Vehicle', label: 'Vehicles', count: sourceList.filter(e => e.type === 'Vehicle').length },
+    { type: 'Location', label: 'Locations', count: sourceList.filter(e => e.type === 'Location').length },
+    { type: 'Organization', label: 'Organizations', count: sourceList.filter(e => e.type === 'Organization').length },
+    { type: 'FIR', label: 'FIRs', count: sourceList.filter(e => e.type === 'FIR').length },
+    { type: 'Crime', label: 'Crimes', count: sourceList.filter(e => e.type === 'Crime').length },
+    { type: 'Transaction', label: 'Transactions', count: sourceList.filter(e => e.type === 'Transaction').length },
+    { type: 'Communication', label: 'Communications', count: sourceList.filter(e => e.type === 'Communication').length },
+    { type: 'Evidence', label: 'Evidence', count: sourceList.filter(e => e.type === 'Evidence').length },
   ];
 
-  const displayedList = ALL_ENTITIES.filter(e => {
+  const displayedList = sourceList.filter(e => {
     if (activeTab !== 'ALL' && e.type !== activeTab) return false;
-    if (filterQuery.trim()) {
+    if (filterQuery.trim() && !liveEntities) {
       const q = filterQuery.toLowerCase();
-      return e.label.toLowerCase().includes(q) || e.id.toLowerCase().includes(q);
+      return (e.label || '').toLowerCase().includes(q) || (e.id || '').toLowerCase().includes(q);
     }
     return true;
   });
+
+  const currentEntity = (liveDetail && liveDetail.id === selectedEntityId) 
+    ? liveDetail 
+    : (sourceList.find(e => e.id === selectedEntityId) || ALL_ENTITIES.find(e => e.id === selectedEntityId) || displayedList[0] || PERSON_VIKRAM_MALHOTRA);
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
@@ -59,7 +103,16 @@ export const EntityExplorer: React.FC = () => {
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold text-slate-100">Multi-Modal Entity Explorer</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl font-bold text-slate-100">Multi-Modal Entity Explorer</h1>
+            <span className={`text-[10px] font-mono px-2 py-0.5 rounded border ${
+              liveEntities 
+                ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' 
+                : 'bg-cyan-500/10 text-cyan-300 border-cyan-500/20'
+            }`}>
+              {liveEntities ? 'LIVE GRAPH (NEO4J - 490K RECORDS)' : 'SYNTHETIC FALLBACK'}
+            </span>
+          </div>
           <p className="text-xs text-slate-400 mt-1">
             Browse and inspect structured profiles across 11 crime network entity types. (Strictly zero risk scoring)
           </p>

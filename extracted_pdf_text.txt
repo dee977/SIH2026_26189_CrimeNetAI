@@ -1,0 +1,351 @@
+
+[PAGE 1]
+CONFIDENTIAL LAW ENFORCEMENT INTELLIGENCE DOSSIER
+ CRIME NETWORK ANALYSIS & EVIDENCE INTEGRITY REPORT
+ Case Reference: CASE-2024-MH-092  Dossier ID: CASE-2024-MH-092
+CASE REFERENCE:
+DOSSIER ID:
+LEAD OFFICER:
+DATE GENERATED:
+CASE-2024-MH-092
+CASE-2024-MH-092
+Inspector Vikramaditya Rao
+(LEO-7729)
+2026-09-24
+SECURITY CLEARANCE:
+JURISDICTION:
+ASSIGNED TEAM:
+ASSOCIATED FIR:
+CONFIDENTIAL
+Special Crime Branch, CID
+Mumbai
+Insp. V. Rao, SI Priyanka Sen,
+Analyst K. Nair
+FIR-2024-8841
+1. Executive Investigation Summary
+Investigation into organized contraband import through fictitious shipping manifests, shell clearing companies, and offshore hawala
+conduits along the Mumbai-Surat maritime corridor. On 14 August 2024 at 02:30 AM, joint preventive officers intercepted refrigerated
+container #MRKU-982141-0 at Nhava Sheva Port Yard 4B, recovering 42.5 kg concealed illicit contraband. Multi-hop network synthesis
+establishes operational coordination between logistics operator Vikram Malhotra and Surat financial broker Rajesh K. Sharma via shell
+entity BlueSea Logistics & Trading Pvt Ltd.
+2. Key Indexed Network Entities
+PRIMARY SUBJECT:
+Vikram Malhotra (ENT-PERS-001)
+Aliases/ID: Vicky Cargo, V.M. Logistics  Role: On-Ground Logistics
+Coordinator
+Identified as principal on-ground logistics coordinator in container
+handling at Nhava Sheva. CDR indicates repeated burst calls prior to
+consignment arrivals. No prior convictions recorded; analytical focus
+centered on multi-hop remittances and discrepancies in cargo
+declaration documents.
+Provenance: FIR-2024-8841 Case Diary Vol I & Port Clearance
+Register
+INTERMEDIARY BROKER:
+Rajesh Kumar Sharma (ENT-PERS-002)
+Aliases/ID: Sharma Ji, RK Hawala, Bhaiya Surat  Role: Financial
+Intermediary & Hawala Broker
+Documented financial intermediary operating out of Surat diamond
+bazaar. Banking audit reveals high-velocity pass-through transfers
+between bullion accounts and logistics firms.
+Provenance: FIU-IND Suspicious Transaction Report STR-2024-09
+SHELL CORPORATE FRONT:
+BlueSea Logistics & Trading Pvt Ltd (ENT-ORG-001)
+Aliases/ID: CIN: U63090MH2021PTC368912  Role: Shell Clearing &
+Forwarding Front
+Paper clearing entity without legitimate freight equipment. Used for
+billing bogus transport invoices and receiving hawala wire transfers.
+Provenance: MCA Company Registrar Audit
+FINANCIAL CONDUIT:
+HDFC Account 9921-4820 (ENT-BANK-001)
+Aliases/ID: IFSC: HDFC0000060 | Branch: Fort Mumbai | Holder:
+Rajesh Sharma  Role: Pooling Current Account
+Primary transaction conduit. Executed INR 15,00,000 debit relay wire
+TXN-90214 directly prior to container arrival at terminal.
+Provenance: HDFC Certified Ledger Stmt #B24-911
+TARGET CELLULAR HANDSET:
++91-98201-99412 (ENT-PHON-001)
+Aliases/ID: Carrier: Airtel Mumbai | IMEI: 864209041234567 | Sub: V.
+Malhotra  Role: Operational Burner Handset
+Target line seized under Faraday containment. Associated with 342s
+voice call to Surat broker immediately prior to container offloading.
+Provenance: Airtel Tower Dump & CDR Extraction
+SEIZED EXHIBIT / CARGO:
+Container #MRKU-982141-0 (ENT-CRIM-001)
+Aliases/ID: Exhibit P-1 (42.5 kg Contraband)  Role: Contraband
+Concealment Vessel
+Intercepted with 42.5 kg contraband behind false insulation bulkhead.
+Seal tampered in transit from Jebel Ali to JNPT Port.
+Provenance: Joint Customs & CID Panchnama Memo
+Case Ref: CASE-2024-MH-092  |  CrimeNet AI Investigative Engine  |  Special Crime Branch CID
+Page 1 of 5
+
+[PAGE 2]
+3. Network Graph Intelligence Findings (M5 Traversal)
+Multi-Hop Forensic Conduit: The automated graph inference engine executed multi-hop path traversal linking the primary criminal target
+to physical offloading logistics through an indirect communication and financial conduit.
+STEP
+ORIGIN NODE
+RELATIONSHIP / MODALITY
+DESTINATION NODE
+TIMESTAMP / AUDIT REF
+Hop 1
+Vikram Malhotra
+(Person: ENT-PERS-001)
+OPERATES_PHONE
+Registered Subscriber
++91-98201-99412
+(Phone: ENT-PHON-001)
+Active Since: 2024-01-10
+KYC Verified  Conf: 0.98
+Hop 2
++91-98201-99412
+(Phone: ENT-PHON-001)
+TELECOM_CALL
+Call 342s (01:04 AM)
+Rajesh K. Sharma
+(Person: ENT-PERS-002)
+2024-08-14 01:04:12 UTC
+Airtel CDR Dump #901 
+Conf: 0.96
+Hop 3
+Rajesh K. Sharma
+(Person: ENT-PERS-002)
+FINANCIAL_CONTROL
+Sole Authorized Signatory
+HDFC Account 9921-4820
+(Bank: ENT-BANK-001)
+KYC Ref: HDFC-B-4410
+Branch: Fort Mumbai  Conf:
+0.99
+Hop 4
+HDFC Account 9921-4820
+(Bank: ENT-BANK-001)
+NEFT_DEBIT_RELAY
+TXN-90214 ■15,00,000 (NEFT)
+TXN-90214
+(Transaction: ENT-TXN-001)
+2024-08-14 01:18:45 UTC
+UTR: HDFCN24081490214 
+Conf: 0.99
+Hop 5
+TXN-90214
+(Transaction: ENT-TXN-001)
+BENEFICIARY_CREDIT
+Liaison Handling Fee
+BlueSea Logistics & Trading
+Pvt Ltd
+(Shell Org: ENT-ORG-001)
+2024-08-14 01:19:10 UTC
+Instant Settlement  Conf:
+0.97
+Hop 6
+BlueSea Logistics & Trading
+Pvt Ltd
+(Shell Org: ENT-ORG-001)
+CUSTOMS_CONSIGNEE
+False Manifest Filer
+Container #MRKU-982141-0
+(Seized Cargo: EVD-001)
+2024-08-14 02:30:00 UTC
+Panchnama Seizure  Conf:
+0.95
+Graph ML Model Metrics (M5): Betweenness Centrality: 0.842 (Rajesh K. Sharma / ENT-PERS-002)  Community: Cluster #3 (Financial
+Intermediation & Maritime Logistics)  Shortest Path: 6-Hop Direct Forensic Traversal (Person -> Phone -> Person -> Bank -> Txn -> Org).
+Analytical note / caveat: Network betweenness centrality highlights key liaison role. Does not represent automated judicial guilt.
+CONFIDENTIAL // LAW ENFORCEMENT INTELLIGENCE REPORT
+BSA SEC 63 COMPLIANT DOSSIER
+Case Ref: CASE-2024-MH-092  |  CrimeNet AI Investigative Engine  |  Special Crime Branch CID
+Page 2 of 5
+
+[PAGE 3]
+4. Evidentiary Discrepancies (Cross-Source Verification)
+DATA DISCREPANCY DETECTED: DISCREPANCY-001
+ STATUS: DATA DISCREPANCY DETECTED
+Title: Contradiction: Accused Alibi Statement vs Telecom
+CDR Tower Ping
+Conflicting Field: Physical Location Coordinates at 2024-08-14 02:40
+AM
+Source A (Accused Statement in FIR-2024-8841 Case Diary
+Vol I):
+ Doc Ref: Case Diary Entry #14-B dated 2024-08-15 | Timestamp:
+2024-08-14 02:40:00 UTC
+ Recorded Value: Hotel Blue Diamond, Koregaon Park, Pune,
+Maharashtra
+ Excerpt: 'I retired to my room at Hotel Blue Diamond, Pune by
+11:30 PM on August 13 and did not travel anywhere until the
+afternoon of August 14.'
+Source B (Airtel Telecom Tower Carrier Dump - Certified BSA
+Sec 63):
+ Doc Ref: Carrier Audit File AIRTEL-CDR-20240815.csv |
+Timestamp: 2024-08-14 02:40:18 UTC
+ Recorded Value: Nhava Sheva Sector 4 Tower (Cell ID: 19402,
+Lat: 18.9535, Lng: 72.9480)
+ Excerpt: 'Subscriber +91-98201-99412 registered incoming SMS
+delivery receipt and data session handover at Nhava Sheva Port
+Sector 4 tower, 120km away from Pune.'
+Analytical Assessment: Physical alibi statement is mathematically
+irreconcilable with radio propagation range of Sector 4 cell tower.
+System flags this for investigator follow-up without drawing definitive
+legal conclusions.
+Recommended Investigator Actions:
+1. Subpoena Hotel Blue Diamond guest register and CCTV footage for
+August 13-14.
+2. Request cell tower LAC timing advance records for precise 50m
+distance estimation.
+3. Re-interview accused with corroborated telecom timeline.
+DATA DISCREPANCY DETECTED: DISCREPANCY-002
+ STATUS: DATA DISCREPANCY DETECTED
+Title: Discrepancy: Shipping Cargo Declaration vs
+Physical Customs Panchnama
+Conflicting Field: Declared Consignment Weight & Commodity Code
+Source A (Import General Manifest IGM #239104):
+ Doc Ref: Customs ICEGATE Electronic Manifest Filing |
+Timestamp: 2024-08-10 16:00:00 UTC
+ Recorded Value: HS Code 08041020: Fresh Dates, Gross
+Weight 18,200 kg
+ Excerpt: 'Commercial importer declares 800 cartons of premium
+packaging dates in cold container.'
+Source B (Physical Joint Customs & CID Panchnama):
+ Doc Ref: Panchnama Seizure Exhibit P-1 dated 2024-08-14 |
+Timestamp: 2024-08-14 03:15:00 UTC
+ Recorded Value: Concealed Contraband: 42.5 kg Narcotic
+Consignment behind false bulkhead
+ Excerpt: 'Physical search revealed false bulkhead partition
+containing tamper-wrapped packages with chemical odor, not
+declared in IGM.'
+Analytical Assessment: Weight discrepancy confirms secondary
+unmanifested payload concealed within container structure.
+Recommended Investigator Actions:
+1. Impound shipping agent electronic correspondence.
+2. Forensic examination of container weld joints.
+3. Trace freight payment origin account.
+CONFIDENTIAL // LAW ENFORCEMENT INTELLIGENCE REPORT
+BSA SEC 63 COMPLIANT DOSSIER
+Case Ref: CASE-2024-MH-092  |  CrimeNet AI Investigative Engine  |  Special Crime Branch CID
+Page 3 of 5
+
+[PAGE 4]
+5. Cryptographic Evidence Integrity (M6 Ledger & SHA-256 Audit)
+Immutable Audit Chain: In accordance with Bharatiya Sakshya Adhiniyam (BSA) Section 63, all electronic records are hashed upon
+ingestion and verified periodically against the decentralized ledger. Both verified immutable records and tampered anomaly alerts are
+recorded below.
+EVD-2024-0812: Physical Extraction Image: Mobile Phone
+(+91-98201-99412)
+ MATCH (VERIFIED IMMUTABLE)
+Category: Physical Smartphone Extraction  Size: 24.89 GB 
+Custodian: FSL Kalina Cyber Forensic Lab
+BSA §63 Cert: BSA-63-FSL-2024-8841  Status: VALID
+Genesis Hash SHA-256: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+Current Hash SHA-256: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+Chain of Custody History:
+ 2024-08-14 04:00:00: SEIZURE_AND_FARADAY_BAG by Insp.
+Vikramaditya Rao. Seized from Vikram Malhotra.
+ 2024-08-14 11:30:00: FORENSIC_IMAGING_E01 by Scientific
+Officer V. Kulkarni on Tableau TD3.
+ 2024-08-25 10:15:00: PERIODIC_SHA256_VERIFICATION by M6
+Evidence Daemon. Checksum MATCH confirmed.
+Evidentiary Admissibility:
+ Full bitstream hash verified against genesis ledger record.
+ Cryptographic certificate signed with FSL RSA-4096 private key.
+ Admissible as Primary Electronic Record under BSA Section 63.
+EVD-2024-0813: Certified Bank Ledger: HDFC Account
+9921-4820
+ MATCH (VERIFIED IMMUTABLE)
+Category: Bank Statement Ledger  Size: 4.21 MB  Custodian: CID
+Economic Intelligence Unit Locker
+BSA §63 Cert: BSA-63-BNK-2024-1102  Status: VALID
+Genesis Hash SHA-256: 9b71d224bd62f3785d96d46ad3ea3d73319bfbc2890caadae2dff72519673ca7
+Current Hash SHA-256: 9b71d224bd62f3785d96d46ad3ea3d73319bfbc2890caadae2dff72519673ca7
+Chain of Custody History:
+ 2024-08-15 14:00:00: BANK_SUBPOENA_COLLECTION by SI
+Priyanka Sen via certified digital token.
+ 2024-08-25 10:15:00: PERIODIC_SHA256_VERIFICATION by M6
+Evidence Daemon. Checksum MATCH confirmed.
+Evidentiary Admissibility:
+ Bank compliance digital signature verified under BSA Section 63.
+ Contains authenticated NEFT debit wire record TXN-90214.
+ Court admissible certified documentary evidence.
+EVD-2024-0814: Tampered CDR Audit File (Demonstration of
+Mismatch Alert)
+ MISMATCH (TAMPER ALERT DETECTED)
+Category: Carrier Dump Audit Record  Size: 1.84 MB  Custodian:
+Sub-Inspector Desk Terminal (Under Integrity Audit)
+BSA §63 Cert: BSA-63-TEL-2024-0091  Status: REVOKED
+Genesis Hash SHA-256: a1b2c3d4e5f60718293a4b5c6d7e8f90123456789abcdef0123456789abcdef0
+Current Hash SHA-256: f9e8d7c6b5a403928172635443322110ffeeddccbbaa99887766554433221100
+Chain of Custody History:
+ 2024-08-16 09:00:00: INITIAL_INGESTION by Insp. Vikramaditya
+Rao. Genesis hash recorded.
+ 2024-08-24 16:30:00: HASH_MISMATCH_TRIGGERED by M6
+Evidence Daemon. Current hash differs from Genesis Hash. Byte
+alteration detected!
+Evidentiary Admissibility:
+ File quarantined from formal court evidence bundle.
+ Internal audit incident logged under LOG-SEC-TAMPER-0814.
+ Sub-Inspector terminal disconnected from network pending forensic
+review.
+CONFIDENTIAL // LAW ENFORCEMENT INTELLIGENCE REPORT
+BSA SEC 63 COMPLIANT DOSSIER
+Case Ref: CASE-2024-MH-092  |  CrimeNet AI Investigative Engine  |  Special Crime Branch CID
+Page 4 of 5
+
+[PAGE 5]
+6. Chronological Case Timeline & Operational Audit
+TIMESTAMP (UTC)
+EVENT TITLE
+SOURCE & CORROBORATING
+EVIDENCE
+OPERATIONAL DETAILS
+2024-08-10 16:00
+Import Manifest Filed (IGM
+#239104)
+ICEGATE Electronic Manifest
+BlueSea Logistics declared 800 cartons of fresh
+dates from Dubai aboard vessel MV Al-Rida.
+2024-08-14 01:04
+Suspicious Intercept Voice
+Call
+Airtel CDR Dump #901
+342s voice call between Vikram Malhotra
+(+91-98201-99412) and Surat broker Rajesh
+Sharma.
+2024-08-14 01:18
+NEFT Relay Wire Executed
+(TXN-90214)
+HDFC Certified Ledger
+INR 15,00,000 debit wire transfer from Rajesh
+Sharma account to BlueSea Logistics clearing
+account.
+2024-08-14 02:30
+Physical Interception &
+Seizure (Exhibit P-1)
+Panchnama Exhibit P-1
+Joint raid seized container #MRKU-982141-0 at
+Nhava Sheva Yard 4B. Found 42.5 kg
+contraband behind false insulation panel.
+2024-08-14 04:00
+Suspect Apprehension &
+Device Seizure
+Seizure Memo #14-B
+Apprehended Vikram Malhotra on site. Secured
+operational smartphone inside RF-shielded
+Faraday bag.
+7. Formal Attestation & Judicial Certification
+Certificate under Section 63 of Bharatiya Sakshya Adhiniyam, 2023: I hereby certify that the electronic records, hash digests, network
+relationships, and discrepancies compiled in this document were produced by computer systems operating under regular supervision during the
+ordinary course of investigative duties. The cryptographic SHA-256 hashes were calculated directly from bitstream forensic copies without manual
+interception or post-facto modification.
+____________________________________________
+INVESTIGATING OFFICER SIGNATURE
+Inspector Vikramaditya Rao (LEO-7729)
+Badge: LEO-7729 | Special Crime Branch, CID Mumbai
+Date: 2026-09-24
+____________________________________________
+SUPERINTENDENT OF POLICE / ATTESTING AUTHORITY
+Special Crime Branch CID Maharashtra
+Cryptographic Digital Seal: SHA256-ECDSA-VERIFIED
+Date: 2026-09-24
+CONFIDENTIAL // LAW ENFORCEMENT INTELLIGENCE REPORT
+BSA SEC 63 COMPLIANT DOSSIER
+Case Ref: CASE-2024-MH-092  |  CrimeNet AI Investigative Engine  |  Special Crime Branch CID
+Page 5 of 5

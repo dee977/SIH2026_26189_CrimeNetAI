@@ -24,6 +24,7 @@ export type AppView =
   | 'assistant'
   | 'authority'
   | 'admin'
+  | 'ingestion'
   | 'reports';
 
 interface NavigationState {

@@ -27,7 +27,8 @@ async def get_current_user(
                 'alert:read', 'alert:manage',
                 'watchlist:read', 'watchlist:manage',
                 'report:generate', 'report:read',
-                'audit:read'
+                'audit:read',
+                'cases', 'graph', 'evidence', 'timeline', 'ai', 'export', 'alerts', 'gis', 'search'
             ],
             isActive=True
         )

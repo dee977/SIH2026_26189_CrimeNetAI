@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigationStore } from '../../store/navigationStore';
 import { SYNTHETIC_TIMELINE_EVENTS, SYNTHETIC_ACTIVITY_BURSTS } from '../../data/syntheticData';
 import { TimelineCategory, TimelineEvent } from '../../types/timeline';
+import { apiRequest } from '../../services/apiClient';
 import { 
   Clock, 
   Play, 
@@ -26,7 +27,39 @@ export const TimelineView: React.FC = () => {
 
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
+  const [events, setEvents] = useState<TimelineEvent[]>(SYNTHETIC_TIMELINE_EVENTS);
   const [playbackIndex, setPlaybackIndex] = useState<number>(SYNTHETIC_TIMELINE_EVENTS.length - 1);
+  const [isLiveTimeline, setIsLiveTimeline] = useState<boolean>(false);
+
+  useEffect(() => {
+    apiRequest<any>('/timeline?limit=60').then(res => {
+      const items = res.data?.items || (Array.isArray(res.data) ? res.data : null);
+      if (items && items.length > 0) {
+        const mapped: TimelineEvent[] = items.map((item: any) => ({
+          id: item.eventId || item.id,
+          timestamp: item.timestamp,
+          category: (item.eventType === 'COMMUNICATION' ? 'Communication' : item.eventType === 'TRANSACTION' ? 'Transaction' : 'Relationship') as TimelineCategory,
+          title: item.title,
+          description: item.description,
+          primaryEntity: {
+            id: item.primaryEntityId || 'P00001',
+            label: item.primaryEntityName || item.primaryEntityId || 'Subject',
+            type: 'Person'
+          },
+          secondaryEntity: item.secondaryEntityId ? {
+            id: item.secondaryEntityId,
+            label: item.secondaryEntityName || item.secondaryEntityId,
+            type: 'Person'
+          } : undefined,
+          locationName: item.location || 'Pan-India Grid',
+          source: item.sourceDocument || 'member3_data_graph/datasets'
+        }));
+        setEvents(mapped);
+        setPlaybackIndex(mapped.length - 1);
+        setIsLiveTimeline(true);
+      }
+    }).catch(() => {});
+  }, []);
 
   const categories: { key: string; label: string }[] = [
     { key: 'ALL', label: 'All Event Streams' },
@@ -44,7 +77,7 @@ export const TimelineView: React.FC = () => {
     if (isPlaying) {
       interval = setInterval(() => {
         setPlaybackIndex(prev => {
-          if (prev < SYNTHETIC_TIMELINE_EVENTS.length - 1) {
+          if (prev < events.length - 1) {
             return prev + 1;
           } else {
             setIsPlaying(false);
@@ -54,9 +87,9 @@ export const TimelineView: React.FC = () => {
       }, 1500);
     }
     return () => clearInterval(interval);
-  }, [isPlaying]);
+  }, [isPlaying, events.length]);
 
-  const visibleEvents = SYNTHETIC_TIMELINE_EVENTS
+  const visibleEvents = events
     .slice(0, playbackIndex + 1)
     .filter(ev => selectedCategory === 'ALL' || ev.category === selectedCategory);
 
@@ -81,8 +114,12 @@ export const TimelineView: React.FC = () => {
             <span className="text-xs font-mono uppercase tracking-wider text-cyan-400 font-semibold">
               Temporal Intelligence Engine
             </span>
-            <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-950 text-cyan-400 border border-cyan-800">
-              Synchronized Multi-Source Chronology
+            <span className={`text-[10px] font-mono px-2 py-0.5 rounded border ${
+              isLiveTimeline 
+                ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' 
+                : 'bg-cyan-500/10 text-cyan-300 border-cyan-500/20'
+            }`}>
+              {isLiveTimeline ? `LIVE EVENT CHRONOLOGY (${events.length} Events)` : 'SYNTHETIC CHRONOLOGY'}
             </span>
           </div>
           <h1 className="text-xl font-bold text-slate-100 mt-1">

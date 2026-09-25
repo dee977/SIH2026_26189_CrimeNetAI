@@ -4,6 +4,7 @@ import { GRAPH_NODES, GRAPH_EDGES } from '../../data/syntheticData';
 import { GraphNode, GraphEdge } from '../../types/graph';
 import { EntityType } from '../../types/entities';
 import { useNavigationStore } from '../../store/navigationStore';
+import { fetchGraphData } from '../../services/graphService';
 import { 
   ZoomIn, 
   ZoomOut, 
@@ -32,6 +33,11 @@ export const NetworkGraphView: React.FC = () => {
   const [filterType, setFilterType] = useState<string>('ALL');
   const [confidenceThreshold, setConfidenceThreshold] = useState<number>(0.8);
   const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
+  const [isLiveGraph, setIsLiveGraph] = useState<boolean>(false);
+  const [graphData, setGraphData] = useState<{ nodes: GraphNode[]; edges: GraphEdge[] }>({
+    nodes: GRAPH_NODES,
+    edges: GRAPH_EDGES
+  });
 
   // Color mapping per node category
   const getNodeColor = (type: EntityType) => {
@@ -52,27 +58,42 @@ export const NetworkGraphView: React.FC = () => {
   };
 
   useEffect(() => {
+    fetchGraphData().then(res => {
+      if (res.success && res.data && res.data.nodes && res.data.nodes.length > 0) {
+        setGraphData({
+          nodes: res.data.nodes,
+          edges: res.data.edges || []
+        });
+        setIsLiveGraph(true);
+      }
+    }).catch(() => {});
+  }, []);
+
+  useEffect(() => {
     if (!containerRef.current) return;
 
-    // Build Cytoscape elements from synthetic/M3 graph data
+    // Build Cytoscape elements from live Neo4j or fallback graph data
     const elements = [
-      ...GRAPH_NODES.map(node => ({
-        data: {
-          id: node.id,
-          label: node.label,
-          type: node.entityType,
-          color: getNodeColor(node.entityType),
-          degree: node.degree || 1,
-          raw: node
-        }
-      })),
-      ...GRAPH_EDGES.map(edge => ({
+      ...graphData.nodes.map(node => {
+        const eType = (node.entityType || (node as any).type || 'Person') as EntityType;
+        return {
+          data: {
+            id: node.id,
+            label: node.label || node.id,
+            type: eType,
+            color: getNodeColor(eType),
+            degree: node.degree || 1,
+            raw: node
+          }
+        };
+      }),
+      ...graphData.edges.map(edge => ({
         data: {
           id: edge.id,
           source: edge.source,
           target: edge.target,
-          label: edge.relationType,
-          confidence: edge.confidence,
+          label: edge.relationType || (edge as any).relationshipType || 'LINKED_TO',
+          confidence: edge.confidence || 0.95,
           raw: edge
         }
       }))
@@ -189,7 +210,7 @@ export const NetworkGraphView: React.FC = () => {
     return () => {
       cy.destroy();
     };
-  }, []);
+  }, [graphData]);
 
   // Controls
   const handleZoomIn = () => cyRef.current?.zoom(cyRef.current.zoom() * 1.25);
@@ -232,8 +253,12 @@ export const NetworkGraphView: React.FC = () => {
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-lg font-bold text-slate-100">Interactive Network Graph (Cytoscape.js)</h1>
-            <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-950 text-cyan-400 border border-cyan-800">
-              Graph Engine: Neo4j (M3) • Centrality: M5
+            <span className={`text-[10px] font-mono px-2 py-0.5 rounded border ${
+              isLiveGraph 
+                ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' 
+                : 'bg-cyan-500/10 text-cyan-300 border-cyan-500/20'
+            }`}>
+              {isLiveGraph ? `LIVE NEO4J NETWORK (${graphData.nodes.length} Nodes, ${graphData.edges.length} Edges)` : 'SYNTHETIC GRAPH'}
             </span>
           </div>
           <p className="text-xs text-slate-400">
