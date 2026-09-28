@@ -4,6 +4,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
 from fastapi.responses import JSONResponse
 
+import os
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+
 from app.api.v1.router import api_v1_router
 from app.config import settings
 from app.exceptions import AppException, app_exception_handler, global_exception_handler
@@ -48,15 +52,7 @@ app.add_exception_handler(Exception, global_exception_handler)
 # Include API v1 Router
 app.include_router(api_v1_router, prefix=settings.API_V1_STR)
 
-@app.get('/', tags=['System Health'], summary='Root Endpoint')
-async def root():
-    return {
-        'system': settings.PROJECT_NAME,
-        'version': settings.VERSION,
-        'status': 'OPERATIONAL',
-        'documentation': '/docs',
-        'api_v1': settings.API_V1_STR
-    }
+
 
 @app.get('/health', tags=['System Health'], summary='Liveness Probe')
 async def health():
@@ -96,6 +92,40 @@ def custom_openapi():
     return app.openapi_schema
 
 app.openapi = custom_openapi
+
+
+# --- Serve React Frontend ---
+# Assuming member1_frontend/dist is at the root level relative to member2_backend
+FRONTEND_DIST_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "member1_frontend", "dist")
+
+if os.path.exists(FRONTEND_DIST_DIR):
+    # Mount assets so they are served quickly and with correct MIME types
+    app.mount("/assets", StaticFiles(directory=os.path.join(FRONTEND_DIST_DIR, "assets")), name="assets")
+    
+    @app.get("/{full_path:path}", include_in_schema=False)
+    async def serve_frontend(full_path: str):
+        # Prevent catching API routes if they slip through
+        if full_path.startswith(settings.API_V1_STR.strip('/')):
+            return {"error": "API route not found"}
+            
+        file_path = os.path.join(FRONTEND_DIST_DIR, full_path)
+        if full_path and os.path.isfile(file_path):
+            return FileResponse(file_path)
+            
+        index_path = os.path.join(FRONTEND_DIST_DIR, "index.html")
+        if os.path.isfile(index_path):
+            return FileResponse(index_path)
+            
+        return {"error": "Frontend build not found"}
+else:
+    @app.get('/', tags=['System Health'], summary='Root Endpoint')
+    async def root():
+        return {
+            'system': settings.PROJECT_NAME,
+            'version': settings.VERSION,
+            'status': 'OPERATIONAL (Frontend dist not found)',
+            'api_v1': settings.API_V1_STR
+        }
 
 if __name__ == '__main__':
     import uvicorn
