@@ -124,3 +124,26 @@ class IngestJobModel(Base):
     completed_at = Column(DateTime(timezone=True), nullable=True)
     error_details = Column(Text, nullable=True)
 
+class EntityModel(Base):
+    __tablename__ = 'entities'
+    id = Column(Integer, primary_key=True)
+    entity_id = Column(String, unique=True, nullable=False, index=True)
+    case_id = Column(String, ForeignKey('cases.case_id'), nullable=True, index=True)
+    entity_type = Column(String, nullable=False, index=True)
+    canonical_name = Column(String, nullable=False, index=True)
+    confidence = Column(String, default='0.95')
+    properties = Column(JSON, default=dict, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+class RelationshipModel(Base):
+    __tablename__ = 'relationships'
+    id = Column(Integer, primary_key=True)
+    relationship_id = Column(String, unique=True, nullable=False, index=True)
+    case_id = Column(String, ForeignKey('cases.case_id'), nullable=True, index=True)
+    source_id = Column(String, nullable=False, index=True)
+    target_id = Column(String, nullable=False, index=True)
+    relationship_type = Column(String, nullable=False, index=True)
+    confidence = Column(String, default='0.95')
+    properties = Column(JSON, default=dict, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+

@@ -108,8 +108,9 @@ async def execute_search(
 
     try:
         def _run_search():
-            driver = GraphDatabase.driver(uri, auth=(user, pwd), connection_timeout=3)
+            driver = GraphDatabase.driver(uri, auth=(user, pwd), connection_timeout=0.2, max_connection_lifetime=5)
             try:
+                driver.verify_connectivity()
                 with driver.session() as session:
                     return session.execute_read(_neo4j_search)
             finally:
@@ -122,29 +123,32 @@ async def execute_search(
     except Exception as e:
         print(f"[Search API] Neo4j search notice: {e}")
 
-    # Fallback to canonical case entities if Neo4j is offline or empty
-    if not items:
-        from app.services.demo_data import DEMO_ENTITIES
-        for ent in DEMO_ENTITIES:
-            if case_id and ent.get('caseId') != case_id:
-                continue
-            name = str(ent.get('canonicalName') or ent.get('name') or ent.get('fullName') or '')
-            nid = str(ent.get('id', ''))
-            lbl = ent.get('entityType', 'Entity')
-            if type_filters and not any(t in lbl.lower() for t in type_filters):
-                continue
-            if not q or (q in name.lower() or q in nid.lower()):
-                items.append(SearchResultItem(
-                    entityId=nid,
-                    entityType=lbl,
-                    name=name,
-                    snippet=f"{lbl} [{nid}]: {name}",
-                    source='member3_data_graph/datasets',
-                    caseReference=case_id,
-                    confidence=0.98,
-                    matchedFields=['name'] if q and q in name.lower() else ['index'],
-                    metadata=ent
-                ))
+    # Merge canonical case entities and imported entities from DEMO_ENTITIES
+    from app.services.demo_data import DEMO_ENTITIES
+    seen_ids = {it.entityId for it in items}
+    for ent in DEMO_ENTITIES:
+        if case_id and ent.get('caseId') != case_id:
+            continue
+        nid = str(ent.get('id', ''))
+        if nid in seen_ids:
+            continue
+        name = str(ent.get('canonicalName') or ent.get('name') or ent.get('fullName') or '')
+        lbl = ent.get('entityType', 'Entity')
+        if type_filters and not any(t in lbl.lower() for t in type_filters):
+            continue
+        if not q or (q in name.lower() or q in nid.lower()):
+            seen_ids.add(nid)
+            items.append(SearchResultItem(
+                entityId=nid,
+                entityType=lbl,
+                name=name,
+                snippet=f"{lbl} [{nid}]: {name}",
+                source=ent.get('source', 'Uploaded CSV'),
+                caseReference=case_id,
+                confidence=0.98,
+                matchedFields=['name'] if q and q in name.lower() else ['index'],
+                metadata=ent
+            ))
 
     total = len(items)
     paginated = items[search_req.offset:search_req.offset + search_req.limit]
