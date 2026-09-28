@@ -23,10 +23,17 @@ class Settings(BaseSettings):
         'http://127.0.0.1:3000',
         'http://localhost:5173',
         'http://127.0.0.1:5173',
+        'http://localhost:5174',
+        'http://127.0.0.1:5174',
+        'http://localhost:5175',
+        'http://127.0.0.1:5175',
         'http://localhost:8080'
     ]
 
-    SECRET_KEY: str = 'crimenet-ai-super-secret-jwt-key-sih-2026-replace-in-prod'
+    # Legacy local-token settings are retained only for backwards-compatible
+    # configuration parsing. Authentication is verified against Supabase JWKS.
+    # Never ship a usable signing secret in source.
+    SECRET_KEY: Optional[str] = None
     ALGORITHM: str = 'HS256'
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 480
 
@@ -37,18 +44,22 @@ class Settings(BaseSettings):
     M3_DATA_GRAPH_SERVICE_URL: str = 'http://localhost:8003'
     M3_NEO4J_URI: str = 'bolt://localhost:7687'
     M3_NEO4J_USER: str = 'neo4j'
-    M3_NEO4J_PASSWORD: str = 'password'
+    M3_NEO4J_PASSWORD: Optional[str] = None
+    NEO4J_URI: str = 'bolt://localhost:7687'
+    NEO4J_USER: str = 'neo4j'
+    NEO4J_PASSWORD: Optional[str] = None
 
     M4_AI_NLP_SERVICE_URL: str = 'http://localhost:8004'
     M5_GRAPH_ML_SERVICE_URL: str = 'http://localhost:8005'
     M6_SECURITY_SERVICE_URL: str = 'http://localhost:8006'
+    DATABASE_URL: str = 'sqlite:///./crimenet.db'
     SUPABASE_URL: Optional[str] = None
     SUPABASE_KEY: Optional[str] = None
 
-    DOWNSTREAM_FALLBACK_MODE: bool = True
+    DOWNSTREAM_FALLBACK_MODE: bool = False
 
     # Ingestion & File Storage Configuration
-    UPLOAD_DIR: str = '/app/uploads'
+    UPLOAD_DIR: str = './uploads'
     MAX_UPLOAD_SIZE_BYTES: int = 50 * 1024 * 1024  # 50 MB
     ALLOWED_EXTENSIONS: List[str] = ['.csv', '.pdf', '.png', '.jpg', '.jpeg', '.tiff']
     ALLOWED_MIME_TYPES: List[str] = [

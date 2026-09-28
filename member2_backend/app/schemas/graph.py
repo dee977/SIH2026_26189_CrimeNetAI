@@ -57,12 +57,16 @@ class ShortestPathRequest(BaseModel):
     targetNodeId: str
     maxDepth: int = Field(default=10, ge=1, le=20)
     allowedRelationshipTypes: Optional[List[str]] = None
+    caseId: Optional[str] = None
+    case_id: Optional[str] = None
 
 class MultiHopSearchRequest(BaseModel):
     startNodeId: str
     targetNodeType: str
     maxHops: int = Field(default=6, ge=1, le=10)
     filters: Optional[Dict[str, Any]] = None
+    caseId: Optional[str] = None
+    case_id: Optional[str] = None
 
 class GraphFilterRequest(BaseModel):
     entityTypes: Optional[List[str]] = None

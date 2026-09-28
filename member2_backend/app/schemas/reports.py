@@ -8,65 +8,72 @@ class ReportSectionResponse(BaseModel):
     data: Optional[Dict[str, Any]] = None
 
 class EntitySummary(BaseModel):
-    category: str
-    name: str
     id: str
-    aliases: str
-    role: str
-    details: str
-    source: str
+    category: Optional[str] = 'Person'
+    name: Optional[str] = 'Entity'
+    aliases: Optional[str] = 'None'
+    role: Optional[str] = 'Subject of Interest'
+    details: Optional[str] = 'Active network node'
+    source: Optional[str] = 'Neo4j Intelligence Graph'
+    type: Optional[str] = None
 
 class DiscrepancySource(BaseModel):
-    name: str
-    docRef: str
-    timestamp: str
-    recordedValue: str
-    excerpt: str
+    name: Optional[str] = 'Source Document'
+    docRef: Optional[str] = 'REF-01'
+    timestamp: Optional[str] = ''
+    recordedValue: Optional[str] = ''
+    excerpt: Optional[str] = ''
 
 class DiscrepancySummary(BaseModel):
     id: str
-    status: str
-    title: str
-    conflictingField: str
-    sourceA: DiscrepancySource
-    sourceB: DiscrepancySource
-    assessment: str
+    status: Optional[str] = 'DATA DISCREPANCY DETECTED'
+    title: Optional[str] = 'Evidentiary Contradiction'
+    conflictingField: Optional[str] = 'Discrepancy Parameter'
+    sourceA: Optional[DiscrepancySource] = None
+    sourceB: Optional[DiscrepancySource] = None
+    assessment: Optional[str] = ''
     actions: Optional[str] = None
+    description: Optional[str] = None
 
 class EvidenceSummary(BaseModel):
     id: str
-    name: str
-    type: str
-    category: str
-    size: str
-    custodian: str
-    bsaCert: str
-    status: str
-    resultText: str
-    genesisHash: str
-    currentHash: str
+    name: Optional[str] = 'Evidence Item'
+    title: Optional[str] = None
+    type: Optional[str] = 'Document'
+    category: Optional[str] = 'Forensic Seizure'
+    size: Optional[str] = 'N/A'
+    custodian: Optional[str] = 'Central Evidence Vault'
+    bsaCert: Optional[str] = 'BSA-63'
+    status: Optional[str] = 'VALID'
+    resultText: Optional[str] = 'Integrity Verified'
+    genesisHash: Optional[str] = ''
+    currentHash: Optional[str] = ''
+    hash: Optional[str] = None
     history: List[str] = Field(default_factory=list)
     evidentiaryInfo: List[str] = Field(default_factory=list)
 
 class PathHop(BaseModel):
-    hop: str
-    origin: str
-    originSub: str
-    rel: str
-    relSub: str
-    dest: str
-    destSub: str
-    audit: str
+    hop: Optional[str] = ''
+    origin: Optional[str] = ''
+    originSub: Optional[str] = ''
+    rel: Optional[str] = ''
+    relSub: Optional[str] = ''
+    dest: Optional[str] = ''
+    destSub: Optional[str] = ''
+    audit: Optional[str] = ''
+    source: Optional[str] = None
+    target: Optional[str] = None
+    relation: Optional[str] = None
 
 class AttestationSummary(BaseModel):
-    standard: str
-    certText: str
-    investigatingOfficer: str
-    officerBadge: str
-    officerUnit: str
-    attestingAuthority: str
-    authorityUnit: str
-    digitalSeal: str
+    standard: Optional[str] = 'BSA Section 63'
+    certText: Optional[str] = ''
+    investigatingOfficer: Optional[str] = ''
+    officerBadge: Optional[str] = 'LEO-7729'
+    officerUnit: Optional[str] = 'Special Crime Branch'
+    attestingAuthority: Optional[str] = 'State Cyber Police'
+    authorityUnit: Optional[str] = 'Forensic Laboratory'
+    digitalSeal: Optional[str] = 'SHA-256 SEAL'
 
 class ReportDossierData(BaseModel):
     caseReference: str

@@ -6,6 +6,7 @@ export type AppView =
   | 'login'
   | 'register'
   | 'forgot-password'
+  | 'reset-password'
   | 'dashboard'
   | 'search'
   | 'cases'
@@ -37,7 +38,7 @@ interface NavigationState {
   
   // Actions
   setView: (view: AppView) => void;
-  selectEntity: (entityId: string) => void;
+  selectEntity: (entityId: string | null) => void;
   selectCase: (caseId: string) => void;
   selectEvidence: (evidenceId: string) => void;
   setGlobalSearchQuery: (query: string) => void;
@@ -46,15 +47,18 @@ interface NavigationState {
 
 export const useNavigationStore = create<NavigationState>((set) => ({
   currentView: 'dashboard',
-  selectedEntityId: 'ENT-PERS-001', // defaults to Vikram Malhotra
-  selectedCaseId: 'CASE-2024-MH-092', // Operation Blue Tide
-  selectedEvidenceId: 'EVD-2024-0812',
+  selectedEntityId: null,
+  selectedCaseId: null,
+  selectedEvidenceId: null,
   globalSearchQuery: '',
-  isBackendConnected: false, // Default to synthetic fallback for instant demo stability
+  isBackendConnected: true,
 
   setView: (view) => set({ currentView: view }),
-  selectEntity: (entityId) => set({ selectedEntityId: entityId, currentView: 'entity' }),
-  selectCase: (caseId) => set({ selectedCaseId: caseId, currentView: 'case-workspace' }),
+  selectEntity: (entityId) => set((state) => ({ 
+    selectedEntityId: entityId, 
+    currentView: entityId ? 'entity' : state.currentView 
+  })),
+  selectCase: (caseId) => set({ selectedCaseId: caseId, currentView: 'case-workspace', selectedEntityId: null }),
   selectEvidence: (evidenceId) => set({ selectedEvidenceId: evidenceId, currentView: 'evidence' }),
   setGlobalSearchQuery: (query) => set({ globalSearchQuery: query, currentView: 'search' }),
   toggleBackendConnection: () => set(state => ({ isBackendConnected: !state.isBackendConnected }))

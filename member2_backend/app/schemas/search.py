@@ -10,9 +10,9 @@ class SearchFilterParams(BaseModel):
     caseId: Optional[str] = Field(default=None, description='Case context filter')
 
 class UniversalSearchRequest(BaseModel):
-    query: str = Field(..., min_length=1, description='Search keyword, identifier, name, phone, account, vehicle, etc.')
+    query: str = Field(default='', description='Search keyword, identifier, name, phone, account, vehicle, etc.')
     filters: Optional[SearchFilterParams] = Field(default_factory=SearchFilterParams)
-    limit: int = Field(default=20, ge=1, le=100)
+    limit: int = Field(default=50, ge=1, le=100)
     offset: int = Field(default=0, ge=0)
 
 class SearchResultItem(BaseModel):

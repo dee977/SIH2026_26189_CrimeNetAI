@@ -23,7 +23,7 @@ export const AuthorityDashboardView: React.FC = () => {
   const { addToast } = useNotificationStore();
 
   const [selectedOfficerId, setSelectedOfficerId] = useState<string>(pendingOfficers[0]?.id || '');
-  const [assignedRole, setAssignedRole] = useState<UserRole>('Investigator');
+  const [assignedRole, setAssignedRole] = useState<UserRole>('INVESTIGATOR');
   const [selectedPermissions, setSelectedPermissions] = useState<string[]>([
     'cases', 'graph', 'evidence', 'timeline', 'ai', 'search'
   ]);
@@ -81,16 +81,16 @@ export const AuthorityDashboardView: React.FC = () => {
             M6 Hierarchical RBAC Gatekeeper
           </span>
         </div>
-        <h1 className="text-xl font-bold text-slate-100 mt-1">
+        <h1 className="text-xl font-bold text-[var(--text-primary)] mt-1">
           Pending Officer Enrolment & Role Grants
         </h1>
-        <p className="text-xs text-slate-400 mt-0.5">
+        <p className="text-xs text-[var(--text-secondary)] mt-0.5">
           Senior Authorities inspect applicant police unit affiliations, assign actual granted roles, and grant fine-grained permissions.
         </p>
       </div>
 
       {/* Mandatory M6 Disclosure Banner */}
-      <div className="p-4 rounded-xl bg-slate-900 border border-amber-500/30 flex items-center justify-between text-xs font-mono">
+      <div className="p-4 rounded-xl bg-[var(--bg-card)] border border-amber-500/30 flex items-center justify-between text-xs font-mono">
         <div className="flex items-center gap-2 text-amber-300">
           <AlertTriangle className="w-4 h-4 shrink-0" />
           <span>M6 RBAC Enforcement: Requested Role ≠ Granted Role ≠ Actual Permissions</span>
@@ -103,7 +103,7 @@ export const AuthorityDashboardView: React.FC = () => {
         
         {/* Left: Pending Requests Queue (1 Col) */}
         <div className="space-y-3">
-          <div className="text-[11px] font-mono uppercase tracking-wider text-slate-400 font-semibold">
+          <div className="text-[11px] font-mono uppercase tracking-wider text-[var(--text-secondary)] font-semibold">
             Enrolment Queue ({pendingOfficers.length})
           </div>
 
@@ -118,12 +118,12 @@ export const AuthorityDashboardView: React.FC = () => {
                 }}
                 className={`p-4 rounded-xl border cursor-pointer transition-all ${
                   isSelected
-                    ? 'glass-panel bg-slate-900/90 border-cyan-500/50 shadow-md'
-                    : 'glass-card bg-slate-950/60 border-slate-800 hover:border-slate-700'
+                    ? 'bg-[var(--bg-card)] shadow-sm border border-[var(--border)] rounded-2xl bg-[var(--bg-card)] border-[var(--primary)] shadow-md'
+                    : 'bg-[var(--bg-card)] shadow-sm border border-[var(--border)] rounded-xl bg-[var(--bg-card)] border-[var(--border)] hover:border-[var(--border)]'
                 }`}
               >
                 <div className="flex items-center justify-between text-xs mb-1.5">
-                  <span className="font-mono text-cyan-400 font-bold">{officer.officerId}</span>
+                  <span className="font-mono text-[var(--primary)] font-bold">{officer.officerId}</span>
                   <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded ${
                     officer.status === 'APPROVED' 
                       ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
@@ -134,8 +134,8 @@ export const AuthorityDashboardView: React.FC = () => {
                     {officer.status}
                   </span>
                 </div>
-                <h4 className="text-xs font-bold text-slate-200">{officer.name}</h4>
-                <div className="text-[11px] text-slate-400 mt-0.5 truncate">{officer.organization}</div>
+                <h4 className="text-xs font-bold text-[var(--text-primary)]">{officer.name}</h4>
+                <div className="text-[11px] text-[var(--text-secondary)] mt-0.5 truncate">{officer.organization}</div>
                 <div className="text-[10px] font-mono text-slate-500 mt-2">
                   Requested: <span className="text-amber-400">{officer.requestedRole}</span>
                 </div>
@@ -146,20 +146,20 @@ export const AuthorityDashboardView: React.FC = () => {
 
         {/* Right: Review Officer Details & Assign Permissions (2 Cols) */}
         {activeOfficer && (
-          <div className="lg:col-span-2 glass-panel rounded-2xl p-6 border-slate-800 space-y-6">
+          <div className="lg:col-span-2 bg-[var(--bg-card)] shadow-sm border border-[var(--border)] rounded-2xl rounded-2xl p-6 border-[var(--border)] space-y-6">
             
             {/* Officer Details */}
-            <div className="border-b border-slate-800 pb-4">
+            <div className="border-b border-[var(--border)] pb-4">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-mono font-bold text-cyan-400 bg-cyan-950 px-2 py-0.5 rounded border border-cyan-800">
+                <span className="text-xs font-mono font-bold text-[var(--primary)] bg-cyan-950 px-2 py-0.5 rounded border border-cyan-800">
                   Officer Badge ID: {activeOfficer.officerId}
                 </span>
-                <span className="text-xs font-mono text-slate-400">
+                <span className="text-xs font-mono text-[var(--text-secondary)]">
                   Enrolled: {activeOfficer.createdAt}
                 </span>
               </div>
-              <h2 className="text-lg font-bold text-slate-100">{activeOfficer.name}</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs font-mono text-slate-400 mt-3">
+              <h2 className="text-lg font-bold text-[var(--text-primary)]">{activeOfficer.name}</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs font-mono text-[var(--text-secondary)] mt-3">
                 <div className="flex items-center gap-1.5"><Mail className="w-3.5 h-3.5 text-slate-500" /> {activeOfficer.email}</div>
                 <div className="flex items-center gap-1.5"><Phone className="w-3.5 h-3.5 text-slate-500" /> {activeOfficer.phone}</div>
                 <div className="flex items-center gap-1.5"><Building className="w-3.5 h-3.5 text-slate-500" /> {activeOfficer.organization}</div>
@@ -168,18 +168,18 @@ export const AuthorityDashboardView: React.FC = () => {
 
             {/* Role Grant Decision */}
             <div className="space-y-2">
-              <label className="block text-xs font-mono uppercase tracking-wider text-slate-300 font-semibold">
+              <label className="block text-xs font-mono uppercase tracking-wider text-[var(--text-secondary)] font-semibold">
                 Designate Granted Role (Senior Authority Prerogative)
               </label>
               <select
                 value={assignedRole}
                 onChange={(e) => setAssignedRole(e.target.value as UserRole)}
-                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-cyan-500 font-semibold cursor-pointer"
+                className="w-full bg-[var(--bg-card)] border border-[var(--border)] rounded-xl px-3 py-2 text-xs text-[var(--text-primary)] focus:outline-none focus:border-[var(--primary)] font-semibold cursor-pointer"
               >
-                <option value="Senior Investigator">Senior Investigator (Lead Case Officer)</option>
-                <option value="Investigator">Investigator (Field Inquiries)</option>
-                <option value="Analyst / Viewer">Analyst / Viewer (Read-only Graph)</option>
-                <option value="Senior Authority">Senior Authority (Approval Station)</option>
+                <option value="ADMIN">ADMIN</option>
+                <option value="INVESTIGATOR">INVESTIGATOR</option>
+                <option value="ANALYST">ANALYST</option>
+                <option value="AUDITOR">AUDITOR</option>
                 <option value="System Administrator">System Administrator (Master Control)</option>
               </select>
               <p className="text-[10px] text-slate-500 italic">
@@ -189,7 +189,7 @@ export const AuthorityDashboardView: React.FC = () => {
 
             {/* Fine-Grained Permissions Toggle Matrix */}
             <div className="space-y-2">
-              <label className="block text-xs font-mono uppercase tracking-wider text-slate-300 font-semibold">
+              <label className="block text-xs font-mono uppercase tracking-wider text-[var(--text-secondary)] font-semibold">
                 Cryptographic Module Permissions Matrix
               </label>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
@@ -201,13 +201,13 @@ export const AuthorityDashboardView: React.FC = () => {
                       onClick={() => togglePermission(perm.id)}
                       className={`p-2.5 rounded-lg border cursor-pointer flex items-center justify-between transition-colors ${
                         isChecked 
-                          ? 'bg-cyan-500/10 border-cyan-500/40 text-cyan-200' 
-                          : 'bg-slate-900/60 border-slate-800 text-slate-500'
+                          ? 'bg-[var(--surface-cyan)] border-[var(--primary)] text-cyan-200' 
+                          : 'bg-[var(--bg-card)] border-[var(--border)] text-slate-500'
                       }`}
                     >
                       <span className="font-medium">{perm.label}</span>
                       <span className={`w-4 h-4 rounded flex items-center justify-center text-[10px] font-bold ${
-                        isChecked ? 'bg-cyan-500 text-slate-950' : 'border border-slate-700'
+                        isChecked ? 'bg-[var(--primary)] text-white text-slate-950' : 'border border-[var(--border)]'
                       }`}>
                         {isChecked ? '✓' : ''}
                       </span>
@@ -218,17 +218,17 @@ export const AuthorityDashboardView: React.FC = () => {
             </div>
 
             {/* Decision Actions */}
-            <div className="pt-4 border-t border-slate-800 flex flex-wrap items-center justify-between gap-3">
+            <div className="pt-4 border-t border-[var(--border)] flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => suspendOfficer(activeOfficer.id)}
-                  className="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-amber-400 border border-slate-700 text-xs font-medium transition-colors"
+                  className="px-3 py-1.5 rounded-lg bg-[var(--bg-card)] hover:bg-slate-50 text-amber-400 border border-[var(--border)] text-xs font-medium transition-colors"
                 >
                   Suspend Badge
                 </button>
                 <button
                   onClick={() => reactivateOfficer(activeOfficer.id)}
-                  className="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-emerald-400 border border-slate-700 text-xs font-medium transition-colors"
+                  className="px-3 py-1.5 rounded-lg bg-[var(--bg-card)] hover:bg-slate-50 text-emerald-400 border border-[var(--border)] text-xs font-medium transition-colors"
                 >
                   Reactivate
                 </button>
@@ -243,7 +243,7 @@ export const AuthorityDashboardView: React.FC = () => {
                 </button>
                 <button
                   onClick={() => handleApprove(activeOfficer)}
-                  className="px-5 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs uppercase tracking-wider transition-colors shadow"
+                  className="px-5 py-2 rounded-xl bg-[var(--primary)] text-white hover:bg-cyan-400 text-slate-950 font-bold text-xs uppercase tracking-wider transition-colors shadow"
                 >
                   Grant Authorization & Key
                 </button>

@@ -14,14 +14,14 @@ export const ToastContainer: React.FC = () => {
           success: <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />,
           error: <AlertCircle className="w-5 h-5 text-red-400 shrink-0" />,
           warning: <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0" />,
-          info: <Info className="w-5 h-5 text-cyan-400 shrink-0" />
+          info: <Info className="w-5 h-5 text-[var(--primary)] shrink-0" />
         };
 
         const borders = {
-          success: 'border-emerald-500/30 bg-slate-900/95',
-          error: 'border-red-500/30 bg-slate-900/95',
-          warning: 'border-amber-500/30 bg-slate-900/95',
-          info: 'border-cyan-500/30 bg-slate-900/95'
+          success: 'border-emerald-500/30 bg-[var(--bg-card)]',
+          error: 'border-red-500/30 bg-[var(--bg-card)]',
+          warning: 'border-amber-500/30 bg-[var(--bg-card)]',
+          info: 'border-[var(--primary)] bg-[var(--bg-card)]'
         };
 
         return (
@@ -31,12 +31,12 @@ export const ToastContainer: React.FC = () => {
           >
             {icons[toast.type]}
             <div className="flex-1 min-w-0">
-              <h5 className="text-xs font-semibold text-slate-100">{toast.title}</h5>
-              <p className="text-[11px] text-slate-400 mt-0.5 leading-snug">{toast.message}</p>
+              <h5 className="text-xs font-semibold text-[var(--text-primary)]">{toast.title}</h5>
+              <p className="text-[11px] text-[var(--text-secondary)] mt-0.5 leading-snug">{toast.message}</p>
             </div>
             <button
               onClick={() => removeToast(toast.id)}
-              className="text-slate-500 hover:text-slate-300 transition-colors p-0.5"
+              className="text-slate-500 hover:text-[var(--text-secondary)] transition-colors p-0.5"
             >
               <X className="w-4 h-4" />
             </button>

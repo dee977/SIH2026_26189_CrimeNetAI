@@ -3,45 +3,77 @@ from fastapi import Depends, Header, HTTPException, status
 from app.exceptions import AuthenticationError, AuthorizationError
 from app.schemas.auth import UserProfile
 from app.services.m6_security_evidence import M6SecurityClient, get_m6_client
+from app.database import get_db
+from app.models import CaseMembershipModel
 
 async def get_current_user(
     authorization: Optional[str] = Header(None, description='Bearer JWT token'),
-    m6_client: M6SecurityClient = Depends(get_m6_client)
+    m6_client: M6SecurityClient = Depends(get_m6_client),
+    db = Depends(get_db)
 ) -> UserProfile:
     if not authorization:
-        return UserProfile(
-            userId='usr_investigator_001',
-            email='rajesh.kumar@cid.gov.in',
-            fullName='Inspector Rajesh Kumar',
-            badgeNumber='CID-MH-4421',
-            agencyUnit='State Cyber Crime and Narcotics Branch',
-            role='lead_investigator',
-            permissions=[
-                'case:read', 'case:write', 'case:delete',
-                'entity:read', 'entity:write',
-                'graph:read', 'graph:analyze',
-                'search:execute',
-                'timeline:read',
-                'ingest:upload', 'ingest:process',
-                'ai:query',
-                'alert:read', 'alert:manage',
-                'watchlist:read', 'watchlist:manage',
-                'report:generate', 'report:read',
-                'audit:read',
-                'cases', 'graph', 'evidence', 'timeline', 'ai', 'export', 'alerts', 'gis', 'search'
-            ],
-            isActive=True
-        )
-
+        raise AuthenticationError('Missing authorization token')
+        
     token = authorization.replace('Bearer ', '').strip()
     user = await m6_client.verify_token(token)
     if not user:
         raise AuthenticationError('Invalid or expired authorization token')
+        
+    # BACKEND RBAC SOURCE OF TRUTH
+    from app.models import UserProfileModel
+    
+    db_profile = db.query(UserProfileModel).filter(UserProfileModel.email.ilike(user.email)).first()
+    if not db_profile or not db_profile.is_active:
+        # A valid Supabase session alone is not authorization for this system.
+        raise AuthorizationError('Account is not provisioned or is inactive')
+    user.grantedRole = db_profile.role.upper()
+
+        
+    # Map strict permissions based on the DB role
+    # Admin -> Full, Investigator -> Investigation workflow, Analyst -> Analytics, Auditor -> Read-only
+    role_perms = {
+        'ADMIN': [
+            'dashboard:read', 'case:read', 'case:write', 'graph:read', 'analytics:read', 'timeline:read',
+            'evidence:read', 'evidence:write', 'ingest:upload', 'report:generate', 'alert:read', 'alert:manage',
+            'watchlist:read', 'watchlist:manage', 'gis:read', 'ai:read', 'admin:read', 'admin:write', 'audit:read',
+            'verification:read'
+        ],
+        'INVESTIGATOR': [
+            'dashboard:read', 'case:read', 'case:write', 'graph:read', 'analytics:read', 'timeline:read',
+            'evidence:read', 'evidence:write', 'ingest:upload', 'report:generate', 'alert:read', 'alert:manage',
+            'watchlist:read', 'watchlist:manage', 'gis:read', 'ai:read', 'verification:read'
+        ],
+        'ANALYST': [
+            'dashboard:read', 'case:read', 'graph:read', 'analytics:read', 'timeline:read', 'evidence:read',
+            'report:generate', 'watchlist:read', 'gis:read', 'ai:read'
+        ],
+        'AUDITOR': [
+            'dashboard:read', 'case:read', 'graph:read', 'analytics:read', 'timeline:read', 'evidence:read',
+            'report:generate', 'alert:read', 'audit:read', 'verification:read'
+        ]
+    }
+    
+    user.permissions = role_perms.get(user.grantedRole, [])
+    
     return user
 
 def require_permission(permission: str) -> Callable:
     async def permission_dependency(current_user: UserProfile = Depends(get_current_user)) -> UserProfile:
-        if permission not in current_user.permissions and 'super_admin' not in current_user.role:
+        # ADMIN inherits all permissions dynamically or we explicitly check
+        if current_user.grantedRole == 'ADMIN':
+            return current_user
+        if permission not in current_user.permissions:
             raise AuthorizationError(f'Action requires permission: \'{permission}\'')
         return current_user
     return permission_dependency
+
+def assert_case_access(db, user: UserProfile, case_id: str) -> None:
+    """Authorize a selected case against the durable case-membership ACL."""
+    if user.grantedRole == 'ADMIN':
+        return
+    membership = db.query(CaseMembershipModel).filter(
+        CaseMembershipModel.case_id == case_id,
+        CaseMembershipModel.user_email.ilike(user.email),
+    ).first()
+    if not membership:
+        raise AuthorizationError('You do not have access to this case')

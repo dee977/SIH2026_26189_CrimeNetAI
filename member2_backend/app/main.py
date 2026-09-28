@@ -12,6 +12,11 @@ from app.exceptions import AppException, app_exception_handler, global_exception
 async def lifespan(app: FastAPI):
     # Startup: Initialize service connectors, background job configurations
     print(f'Starting {settings.PROJECT_NAME} v{settings.VERSION} [{settings.ENVIRONMENT}]')
+    # Development SQLite installations may not run Alembic; creating declared
+    # tables is idempotent and keeps the ACL available after a restart.
+    from app.database import Base, engine
+    import app.models  # register models before metadata creation
+    Base.metadata.create_all(bind=engine)
     yield
     # Shutdown: Clean up connections
     print(f'Shutting down {settings.PROJECT_NAME}')
@@ -30,6 +35,7 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS,
+    allow_origin_regex=r"^https?://(localhost|127\.0\.0\.1)(:\d+)?$",
     allow_credentials=True,
     allow_methods=['*'],
     allow_headers=['*'],

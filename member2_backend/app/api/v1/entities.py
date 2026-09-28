@@ -1,6 +1,6 @@
 from typing import Any, Dict, List, Optional
-from fastapi import APIRouter, Depends, Query
-from app.dependencies import get_current_user
+from fastapi import APIRouter, Depends, Query, HTTPException
+from app.dependencies import get_current_user, require_permission
 from app.exceptions import ResourceNotFoundError
 from app.schemas.auth import UserProfile
 from app.schemas.common import ResponseEnvelope, PaginatedResponse, PaginationMeta
@@ -11,7 +11,7 @@ from app.schemas.entities import (
 )
 from app.services.m3_graph_data import M3GraphDataClient, get_m3_client
 
-router = APIRouter(prefix='/entities', tags=['Normalized Entities'])
+router = APIRouter(prefix='/entities', tags=['Normalized Entities'], dependencies=[Depends(require_permission('graph:read'))])
 
 def _safe_person(r: dict) -> PersonEntity:
     c = dict(r)
@@ -99,11 +99,14 @@ def _safe_evidence(r: dict) -> EvidenceEntity:
 async def get_all_entities(
     type: Optional[str] = Query(None),
     query: Optional[str] = Query(None),
+    case_id: Optional[str] = Query(None),
     page: int = Query(1, ge=1),
     pageSize: int = Query(50, ge=1, le=500),
     m3_client: M3GraphDataClient = Depends(get_m3_client)
 ):
-    raw = await m3_client.query_entities(entity_type=type, query=query, limit=pageSize)
+    if not case_id:
+        raise HTTPException(status_code=400, detail='case_id is required')
+    raw = await m3_client.query_entities(entity_type=type, query=query, case_id=case_id, limit=pageSize)
     items = []
     for r in raw:
         lbl = r.get('entityType', 'Person')
@@ -201,8 +204,9 @@ async def get_evidence(query: Optional[str] = None, page: int = 1, pageSize: int
     return PaginatedResponse(items=items, pagination=PaginationMeta(page=page, pageSize=pageSize, totalRecords=len(items), totalPages=1))
 
 @router.get('/{id}', response_model=ResponseEnvelope[dict], summary='Get Normalized Entity by ID')
-async def get_entity_by_id(id: str, m3_client: M3GraphDataClient = Depends(get_m3_client)):
-    ent = await m3_client.get_node_by_id(id)
+async def get_entity_by_id(id: str, case_id: Optional[str] = Query(None), m3_client: M3GraphDataClient = Depends(get_m3_client)):
+    target_case = case_id or 'CASE-2024-001'
+    ent = await m3_client.get_node_by_id(id, target_case)
     if not ent:
         raise ResourceNotFoundError('Entity', id)
     return ResponseEnvelope(data=ent)

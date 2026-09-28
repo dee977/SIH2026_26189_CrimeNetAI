@@ -1,37 +1,38 @@
 /**
  * CrimeNet AI API Client
- * 
- * Consumes REST APIs provided by M2 (Backend), M5 (Graph Analytics), M6 (Auth/Evidence).
- * Follows Absolute Ownership Rule: Consumes services, does not implement backend.
- * Provides resilient fallback to verified synthetic/demo data if backend services are offline.
  */
+import { supabase } from './supabaseClient';
+import { useAuthStore } from '../store/authStore';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1';
 
 export interface ApiResponse<T> {
   success: boolean;
   data: T;
-  source: 'LIVE_BACKEND' | 'SYNTHETIC_FALLBACK';
   message?: string;
   error?: string;
 }
 
 export async function apiRequest<T>(
   endpoint: string,
-  options: RequestInit = {},
-  fallbackData?: T
+  options: RequestInit = {}
 ): Promise<ApiResponse<T>> {
-  const token = localStorage.getItem('crimenet_auth_token');
+  const { data: { session } } = await supabase.auth.getSession();
+  const token = session?.access_token;
+
+  // We are not adding 'Content-Type' if it's FormData, fetch handles it automatically.
+  // Wait, the previous code hardcoded Content-Type application/json. I should keep that but allow overriding or deleting if FormData.
+  const isFormData = options.body instanceof FormData;
 
   const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
+    ...(!isFormData ? { 'Content-Type': 'application/json' } : {}),
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...(options.headers as Record<string, string> || {})
   };
 
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout for graph/cypher queries
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
 
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       ...options,
@@ -42,6 +43,18 @@ export async function apiRequest<T>(
     clearTimeout(timeoutId);
 
     if (!response.ok) {
+      if (response.status === 401) {
+        useAuthStore.getState().logout();
+        throw new Error('Unauthorized');
+      } else if (response.status === 403) {
+        throw new Error('Permission denied');
+      } else if (response.status === 404) {
+        throw new Error('Not found');
+      } else if (response.status === 422) {
+        throw new Error('Validation error');
+      } else if (response.status >= 500) {
+        throw new Error('Server error');
+      }
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
@@ -52,26 +65,46 @@ export async function apiRequest<T>(
 
     return {
       success: true,
-      data,
-      source: 'LIVE_BACKEND'
+      data
     };
   } catch (err: any) {
-    // If backend is unreachable (M2 server offline), gracefully use fallback demo data
-    if (fallbackData !== undefined) {
-      console.warn(`[CrimeNet API] Backend unavailable at ${endpoint}. Using synthetic demo data.`);
-      return {
-        success: true,
-        data: fallbackData,
-        source: 'SYNTHETIC_FALLBACK',
-        message: 'Live backend offline. Demonstrating with verified synthetic dataset.'
-      };
-    }
-
     return {
       success: false,
       data: null as any,
-      source: 'LIVE_BACKEND',
       error: err.message || 'Network request failed'
     };
   }
 }
+
+export const apiClient = {
+  get: <T = any>(endpoint: string, options?: { params?: Record<string, any>; headers?: Record<string, string>; responseType?: string }) => {
+    let url = endpoint;
+    if (options?.params) {
+      const searchParams = new URLSearchParams();
+      Object.entries(options.params).forEach(([k, v]) => {
+        if (v !== undefined && v !== null) searchParams.append(k, String(v));
+      });
+      const qs = searchParams.toString();
+      if (qs) url += (url.includes('?') ? '&' : '?') + qs;
+    }
+    return apiRequest<T>(url, { method: 'GET', headers: options?.headers });
+  },
+  post: <T = any>(endpoint: string, body?: any, options?: { headers?: Record<string, string> }) => {
+    const isFormData = body instanceof FormData;
+    return apiRequest<T>(endpoint, {
+      method: 'POST',
+      headers: options?.headers,
+      body: isFormData ? body : (body !== undefined ? JSON.stringify(body) : undefined)
+    });
+  },
+  delete: <T = any>(endpoint: string, options?: { headers?: Record<string, string> }) => {
+    return apiRequest<T>(endpoint, { method: 'DELETE', headers: options?.headers });
+  },
+  put: <T = any>(endpoint: string, body?: any, options?: { headers?: Record<string, string> }) => {
+    return apiRequest<T>(endpoint, {
+      method: 'PUT',
+      headers: options?.headers,
+      body: JSON.stringify(body)
+    });
+  }
+};

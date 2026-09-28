@@ -26,7 +26,7 @@ interface ChatMessage {
 }
 
 export const AIAssistantView: React.FC = () => {
-  const { selectEntity, selectEvidence, setView } = useNavigationStore();
+  const { selectedCaseId, selectEntity, selectEvidence, setView } = useNavigationStore();
 
   const [inputQuery, setInputQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -35,19 +35,7 @@ export const AIAssistantView: React.FC = () => {
       id: 'msg-0',
       sender: 'assistant',
       timestamp: '10:00 AM',
-      text: 'CrimeNet AI Investigator Assistant online. I provide evidence-grounded responses corroborated by CCTNS FIR filings, telecom CDR carrier dumps, and certified banking ledgers. Inquiries unsupported by recorded evidence will be explicitly flagged.'
-    },
-    {
-      id: 'msg-1',
-      sender: 'investigator',
-      timestamp: '10:01 AM',
-      text: 'How is Vikram Malhotra connected to BlueSea Logistics and FIR-2024-8841?'
-    },
-    {
-      id: 'msg-2',
-      sender: 'assistant',
-      timestamp: '10:01 AM',
-      data: SYNTHETIC_AI_KNOWLEDGE_BASE[0]
+      text: 'CrimeNet AI Investigator Assistant online. I provide evidence-grounded responses corroborated by CCTNS FIR filings, telecom CDR carrier dumps, SHA-256 authenticated digital evidence, and certified banking ledgers under BSA Section 63/65B and BNS. Ask any question regarding entities, transactions, or evidence.'
     }
   ]);
 
@@ -67,7 +55,7 @@ export const AIAssistantView: React.FC = () => {
     setIsLoading(true);
 
     try {
-      const response = await askGroundedAssistant(q);
+      const response = await askGroundedAssistant(q, selectedCaseId || undefined);
       const assistantMsg: ChatMessage = {
         id: `msg-${Date.now()}-a`,
         sender: 'assistant',
@@ -75,16 +63,25 @@ export const AIAssistantView: React.FC = () => {
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       };
       setMessages(prev => [...prev, assistantMsg]);
+    } catch (err: any) {
+      const errMsg: ChatMessage = {
+        id: `msg-${Date.now()}-err`,
+        sender: 'assistant',
+        text: `⚠️ Query completed with note: ${err?.message || 'Knowledge base consultation encountered an issue'}. Please ensure backend services are active.`,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      };
+      setMessages(prev => [...prev, errMsg]);
     } finally {
       setIsLoading(false);
     }
   };
 
   const samplePrompts = [
-    'How is Vikram Malhotra connected to BlueSea Logistics and FIR-2024-8841?',
-    'Who is Person_00001 (P00001) and what activities are recorded in the central graph?',
-    'What data discrepancies exist regarding Vikram Malhotra?',
-    'Is there any evidence linking Vikram to offshore cryptocurrency wallets? (Test Unsupported)'
+    'Who are the primary suspects and high-risk entities in this case?',
+    'What financial transactions and suspicious fund flows are detected?',
+    'List all telecom CDR records and communication intercepts.',
+    'What digital evidence is logged with SHA-256 cryptographic verification?',
+    'Provide an executive case summary with statutory legal grounds (BNS/PMLA).'
   ];
 
   return (
@@ -93,17 +90,17 @@ export const AIAssistantView: React.FC = () => {
       {/* Title */}
       <div>
         <div className="flex items-center gap-2">
-          <span className="text-xs font-mono uppercase tracking-wider text-cyan-400 font-semibold">
+          <span className="text-xs font-mono uppercase tracking-wider text-[var(--primary)] font-semibold">
             M4 Natural Language & Entity Grounding
           </span>
-          <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-950 text-cyan-400 border border-cyan-800">
+          <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-950 text-[var(--primary)] border border-cyan-800">
             Zero-Hallucination Evidence RAG
           </span>
         </div>
-        <h1 className="text-xl font-bold text-slate-100 mt-1">
+        <h1 className="text-xl font-bold text-[var(--text-primary)] mt-1">
           Grounded AI Investigator Assistant
         </h1>
-        <p className="text-xs text-slate-400 mt-0.5">
+        <p className="text-xs text-[var(--text-secondary)] mt-0.5">
           Ask questions regarding entities, timeline sequences, and hidden links. Every assertion is transparently supported by source documents and SHA-256 verified evidence.
         </p>
       </div>
@@ -115,7 +112,7 @@ export const AIAssistantView: React.FC = () => {
           <button
             key={idx}
             onClick={() => handleSend(p)}
-            className="px-3 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-xs text-cyan-300 transition-colors text-left"
+            className="px-3 py-1 rounded-lg bg-[var(--bg-card)] hover:bg-slate-50 border border-[var(--border)] text-xs text-cyan-300 transition-colors text-left"
           >
             "{p.length > 50 ? p.slice(0, 48) + '...' : p}"
           </button>
@@ -123,15 +120,15 @@ export const AIAssistantView: React.FC = () => {
       </div>
 
       {/* Chat Messages Feed */}
-      <div className="glass-panel rounded-2xl p-6 border-slate-800 space-y-6 min-h-[460px]">
+      <div className="bg-[var(--bg-card)] shadow-sm border border-[var(--border)] rounded-2xl rounded-2xl p-6 border-[var(--border)] space-y-6 min-h-[460px]">
         {messages.map(msg => (
           <div key={msg.id} className="space-y-3">
             
             {/* Investigator Message */}
             {msg.sender === 'investigator' && (
               <div className="flex justify-end">
-                <div className="max-w-xl p-3.5 rounded-2xl bg-cyan-500/15 border border-cyan-500/30 text-slate-100 text-xs shadow-md">
-                  <div className="text-[10px] font-mono text-cyan-400 mb-1 flex items-center justify-between">
+                <div className="max-w-xl p-3.5 rounded-2xl bg-[var(--primary)] text-white border border-[var(--primary)] text-[var(--text-primary)] text-xs shadow-md">
+                  <div className="text-[10px] font-mono text-[var(--primary)] mb-1 flex items-center justify-between">
                     <span>Officer Inquiry</span>
                     <span>{msg.timestamp}</span>
                   </div>
@@ -143,10 +140,10 @@ export const AIAssistantView: React.FC = () => {
             {/* Assistant Simple Greeting */}
             {msg.sender === 'assistant' && msg.text && (
               <div className="flex items-start gap-3 max-w-2xl">
-                <div className="w-8 h-8 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 shrink-0 mt-0.5">
+                <div className="w-8 h-8 rounded-xl bg-[var(--surface-cyan)] border border-[var(--primary)] flex items-center justify-center text-[var(--primary)] shrink-0 mt-0.5">
                   <Bot className="w-4 h-4" />
                 </div>
-                <div className="p-3.5 rounded-2xl bg-slate-900 border border-slate-800 text-xs text-slate-300 leading-relaxed shadow-sm">
+                <div className="p-3.5 rounded-2xl bg-[var(--bg-card)] border border-[var(--border)] text-xs text-[var(--text-secondary)] leading-relaxed shadow-sm">
                   <div className="text-[10px] font-mono text-slate-500 mb-1 flex items-center justify-between">
                     <span>CrimeNet AI Knowledge Daemon</span>
                     <span>{msg.timestamp}</span>
@@ -159,7 +156,7 @@ export const AIAssistantView: React.FC = () => {
             {/* Structured Grounded AI Response Card */}
             {msg.sender === 'assistant' && msg.data && (
               <div className="flex items-start gap-3 max-w-3xl">
-                <div className="w-8 h-8 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 shrink-0 mt-1">
+                <div className="w-8 h-8 rounded-xl bg-[var(--surface-cyan)] border border-[var(--primary)] flex items-center justify-center text-[var(--primary)] shrink-0 mt-1">
                   <Bot className="w-4 h-4" />
                 </div>
 
@@ -175,28 +172,28 @@ export const AIAssistantView: React.FC = () => {
                   };
 
                   return (
-                    <div className="flex-1 glass-card rounded-2xl p-5 border-cyan-500/30 bg-slate-950/80 space-y-4 shadow-xl">
+                    <div className="flex-1 bg-[var(--bg-card)] shadow-sm border border-[var(--border)] rounded-xl rounded-2xl p-5 border-[var(--primary)] bg-[var(--bg-card)] space-y-4 shadow-xl">
                       
                       {/* Top Grounding Status */}
-                      <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
-                        <span className="text-xs font-mono font-bold text-cyan-400 flex items-center gap-1.5">
+                      <div className="flex items-center justify-between border-b border-[var(--border)] pb-2.5">
+                        <span className="text-xs font-mono font-bold text-[var(--primary)] flex items-center gap-1.5">
                           <Sparkles className="w-3.5 h-3.5" />
                           <span>Evidence-Grounded Intelligence Synthesis</span>
                         </span>
-                        <span className="text-[10px] font-mono text-slate-400">
+                        <span className="text-[10px] font-mono text-[var(--text-secondary)]">
                           Case: {safeData.caseReferences.join(', ')}
                         </span>
                       </div>
 
                       {/* 1. Answer */}
-                      <div className="text-xs text-slate-200 leading-relaxed bg-slate-900/90 p-4 rounded-xl border border-slate-800 font-sans whitespace-pre-line">
+                      <div className="text-xs text-[var(--text-primary)] leading-relaxed bg-[var(--bg-card)] p-4 rounded-xl border border-[var(--border)] font-sans whitespace-pre-line">
                         {safeData.answer}
                       </div>
 
                       {/* 2. Relevant Entities */}
                       {safeData.relevantEntities.length > 0 && (
                         <div>
-                          <span className="text-[10px] font-mono uppercase tracking-wider text-slate-400 block mb-1.5 font-semibold">
+                          <span className="text-[10px] font-mono uppercase tracking-wider text-[var(--text-secondary)] block mb-1.5 font-semibold">
                             Relevant Entities ({safeData.relevantEntities.length}):
                           </span>
                           <div className="flex flex-wrap gap-1.5">
@@ -204,7 +201,7 @@ export const AIAssistantView: React.FC = () => {
                               <button
                                 key={ent.id}
                                 onClick={() => { selectEntity(ent.id); setView('entity'); }}
-                                className="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-850 text-cyan-300 border border-slate-700 font-mono text-[11px] flex items-center gap-1 transition-colors"
+                                className="px-2.5 py-1 rounded-lg bg-[var(--bg-card)] hover:bg-slate-850 text-cyan-300 border border-[var(--border)] font-mono text-[11px] flex items-center gap-1 transition-colors"
                               >
                                 <span>{ent.label || ent.name || ent.id}</span>
                                 <span className="text-[9px] text-slate-500 font-sans">({ent.type || ent.entityType})</span>
@@ -216,14 +213,14 @@ export const AIAssistantView: React.FC = () => {
 
                       {/* 3. Graph Path */}
                       {safeData.graphPath.length > 0 && (
-                        <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800 font-mono text-[11px] space-y-1">
-                          <span className="text-[10px] uppercase text-cyan-400 font-bold block mb-1 flex items-center gap-1">
+                        <div className="p-3 rounded-xl bg-[var(--bg-card)] border border-[var(--border)] font-mono text-[11px] space-y-1">
+                          <span className="text-[10px] uppercase text-[var(--primary)] font-bold block mb-1 flex items-center gap-1">
                             <GitMerge className="w-3.5 h-3.5" />
                             <span>Factual Multi-Hop Path Traversal:</span>
                           </span>
-                          <div className="flex flex-wrap items-center gap-1 text-slate-300">
+                          <div className="flex flex-wrap items-center gap-1 text-[var(--text-secondary)]">
                             {safeData.graphPath.map((step: string, sIdx: number) => (
-                              <span key={sIdx} className={step.includes('↓') ? 'text-cyan-400 font-bold' : 'text-slate-200'}>
+                              <span key={sIdx} className={step.includes('↓') ? 'text-[var(--primary)] font-bold' : 'text-[var(--text-primary)]'}>
                                 {step}{' '}
                               </span>
                             ))}
@@ -234,17 +231,17 @@ export const AIAssistantView: React.FC = () => {
                       {/* 4. Source Records */}
                       {safeData.sourceRecords.length > 0 && (
                         <div>
-                          <span className="text-[10px] font-mono uppercase tracking-wider text-slate-400 block mb-1.5 font-semibold">
+                          <span className="text-[10px] font-mono uppercase tracking-wider text-[var(--text-secondary)] block mb-1.5 font-semibold">
                             Underlying Source Documents (Never Hidden):
                           </span>
                           <div className="space-y-1.5">
                             {safeData.sourceRecords.map((rec: any, rIdx: number) => (
-                              <div key={rIdx} className="p-2.5 rounded-lg bg-slate-900/70 border border-slate-800 text-[11px]">
-                                <div className="flex items-center justify-between text-slate-300 font-mono mb-0.5">
-                                  <span className="font-semibold text-cyan-400">{rec.source}</span>
+                              <div key={rIdx} className="p-2.5 rounded-lg bg-[var(--bg-card)] border border-[var(--border)] text-[11px]">
+                                <div className="flex items-center justify-between text-[var(--text-secondary)] font-mono mb-0.5">
+                                  <span className="font-semibold text-[var(--primary)]">{rec.source}</span>
                                   <span className="text-slate-500">{rec.documentRef}</span>
                                 </div>
-                                <p className="text-slate-400 italic font-sans">{rec.excerpt}</p>
+                                <p className="text-[var(--text-secondary)] italic font-sans">{rec.excerpt}</p>
                               </div>
                             ))}
                           </div>
@@ -254,15 +251,26 @@ export const AIAssistantView: React.FC = () => {
                       {/* 5. Supporting Evidence & SHA-256 Checksums */}
                       {safeData.supportingEvidence.length > 0 && (
                         <div>
-                          <span className="text-[10px] font-mono uppercase tracking-wider text-slate-400 block mb-1.5 font-semibold">
+                          <span className="text-[10px] font-mono uppercase tracking-wider text-[var(--text-secondary)] block mb-1.5 font-semibold">
                             Supporting Evidence Items & Hash Status:
                           </span>
                           <div className="space-y-1.5">
                             {safeData.supportingEvidence.map((ev: any) => (
-                              <div key={ev.evidenceId} className="flex items-center justify-between p-2 rounded-lg bg-slate-900 border border-slate-800 text-[11px] font-mono">
-                                <div>
-                                  <span className="text-cyan-300 font-bold mr-2">{ev.evidenceId}:</span>
-                                  <span className="text-slate-200">{ev.title || ev.docType || 'Evidence Record'}</span>
+                              <div
+                                key={ev.evidenceId}
+                                onClick={() => {
+                                  if (ev.evidenceId) {
+                                    selectEvidence(ev.evidenceId);
+                                    setView('evidence');
+                                  }
+                                }}
+                                className="flex items-center justify-between p-2 rounded-lg bg-[var(--bg-card)] hover:bg-slate-800/40 cursor-pointer border border-[var(--border)] text-[11px] font-mono transition-colors"
+                                title="Click to view evidence details & verify SHA-256 in Evidence Vault"
+                              >
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-cyan-300 font-bold mr-2 hover:underline">{ev.evidenceId}:</span>
+                                  <span className="text-[var(--text-primary)]">{ev.title || ev.docType || 'Evidence Record'}</span>
+                                  <ExternalLink className="w-3 h-3 text-slate-500" />
                                 </div>
                                 <span className="px-2 py-0.5 rounded text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold flex items-center gap-1">
                                   <CheckCircle2 className="w-3 h-3" />
@@ -275,9 +283,9 @@ export const AIAssistantView: React.FC = () => {
                       )}
 
                       {/* 6. Confidence & Analytical Context */}
-                      <div className="pt-2 border-t border-slate-800 flex items-center justify-between text-[11px] text-slate-400 font-mono">
+                      <div className="pt-2 border-t border-[var(--border)] flex items-center justify-between text-[11px] text-[var(--text-secondary)] font-mono">
                         <div>
-                          <span className="text-cyan-400 font-semibold">Context: </span>
+                          <span className="text-[var(--primary)] font-semibold">Context: </span>
                           {safeData.confidenceContext || msg.data.confidenceContext}
                         </div>
                       </div>
@@ -292,7 +300,7 @@ export const AIAssistantView: React.FC = () => {
         ))}
 
         {isLoading && (
-          <div className="flex items-center gap-2 text-xs font-mono text-cyan-400 py-3">
+          <div className="flex items-center gap-2 text-xs font-mono text-[var(--primary)] py-3">
             <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
             <span>Scanning Neo4j graph nodes and evidence files...</span>
           </div>
@@ -306,12 +314,12 @@ export const AIAssistantView: React.FC = () => {
           value={inputQuery}
           onChange={(e) => setInputQuery(e.target.value)}
           placeholder="Ask AI Assistant about target entities, fund flows, or evidence chains..."
-          className="w-full bg-slate-900 border border-slate-700 focus:border-cyan-500 rounded-xl pl-4 pr-12 py-3 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
+          className="w-full bg-[var(--bg-card)] border border-[var(--border)] focus:border-[var(--primary)] rounded-xl pl-4 pr-12 py-3 text-xs text-[var(--text-primary)] placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
         />
         <button
           type="submit"
           disabled={!inputQuery.trim() || isLoading}
-          className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-lg bg-cyan-500 hover:bg-cyan-400 disabled:opacity-40 disabled:pointer-events-none text-slate-950 transition-colors"
+          className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-lg bg-[var(--primary)] text-white hover:bg-cyan-400 disabled:opacity-40 disabled:pointer-events-none text-slate-950 transition-colors"
         >
           <Send className="w-4 h-4" />
         </button>

@@ -1,151 +1,155 @@
 import React, { useState } from 'react';
 import { useNavigationStore } from '../../store/navigationStore';
-import { useNotificationStore } from '../../store/notificationStore';
-import { Shield, Mail, KeyRound, ArrowLeft, CheckCircle2 } from 'lucide-react';
+import { supabase } from '../../services/supabaseClient';
+import { Shield, Mail, KeyRound, ArrowLeft, CheckCircle2, AlertCircle } from 'lucide-react';
 
 export const ForgotPasswordPage: React.FC = () => {
   const { setView } = useNavigationStore();
-  const { addToast } = useNotificationStore();
 
-  const [step, setStep] = useState<'request' | 'verify' | 'success'>('request');
+  const [step, setStep] = useState<'request' | 'success'>('request');
   const [email, setEmail] = useState('');
-  const [token, setToken] = useState('');
-  const [newPassword, setNewPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
-  const handleRequest = (e: React.FormEvent) => {
+  const handleRequest = async (e: React.FormEvent) => {
     e.preventDefault();
-    setStep('verify');
-    addToast({
-      type: 'info',
-      title: 'Reset Token Dispatched',
-      message: `A secure 6-digit recovery code has been sent to your verified police email.`
-    });
-  };
+    if (!email.trim()) {
+      setErrorMessage('Please enter your email address.');
+      return;
+    }
+    
+    setIsLoading(true);
+    setErrorMessage('');
 
-  const handleVerify = (e: React.FormEvent) => {
-    e.preventDefault();
-    setStep('success');
-    addToast({
-      type: 'success',
-      title: 'Password Re-encrypted',
-      message: 'New credentials registered in M6 security ledger.'
-    });
+    // Dynamically get the current frontend URL for the redirect
+    const redirectUrl = `${window.location.origin}/`;
+
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: redirectUrl,
+      });
+
+      if (error) {
+        setErrorMessage(error.message);
+      } else {
+        setStep('success');
+      }
+    } catch (err: any) {
+      setErrorMessage(err.message || 'Unable to reach authentication service.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
-    <div className="min-h-screen bg-[#080d1a] flex flex-col justify-center py-12 sm:px-6 lg:px-8 relative selection:bg-cyan-500/30">
-      <div className="absolute inset-0 grid-bg opacity-25 pointer-events-none" />
-
-      <div className="sm:mx-auto sm:w-full sm:max-w-md z-10 px-4">
-        
-        <div className="text-center mb-6">
-          <button
-            onClick={() => setView('login')}
-            className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-cyan-400 transition-colors mb-3"
-          >
-            <ArrowLeft className="w-3.5 h-3.5" />
-            <span>Back to Login</span>
-          </button>
-          <div className="w-12 h-12 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 mx-auto mb-3">
-            <KeyRound className="w-6 h-6" />
-          </div>
-          <h2 className="text-2xl font-bold tracking-tight text-slate-100">Credential Recovery</h2>
-          <p className="text-xs text-slate-400 mt-1">Law Enforcement Identity Recovery Portal</p>
+    <div className="min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)] flex overflow-hidden select-none">
+      
+      {/* Left side abstract visual treatment */}
+      <div className="hidden lg:flex flex-col justify-between w-1/2 p-12 relative overflow-hidden bg-[var(--sidebar-bg)] border-r border-[var(--sidebar-hover)]">
+        <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
+          <div className="absolute top-[-20%] left-[-10%] w-[120%] h-[120%] bg-[radial-gradient(ellipse_at_top_left,rgba(37,99,235,0.15),transparent_50%)]" />
+          <div className="absolute bottom-[-10%] right-[-10%] w-[100%] h-[100%] bg-[radial-gradient(circle_at_bottom_right,rgba(6,182,212,0.1),transparent_40%)]" />
+          <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:40px_40px] opacity-20" />
         </div>
 
-        <div className="glass-panel bg-slate-950/85 rounded-2xl border-slate-800 p-7 shadow-2xl backdrop-blur-xl">
-          
-          {step === 'request' && (
-            <form onSubmit={handleRequest} className="space-y-4">
-              <div>
-                <label className="block text-[11px] font-mono uppercase tracking-wider text-slate-400 mb-1.5">
-                  Official Police Email
-                </label>
-                <div className="relative">
-                  <Mail className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
-                  <input
-                    type="email"
-                    required
-                    placeholder="v.rao@cid.police.gov.in"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-700 rounded-xl pl-9 pr-4 py-2.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-cyan-500"
-                  />
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                className="w-full py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs uppercase tracking-wider transition-colors shadow-lg shadow-cyan-500/20"
-              >
-                Send Recovery Code
-              </button>
-            </form>
-          )}
-
-          {step === 'verify' && (
-            <form onSubmit={handleVerify} className="space-y-4">
-              <div className="p-3 rounded-lg bg-cyan-500/10 border border-cyan-500/20 text-xs text-cyan-300">
-                Demo Token sent! Enter any 6-digit code (e.g. 772901) to simulate verification.
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-mono uppercase tracking-wider text-slate-400 mb-1.5">
-                  Recovery Token (6 Digits)
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="772901"
-                  value={token}
-                  onChange={(e) => setToken(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-cyan-500 font-mono tracking-widest text-center"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-mono uppercase tracking-wider text-slate-400 mb-1.5">
-                  New Secure Password
-                </label>
-                <input
-                  type="password"
-                  required
-                  placeholder="Min. 8 characters"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-cyan-500"
-                />
-              </div>
-
-              <button
-                type="submit"
-                className="w-full py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs uppercase tracking-wider transition-colors"
-              >
-                Reset Password & Re-encrypt
-              </button>
-            </form>
-          )}
-
-          {step === 'success' && (
-            <div className="text-center py-4 space-y-4">
-              <div className="w-12 h-12 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 mx-auto">
-                <CheckCircle2 className="w-6 h-6" />
-              </div>
-              <h3 className="text-base font-bold text-slate-100">Password Successfully Updated</h3>
-              <p className="text-xs text-slate-400">
-                Your cryptographic token credentials have been refreshed. You can now access your investigator terminal.
-              </p>
-              <button
-                onClick={() => setView('login')}
-                className="w-full py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs uppercase tracking-wider transition-colors"
-              >
-                Proceed to Login
-              </button>
+        <div className="relative z-10">
+          <div className="flex items-center gap-3 mb-8">
+            <div className="w-10 h-10 rounded-xl bg-[var(--primary)]/20 border border-[var(--primary)]/40 flex items-center justify-center text-[var(--accent)] shadow-sm shadow-[var(--primary)]/20">
+              <Shield className="w-5 h-5" />
             </div>
-          )}
-
+            <span className="font-bold text-xl text-white tracking-tight">CrimeNet AI</span>
+          </div>
+          <h1 className="text-4xl font-bold tracking-tight text-white leading-tight mb-4 max-w-lg">
+            Credential Recovery
+          </h1>
+          <p className="text-lg text-[var(--sidebar-text-muted)] max-w-md font-medium">
+            Reset your access to the secure investigation platform. Authorized law enforcement officers only.
+          </p>
         </div>
+      </div>
 
+      {/* Right side form */}
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-[var(--bg-primary)]">
+        <div className="w-full max-w-md animate-in fade-in slide-in-from-bottom-4 duration-500">
+          
+          <div className="mb-6">
+            <button
+              onClick={() => setView('login')}
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--text-secondary)] hover:text-[var(--primary)] transition-colors mb-4"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span>Back to Login</span>
+            </button>
+            <div className="lg:hidden text-center mb-6">
+              <div className="w-12 h-12 mx-auto rounded-xl bg-[var(--surface-blue)] border border-[var(--primary)]/20 flex items-center justify-center text-[var(--primary)] mb-3 shadow-lg shadow-[var(--primary)]/10">
+                <KeyRound className="w-6 h-6" />
+              </div>
+              <h2 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">Recovery Portal</h2>
+            </div>
+          </div>
+
+          <div className="bg-[var(--bg-card)] shadow-lg shadow-black/5 border border-[var(--border)] rounded-2xl p-8">
+            
+            {step === 'request' && (
+              <>
+                <h2 className="text-xl font-bold text-[var(--text-primary)] mb-6 text-center lg:text-left">Forgot Password?</h2>
+                
+                {errorMessage && (
+                  <div className="mb-6 p-3 rounded-lg bg-[var(--danger)]/10 border border-[var(--danger)]/20 flex items-center gap-2 text-xs text-[var(--danger)]">
+                    <AlertCircle className="w-4 h-4 shrink-0" />
+                    <span>{errorMessage}</span>
+                  </div>
+                )}
+
+                <form onSubmit={handleRequest} className="space-y-5">
+                  <div>
+                    <label className="block text-xs font-semibold text-[var(--text-primary)] mb-1.5">
+                      Email Address
+                    </label>
+                    <div className="relative">
+                      <Mail className="w-4 h-4 text-[var(--text-secondary)] absolute left-3.5 top-1/2 -translate-y-1/2" />
+                      <input
+                        type="email"
+                        required
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        className="w-full bg-white border border-[var(--border)] rounded-xl pl-10 pr-4 py-3 text-sm text-[var(--text-primary)] placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 focus:border-[var(--primary)] transition-all"
+                        placeholder="officer@agency.gov"
+                      />
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={isLoading}
+                    className="w-full py-3 mt-2 rounded-xl bg-[var(--primary)] hover:bg-[#1D4ED8] text-white font-semibold text-sm transition-all shadow-md flex items-center justify-center gap-2"
+                  >
+                    {isLoading ? 'Sending...' : 'Send Reset Link'}
+                  </button>
+                </form>
+              </>
+            )}
+
+            {step === 'success' && (
+              <div className="text-center py-4 space-y-4">
+                <div className="w-16 h-16 rounded-full bg-[var(--surface-cyan)] border border-[var(--primary)]/20 flex items-center justify-center text-[var(--primary)] mx-auto shadow-lg shadow-[var(--primary)]/10">
+                  <CheckCircle2 className="w-8 h-8" />
+                </div>
+                <h3 className="text-xl font-bold text-[var(--text-primary)]">Check Your Email</h3>
+                <p className="text-sm text-[var(--text-secondary)] leading-relaxed">
+                  Password reset link sent. Check your email for further instructions.
+                </p>
+                <button
+                  onClick={() => setView('login')}
+                  className="w-full mt-4 py-3 rounded-xl bg-[var(--surface-blue)] text-[var(--primary)] hover:bg-[var(--primary)] hover:text-white font-semibold text-sm transition-colors shadow-sm"
+                >
+                  Return to Login
+                </button>
+              </div>
+            )}
+
+          </div>
+        </div>
       </div>
     </div>
   );

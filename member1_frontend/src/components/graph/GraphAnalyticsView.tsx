@@ -32,17 +32,17 @@ export const GraphAnalyticsView: React.FC = () => {
       {/* Title */}
       <div>
         <div className="flex items-center gap-2">
-          <span className="text-xs font-mono uppercase tracking-wider text-cyan-400 font-semibold">
+          <span className="text-xs font-mono uppercase tracking-wider text-[var(--primary)] font-semibold">
             M5 Graph Machine Learning Results
           </span>
-          <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-950 text-cyan-400 border border-cyan-800">
+          <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-950 text-[var(--primary)] border border-cyan-800">
             Network Centrality Engine
           </span>
         </div>
-        <h1 className="text-xl font-bold text-slate-100 mt-1">
+        <h1 className="text-xl font-bold text-[var(--text-primary)] mt-1">
           Graph Intelligence & Centrality Analytics
         </h1>
-        <p className="text-xs text-slate-400 mt-1">
+        <p className="text-xs text-[var(--text-secondary)] mt-1">
           Algorithmic network metrics calculated by M5 Graph ML models to identify liaison bridges and cluster bottlenecks.
         </p>
       </div>
@@ -63,26 +63,26 @@ export const GraphAnalyticsView: React.FC = () => {
       {/* Overview Metric Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         
-        <div className="glass-card rounded-xl p-4 border-slate-800">
-          <div className="text-[10px] font-mono uppercase tracking-wider text-slate-400">Network Density</div>
-          <div className="text-2xl font-bold text-cyan-400 font-mono mt-1">0.182</div>
+        <div className="bg-[var(--bg-card)] shadow-sm border border-[var(--border)] rounded-xl rounded-xl p-4 border-[var(--border)]">
+          <div className="text-[10px] font-mono uppercase tracking-wider text-[var(--text-secondary)]">Network Density</div>
+          <div className="text-2xl font-bold text-[var(--primary)] font-mono mt-1">0.182</div>
           <span className="text-[10px] text-slate-500">Sparse Cluster Topology</span>
         </div>
 
-        <div className="glass-card rounded-xl p-4 border-slate-800">
-          <div className="text-[10px] font-mono uppercase tracking-wider text-slate-400">Connected Components</div>
+        <div className="bg-[var(--bg-card)] shadow-sm border border-[var(--border)] rounded-xl rounded-xl p-4 border-[var(--border)]">
+          <div className="text-[10px] font-mono uppercase tracking-wider text-[var(--text-secondary)]">Connected Components</div>
           <div className="text-2xl font-bold text-emerald-400 font-mono mt-1">1 Giant</div>
           <span className="text-[10px] text-slate-500">Fully Reachable Subgraph</span>
         </div>
 
-        <div className="glass-card rounded-xl p-4 border-slate-800">
-          <div className="text-[10px] font-mono uppercase tracking-wider text-slate-400">Louvain Communities</div>
+        <div className="bg-[var(--bg-card)] shadow-sm border border-[var(--border)] rounded-xl rounded-xl p-4 border-[var(--border)]">
+          <div className="text-[10px] font-mono uppercase tracking-wider text-[var(--text-secondary)]">Louvain Communities</div>
           <div className="text-2xl font-bold text-purple-400 font-mono mt-1">2 Clusters</div>
           <span className="text-[10px] text-slate-500">Modularity Q = 0.64</span>
         </div>
 
-        <div className="glass-card rounded-xl p-4 border-slate-800">
-          <div className="text-[10px] font-mono uppercase tracking-wider text-slate-400">Bridge Nodes Detected</div>
+        <div className="bg-[var(--bg-card)] shadow-sm border border-[var(--border)] rounded-xl rounded-xl p-4 border-[var(--border)]">
+          <div className="text-[10px] font-mono uppercase tracking-wider text-[var(--text-secondary)]">Bridge Nodes Detected</div>
           <div className="text-2xl font-bold text-amber-400 font-mono mt-1">3 Liaison Hubs</div>
           <span className="text-[10px] text-slate-500">Cross-Cluster Intermediaries</span>
         </div>
@@ -90,15 +90,15 @@ export const GraphAnalyticsView: React.FC = () => {
       </div>
 
       {/* Centrality Distribution Chart */}
-      <div className="glass-panel rounded-2xl p-5 border-slate-800">
+      <div className="bg-[var(--bg-card)] shadow-sm border border-[var(--border)] rounded-2xl rounded-2xl p-5 border-[var(--border)]">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h3 className="text-sm font-semibold text-slate-100">
+            <h3 className="text-sm font-semibold text-[var(--text-primary)]">
               Betweenness vs. Degree Centrality (Top Entities)
             </h3>
-            <p className="text-[11px] text-slate-400">Computed via Brandes algorithm & random walk PageRank</p>
+            <p className="text-[11px] text-[var(--text-secondary)]">Computed via Brandes algorithm & random walk PageRank</p>
           </div>
-          <span className="text-[10px] font-mono text-cyan-400 bg-cyan-950 px-2 py-0.5 rounded border border-cyan-800">
+          <span className="text-[10px] font-mono text-[var(--primary)] bg-cyan-950 px-2 py-0.5 rounded border border-cyan-800">
             Source: M5 Subsystem
           </span>
         </div>
@@ -119,14 +119,14 @@ export const GraphAnalyticsView: React.FC = () => {
       </div>
 
       {/* Key Analytical Leads Table */}
-      <div className="glass-panel rounded-2xl p-5 border-slate-800">
-        <h3 className="text-sm font-semibold text-slate-100 mb-3">
+      <div className="bg-[var(--bg-card)] shadow-sm border border-[var(--border)] rounded-2xl rounded-2xl p-5 border-[var(--border)]">
+        <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-3">
           Algorithmic Bridge Nodes & Analytical Leads
         </h3>
 
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="border-b border-slate-800 text-[10px] font-mono uppercase text-slate-400 bg-slate-900/50">
+            <thead className="border-b border-[var(--border)] text-[10px] font-mono uppercase text-[var(--text-secondary)] bg-[var(--bg-card)]">
               <tr>
                 <th className="py-2.5 px-3">Entity</th>
                 <th className="py-2.5 px-3">Type</th>
@@ -139,17 +139,17 @@ export const GraphAnalyticsView: React.FC = () => {
             </thead>
             <tbody className="divide-y divide-slate-800/60 font-mono">
               {GRAPH_NODES.map(node => (
-                <tr key={node.id} className="hover:bg-slate-900/50 transition-colors">
-                  <td className="py-2.5 px-3 font-semibold text-slate-200">{node.label}</td>
+                <tr key={node.id} className="hover:bg-[var(--bg-card)] transition-colors">
+                  <td className="py-2.5 px-3 font-semibold text-[var(--text-primary)]">{node.label}</td>
                   <td className="py-2.5 px-3">
-                    <span className="text-[10px] px-1.5 py-0.2 rounded bg-slate-800 text-cyan-300">
+                    <span className="text-[10px] px-1.5 py-0.2 rounded bg-slate-50 text-cyan-300">
                       {node.entityType}
                     </span>
                   </td>
-                  <td className="py-2.5 px-3 text-slate-300">{node.analytics?.degreeCentrality}</td>
-                  <td className="py-2.5 px-3 text-cyan-400 font-bold">{node.analytics?.betweennessCentrality}</td>
+                  <td className="py-2.5 px-3 text-[var(--text-secondary)]">{node.analytics?.degreeCentrality}</td>
+                  <td className="py-2.5 px-3 text-[var(--primary)] font-bold">{node.analytics?.betweennessCentrality}</td>
                   <td className="py-2.5 px-3 text-emerald-400">{node.analytics?.pagerank}</td>
-                  <td className="py-2.5 px-3 font-sans text-slate-400 text-[11px] max-w-xs truncate">
+                  <td className="py-2.5 px-3 font-sans text-[var(--text-secondary)] text-[11px] max-w-xs truncate">
                     {node.analytics?.analyticalLeadNote || (node.analytics?.isBridge ? 'Bridge node bridging operations' : 'Peripheral node')}
                   </td>
                   <td className="py-2.5 px-3 text-right">
@@ -158,7 +158,7 @@ export const GraphAnalyticsView: React.FC = () => {
                         selectEntity(node.id);
                         setView('entity');
                       }}
-                      className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-cyan-400 text-[10px] font-semibold transition-colors"
+                      className="px-2 py-1 rounded bg-slate-50 hover:bg-slate-200 text-[var(--primary)] text-[10px] font-semibold transition-colors"
                     >
                       Dossier →
                     </button>

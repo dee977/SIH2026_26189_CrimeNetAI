@@ -15,7 +15,7 @@ export interface MapMarkerLocation {
   notes?: string;
   cellTowerDetails?: {
     towerId: string;
-    lac: string;
+    lac?: string;
     azimuthDegrees: number;
     cdrCount: number;
   };

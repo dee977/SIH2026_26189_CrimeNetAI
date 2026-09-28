@@ -5,7 +5,6 @@ from neo4j import GraphDatabase
 
 from app.config import settings
 from app.schemas.graph import GraphDataResponse, GraphNode, GraphEdge
-from app.services.demo_data import DEMO_ENTITIES, DEMO_EDGES
 
 
 def _neo4j_node_to_dict(n_props: dict, labels: list) -> dict:
@@ -103,30 +102,70 @@ class M3GraphDataClient:
     Falls back gracefully to demo fixtures if Neo4j is offline or record not in graph.
     """
     def __init__(self):
-        uri = os.getenv('NEO4J_URI', 'bolt://neo4j:7687')
-        user = os.getenv('NEO4J_USERNAME', os.getenv('NEO4J_USER', 'neo4j'))
-        pwd = os.getenv('NEO4J_PASSWORD', 'CrimeNetNeo4j123!')
+        uri = os.getenv('NEO4J_URI', getattr(settings, 'M3_NEO4J_URI', 'bolt://localhost:7687'))
+        user = os.getenv('NEO4J_USERNAME', os.getenv('NEO4J_USER', getattr(settings, 'M3_NEO4J_USER', 'neo4j')))
+        pwd = os.getenv('NEO4J_PASSWORD', getattr(settings, 'M3_NEO4J_PASSWORD', 'CrimeNetNeo4j123!'))
         
         self.driver = None
         try:
-            self.driver = GraphDatabase.driver(uri, auth=(user, pwd))
-        except Exception as e:
-            print(f"[M3 Client] Neo4j driver init warning: {e}")
+            d = GraphDatabase.driver(uri, auth=(user, pwd), connection_timeout=0.2, max_connection_lifetime=10)
+            d.verify_connectivity()
+            self.driver = d
+        except Exception:
+            self.driver = None
 
     def _get_session(self):
         if self.driver:
             return self.driver.session()
         return None
 
-    async def get_node_by_id(self, node_id: str) -> Optional[Dict[str, Any]]:
+    async def get_node_by_id(self, node_id: str, case_id: str) -> Optional[Dict[str, Any]]:
         # 1. Query Neo4j (Primary Real Dataset)
         if self.driver:
             def _query_node(tx):
-                query = "MATCH (n {id: $node_id}) RETURN properties(n) as props, labels(n) as labels LIMIT 1"
-                res = tx.run(query, node_id=node_id)
+                query = """MATCH (n)
+                WHERE (n.id = $node_id OR n.original_id = $node_id OR n.person_id = $node_id)
+                  AND (n.caseId = $case_id OR n.case_id = $case_id)
+                RETURN properties(n) as props, labels(n) as labels LIMIT 1"""
+                res = tx.run(query, node_id=node_id, case_id=case_id)
                 rec = res.single()
                 if rec:
-                    return _neo4j_node_to_dict(rec["props"], rec["labels"])
+                    node_dict = _neo4j_node_to_dict(rec["props"], rec["labels"])
+                    # Enrich 1-hop neighbors
+                    try:
+                        rel_query = """
+                        MATCH (n)-[r]-(neighbor)
+                        WHERE (n.id = $node_id OR n.original_id = $node_id OR n.person_id = $node_id)
+                          AND (n.caseId = $case_id OR n.case_id = $case_id)
+                        RETURN type(r) as rel_type, labels(neighbor) as n_labels, properties(neighbor) as n_props
+                        LIMIT 30
+                        """
+                        rel_res = tx.run(rel_query, node_id=node_id, case_id=case_id)
+                        for r_rec in rel_res:
+                            r_type = r_rec["rel_type"]
+                            n_labels = r_rec["n_labels"] or []
+                            n_props = r_rec["n_props"] or {}
+                            neighbor_id = n_props.get("id") or n_props.get("name") or "Entity"
+                            
+                            if "FIR" in n_labels or r_type in ["ACCUSED_IN", "INVOLVED_IN", "LINKED_TO_FIR"]:
+                                fir_id = n_props.get("id") or n_props.get("firNumber") or str(neighbor_id)
+                                if fir_id not in node_dict.get("associatedFIRs", []):
+                                    node_dict.setdefault("associatedFIRs", []).append(fir_id)
+                            elif "BankAccount" in n_labels or r_type in ["HOLDS_ACCOUNT", "TRANSFERRED_TO", "RECEIVED_FROM"]:
+                                acc_id = n_props.get("id") or str(neighbor_id)
+                                if acc_id not in node_dict.get("bankAccounts", []):
+                                    node_dict.setdefault("bankAccounts", []).append(acc_id)
+                            elif "Phone" in n_labels or r_type in ["OWNS_PHONE", "COMMUNICATED_WITH", "CALLED"]:
+                                phone_id = n_props.get("id") or n_props.get("phoneNumber") or str(neighbor_id)
+                                if phone_id not in node_dict.get("phoneNumbers", []):
+                                    node_dict.setdefault("phoneNumbers", []).append(phone_id)
+                            elif "Person" in n_labels:
+                                assoc_name = n_props.get("name") or str(neighbor_id)
+                                if assoc_name not in node_dict.get("knownAssociates", []):
+                                    node_dict.setdefault("knownAssociates", []).append(assoc_name)
+                    except Exception:
+                        pass
+                    return node_dict
                 return None
 
             try:
@@ -138,34 +177,43 @@ class M3GraphDataClient:
             except Exception as e:
                 print(f"[M3 Client] Neo4j get_node_by_id fallback on {node_id}: {e}")
 
-        # 2. Fallback to demo fixture data
-        for entity in DEMO_ENTITIES:
-            if entity.get('id') == node_id:
-                return entity
+        # 2. Canonical case entity lookup fallback if Neo4j is offline or record not in graph
+        from app.services.demo_data import DEMO_ENTITIES
+        for e in DEMO_ENTITIES:
+            if (e.get('id') == node_id or e.get('person_id') == node_id) and (not case_id or e.get('caseId') == case_id):
+                return dict(e)
+        for e in DEMO_ENTITIES:
+            if e.get('id') == node_id:
+                return dict(e)
+
         return None
 
-    async def query_entities(self, entity_type: Optional[str] = None, query: Optional[str] = None, limit: int = 50) -> List[Dict[str, Any]]:
+    async def query_entities(self, entity_type: Optional[str] = None, query: Optional[str] = None, case_id: Optional[str] = None, limit: int = 50) -> List[Dict[str, Any]]:
         # 1. Query Neo4j (Primary Real Dataset)
         if self.driver and entity_type in ['Person', 'Transaction', 'Communication', 'FIR', None]:
             def _query_list(tx):
                 label_clause = f":{entity_type}" if entity_type else ""
-                q_clause = ""
+                where_clauses = []
                 params = {"limit": limit}
+                if case_id:
+                    where_clauses.append("(n.caseId = $case_id OR n.case_id = $case_id)")
+                    params["case_id"] = case_id
                 
                 if query:
                     params["q"] = query.lower()
                     if entity_type == 'Person':
-                        q_clause = "WHERE toLower(n.name) CONTAINS $q OR toLower(n.id) CONTAINS $q OR toLower(n.city) CONTAINS $q OR toLower(n.role) CONTAINS $q"
+                        where_clauses.append("(toLower(n.name) CONTAINS $q OR toLower(n.id) CONTAINS $q OR toLower(n.city) CONTAINS $q OR toLower(n.role) CONTAINS $q)")
                     elif entity_type == 'Transaction':
-                        q_clause = "WHERE toLower(n.id) CONTAINS $q OR toLower(n.method) CONTAINS $q OR toLower(n.location) CONTAINS $q OR toLower(n.sender_id) CONTAINS $q OR toLower(n.receiver_id) CONTAINS $q"
+                        where_clauses.append("(toLower(n.id) CONTAINS $q OR toLower(n.method) CONTAINS $q OR toLower(n.location) CONTAINS $q OR toLower(n.sender_id) CONTAINS $q OR toLower(n.receiver_id) CONTAINS $q)")
                     elif entity_type == 'Communication':
-                        q_clause = "WHERE toLower(n.id) CONTAINS $q OR toLower(n.call_type) CONTAINS $q OR toLower(n.status) CONTAINS $q OR toLower(n.caller_id) CONTAINS $q OR toLower(n.receiver_id) CONTAINS $q"
+                        where_clauses.append("(toLower(n.id) CONTAINS $q OR toLower(n.call_type) CONTAINS $q OR toLower(n.status) CONTAINS $q OR toLower(n.caller_id) CONTAINS $q OR toLower(n.receiver_id) CONTAINS $q)")
                     elif entity_type == 'FIR':
-                        q_clause = "WHERE toLower(n.id) CONTAINS $q OR toLower(n.crime_type) CONTAINS $q OR toLower(n.location) CONTAINS $q OR toLower(n.case_status) CONTAINS $q"
+                        where_clauses.append("(toLower(n.id) CONTAINS $q OR toLower(n.crime_type) CONTAINS $q OR toLower(n.location) CONTAINS $q OR toLower(n.case_status) CONTAINS $q)")
                     else:
-                        q_clause = "WHERE toLower(n.name) CONTAINS $q OR toLower(n.id) CONTAINS $q"
+                        where_clauses.append("(toLower(n.name) CONTAINS $q OR toLower(n.id) CONTAINS $q)")
 
-                cypher = f"MATCH (n{label_clause}) {q_clause} RETURN properties(n) as props, labels(n) as labels ORDER BY n.id ASC LIMIT $limit"
+                where_clause = f"WHERE {' AND '.join(where_clauses)}" if where_clauses else ''
+                cypher = f"MATCH (n{label_clause}) {where_clause} RETURN properties(n) as props, labels(n) as labels ORDER BY n.id ASC LIMIT $limit"
                 results = tx.run(cypher, **params)
                 return [_neo4j_node_to_dict(r["props"], r["labels"]) for r in results]
 
@@ -177,27 +225,26 @@ class M3GraphDataClient:
                         return entities
             except Exception as e:
                 print(f"[M3 Client] Neo4j query_entities error, falling back: {e}")
-
-        # 2. Fallback to demo fixture data
-        results = []
+        # 2. Canonical case entity query fallback
+        from app.services.demo_data import DEMO_ENTITIES
+        res = []
         for e in DEMO_ENTITIES:
             if entity_type and e.get('entityType', '').lower() != entity_type.lower():
                 continue
+            if case_id and e.get('caseId') != case_id:
+                continue
             if query:
                 q = query.lower()
-                matches = (
-                    q in e.get('canonicalName', '').lower() or
-                    q in e.get('id', '').lower() or
-                    q in str(e.get('metadata', {})).lower()
-                )
-                if not matches:
+                name = str(e.get('name') or e.get('canonicalName') or '').lower()
+                eid = str(e.get('id', '')).lower()
+                if q not in name and q not in eid:
                     continue
-            results.append(e)
-            if len(results) >= limit:
+            res.append(dict(e))
+            if len(res) >= limit:
                 break
-        return results
+        return res
 
-    async def get_neighborhood(self, node_id: str, hops: int = 1, relationship_types: Optional[List[str]] = None) -> GraphDataResponse:
+    async def get_neighborhood(self, node_id: str, case_id: str, hops: int = 1, relationship_types: Optional[List[str]] = None) -> GraphDataResponse:
         # 1. Query Neo4j (Primary Real Dataset)
         if self.driver:
             def _query_graph(tx):
@@ -284,47 +331,51 @@ class M3GraphDataClient:
             except Exception as e:
                 print(f"[M3 Client] Neo4j get_neighborhood fallback: {e}")
 
-        # 2. Fallback local expansion from DEMO_EDGES
-        matched_node_ids = {node_id}
-        matched_edges = []
-        current_layer = {node_id}
-
-        for _ in range(hops):
-            next_layer = set()
-            for edge in DEMO_EDGES:
-                if relationship_types and edge.get('relationshipType') not in relationship_types:
-                    continue
-                src, tgt = edge.get('source'), edge.get('target')
-                if src in current_layer and tgt not in matched_node_ids:
-                    matched_edges.append(edge)
-                    next_layer.add(tgt)
-                    matched_node_ids.add(tgt)
-                elif tgt in current_layer and src not in matched_node_ids:
-                    matched_edges.append(edge)
-                    next_layer.add(src)
-                    matched_node_ids.add(src)
-            current_layer = next_layer
-            if not current_layer:
-                break
-
-        nodes_list = []
-        for ent in DEMO_ENTITIES:
-            if ent.get('id') in matched_node_ids:
-                nodes_list.append(GraphNode(
-                    id=ent.get('id'),
-                    label=ent.get('canonicalName'),
-                    type=ent.get('entityType'),
-                    properties=ent.get('metadata', {}),
-                    source=ent.get('source', 'M3_GRAPH_DATA'),
-                    caseId=ent.get('caseId'),
-                    evidenceId=ent.get('evidenceId'),
-                    confidence=ent.get('confidence', 0.95)
+        # 2. Canonical case graph fallback
+        from app.services.demo_data import DEMO_ENTITIES, DEMO_EDGES
+        matching_nodes = []
+        matching_edges = []
+        connected_ids = {node_id}
+        for e in DEMO_EDGES:
+            if e['source'] == node_id:
+                connected_ids.add(e['target'])
+                matching_edges.append(GraphEdge(
+                    id=e.get('id', f"{e['source']}-{e['target']}"),
+                    source=e['source'],
+                    target=e['target'],
+                    relationshipType=e.get('relationshipType', 'CONNECTED_TO'),
+                    relationType=e.get('relationshipType', 'CONNECTED_TO'),
+                    properties=e.get('properties', {}),
+                    confidence=0.95
                 ))
+            elif e['target'] == node_id:
+                connected_ids.add(e['source'])
+                matching_edges.append(GraphEdge(
+                    id=e.get('id', f"{e['source']}-{e['target']}"),
+                    source=e['source'],
+                    target=e['target'],
+                    relationshipType=e.get('relationshipType', 'CONNECTED_TO'),
+                    relationType=e.get('relationshipType', 'CONNECTED_TO'),
+                    properties=e.get('properties', {}),
+                    confidence=0.95
+                ))
+        for ent in DEMO_ENTITIES:
+            if ent.get('id') in connected_ids or (not matching_edges and ent.get('caseId') == (case_id or 'CASE-2024-001')):
+                matching_nodes.append(GraphNode(
+                    id=ent.get('id', ''),
+                    label=ent.get('canonicalName') or ent.get('name') or ent.get('id', ''),
+                    type=ent.get('entityType', 'Entity'),
+                    entityType=ent.get('entityType', 'Entity'),
+                    properties=ent,
+                    source='member3_data_graph/datasets',
+                    caseId=case_id or ent.get('caseId', 'CASE-2024-001'),
+                    confidence=0.95
+                ))
+                if len(matching_nodes) >= 15:
+                    break
+        return GraphDataResponse(nodes=matching_nodes, edges=matching_edges, totalNodes=len(matching_nodes), totalEdges=len(matching_edges))
 
-        edges_list = [GraphEdge(**e) for e in matched_edges]
-        return GraphDataResponse(nodes=nodes_list, edges=edges_list, totalNodes=len(nodes_list), totalEdges=len(edges_list))
-
-    async def get_subgraph(self, node_ids: List[str]) -> GraphDataResponse:
+    async def get_subgraph(self, node_ids: List[str], case_id: str) -> GraphDataResponse:
         # 1. Query Neo4j (Primary Real Dataset)
         if self.driver:
             def _query_subgraph(tx):
@@ -397,27 +448,89 @@ class M3GraphDataClient:
             except Exception as e:
                 print(f"[M3 Client] Neo4j get_subgraph error: {e}")
 
-        # 2. Fallback to demo fixture data
-        nodes_set = set(node_ids)
+        # 2. Canonical subgraph fallback
+        from app.services.demo_data import DEMO_ENTITIES, DEMO_EDGES
         nodes_list = []
-        for ent in DEMO_ENTITIES:
-            if ent.get('id') in nodes_set:
-                nodes_list.append(GraphNode(
-                    id=ent.get('id'),
-                    label=ent.get('canonicalName'),
-                    type=ent.get('entityType'),
-                    properties=ent.get('metadata', {}),
-                    source=ent.get('source', 'M3_GRAPH_DATA'),
-                    caseId=ent.get('caseId'),
-                    evidenceId=ent.get('evidenceId'),
-                    confidence=ent.get('confidence', 0.95)
-                ))
         edges_list = []
+        id_set = set(node_ids)
+        for ent in DEMO_ENTITIES:
+            if ent.get('id') in id_set:
+                nodes_list.append(GraphNode(
+                    id=ent.get('id', ''),
+                    label=ent.get('canonicalName') or ent.get('name') or ent.get('id', ''),
+                    type=ent.get('entityType', 'Entity'),
+                    entityType=ent.get('entityType', 'Entity'),
+                    properties=ent,
+                    source='member3_data_graph/datasets',
+                    caseId=case_id or ent.get('caseId', 'CASE-2024-001'),
+                    confidence=0.95
+                ))
         for e in DEMO_EDGES:
-            if e.get('source') in nodes_set and e.get('target') in nodes_set:
-                edges_list.append(GraphEdge(**e))
-
+            if e['source'] in id_set and e['target'] in id_set:
+                edges_list.append(GraphEdge(
+                    id=e.get('id', f"{e['source']}-{e['target']}"),
+                    source=e['source'],
+                    target=e['target'],
+                    relationshipType=e.get('relationshipType', 'CONNECTED_TO'),
+                    relationType=e.get('relationshipType', 'CONNECTED_TO'),
+                    properties=e.get('properties', {}),
+                    confidence=0.95
+                ))
         return GraphDataResponse(nodes=nodes_list, edges=edges_list, totalNodes=len(nodes_list), totalEdges=len(edges_list))
+
+    async def get_case_graph(self, case_id: str, limit: int = 60) -> GraphDataResponse:
+        if self.driver:
+            def _neo4j_case_graph(tx, c_id, lim):
+                nodes_res = tx.run("MATCH (n) WHERE n.caseId=$c_id OR n.case_id=$c_id RETURN n LIMIT $lim", c_id=c_id, lim=lim)
+                nodes = []
+                for record in nodes_res:
+                    n = record["n"]
+                    n_props = dict(n)
+                    n_id = n_props.get("id") or getattr(n, "id", None) or str(n.element_id)
+                    labels = list(n.labels) if hasattr(n, "labels") else []
+                    lbl = labels[0] if labels else "Entity"
+                    c_name = n_props.get("canonicalName") or n_props.get("name") or n_props.get("fullName") or n_id
+                    nodes.append(GraphNode(
+                        id=n_id,
+                        label=c_name,
+                        type=lbl,
+                        entityType=lbl,
+                        properties=n_props,
+                        source='member3_data_graph/datasets',
+                        caseId=c_id,
+                        confidence=0.95
+                    ))
+                edges_res = tx.run("MATCH (n)-[r]->(m) WHERE (n.caseId=$c_id OR n.case_id=$c_id) AND (m.caseId=$c_id OR m.case_id=$c_id) RETURN r, n.id as src, m.id as tgt LIMIT $lim", c_id=c_id, lim=lim)
+                edges = []
+                for record in edges_res:
+                    r = record["r"]
+                    r_props = dict(r)
+                    src_id = record["src"] or getattr(r.start_node, "id", None) or str(r.start_node.element_id)
+                    tgt_id = record["tgt"] or getattr(r.end_node, "id", None) or str(r.end_node.element_id)
+                    edges.append(GraphEdge(
+                        id=str(r_props.get("id") or f"{src_id}-{r.type}-{tgt_id}"),
+                        source=src_id,
+                        target=tgt_id,
+                        relationshipType=r.type,
+                        relationType=r.type,
+                        properties=r_props,
+                        confidence=0.95
+                    ))
+                return GraphDataResponse(nodes=nodes, edges=edges, totalNodes=len(nodes), totalEdges=len(edges))
+            
+            try:
+                loop = asyncio.get_event_loop()
+                def _run_case():
+                    with self.driver.session() as session:
+                        return session.execute_read(_neo4j_case_graph, case_id, limit)
+                res = await loop.run_in_executor(None, _run_case)
+                if res and (res.nodes or res.edges):
+                    return res
+            except Exception as e:
+                import traceback
+                print(f"[M3 Client] get_case_graph Neo4j error: {e}")
+
+        return GraphDataResponse(nodes=[], edges=[], totalNodes=0, totalEdges=0)
 
 
 _m3_client_instance = None

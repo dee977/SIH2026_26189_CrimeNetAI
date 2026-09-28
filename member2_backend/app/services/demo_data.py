@@ -675,3 +675,683 @@ DEMO_EVIDENCE_MH092: List[Dict[str, Any]] = [
     }
 ]
 
+
+DEMO_CASES.extend([
+    {
+        'caseId': 'CASE-VIDEO-001',
+        'caseNumber': 'CASE-VIDEO-001',
+        'title': 'Operation Golden Fleece - Financial Syndicate',
+        'description': 'Massive money laundering operation spanning multiple offshore shell companies.',
+        'assignedInvestigator': 'Inspector Sharma',
+        'leadInvestigator': 'Inspector Sharma',
+        'assignedTeam': 'Financial Crimes Unit',
+        'status': 'active',
+        'priority': 'critical',
+        'policeStation': 'Cyber Cell HQ',
+        'jurisdiction': 'National',
+        'executiveSummary': 'Demo Case 1',
+        'entityCount': 200,
+        'relationshipCount': 150,
+        'evidenceCount': 2,
+        'reportCount': 1,
+        'accessClassification': 'RESTRICTED',
+        'associatedFIRs': ['F1001'],
+        'createdAt': '2026-01-01T00:00:00Z',
+        'updatedAt': '2026-01-01T00:00:00Z'
+    },
+    {
+        'caseId': 'CASE-VIDEO-002',
+        'caseNumber': 'CASE-VIDEO-002',
+        'title': 'Operation White Dust - Narcotics Ring',
+        'description': 'Multi-state drug trafficking ring using domestic courier services.',
+        'assignedInvestigator': 'Officer Reddy',
+        'leadInvestigator': 'Officer Reddy',
+        'assignedTeam': 'Narcotics Control',
+        'status': 'active',
+        'priority': 'high',
+        'policeStation': 'Cyber Cell HQ',
+        'jurisdiction': 'National',
+        'executiveSummary': 'Demo Case 2',
+        'entityCount': 200,
+        'relationshipCount': 150,
+        'evidenceCount': 2,
+        'reportCount': 1,
+        'accessClassification': 'RESTRICTED',
+        'associatedFIRs': ['F1002'],
+        'createdAt': '2026-01-01T00:00:00Z',
+        'updatedAt': '2026-01-01T00:00:00Z'
+    },
+    {
+        'caseId': 'CASE-VIDEO-003',
+        'caseNumber': 'CASE-VIDEO-003',
+        'title': 'Operation Phishnet - Cyber Fraud',
+        'description': 'Organized cyber fraud targeting elderly citizens.',
+        'assignedInvestigator': 'Inspector Khan',
+        'leadInvestigator': 'Inspector Khan',
+        'assignedTeam': 'Cyber Crimes Unit',
+        'status': 'active',
+        'priority': 'high',
+        'policeStation': 'Cyber Cell HQ',
+        'jurisdiction': 'National',
+        'executiveSummary': 'Demo Case 3',
+        'entityCount': 200,
+        'relationshipCount': 150,
+        'evidenceCount': 2,
+        'reportCount': 1,
+        'accessClassification': 'RESTRICTED',
+        'associatedFIRs': ['F1003'],
+        'createdAt': '2026-01-01T00:00:00Z',
+        'updatedAt': '2026-01-01T00:00:00Z'
+    },
+    {
+        'caseId': 'CASE-VIDEO-004',
+        'caseNumber': 'CASE-VIDEO-004',
+        'title': 'Operation Iron Shield - Human Trafficking',
+        'description': 'Cross-border human trafficking and exploitation ring.',
+        'assignedInvestigator': 'Officer Patel',
+        'leadInvestigator': 'Officer Patel',
+        'assignedTeam': 'Human Trafficking Task Force',
+        'status': 'active',
+        'priority': 'critical',
+        'policeStation': 'Cyber Cell HQ',
+        'jurisdiction': 'National',
+        'executiveSummary': 'Demo Case 4',
+        'entityCount': 200,
+        'relationshipCount': 150,
+        'evidenceCount': 2,
+        'reportCount': 1,
+        'accessClassification': 'RESTRICTED',
+        'associatedFIRs': ['F1004'],
+        'createdAt': '2026-01-01T00:00:00Z',
+        'updatedAt': '2026-01-01T00:00:00Z'
+    }
+])
+
+
+# STANDARDIZED EVIDENCE CATALOG FOR ALL 5 ACTIVE CASES
+ALL_CASE_EVIDENCE: List[Dict[str, Any]] = [
+    # 1. CASE-2025-M3-DATASET (Operation Falcon Web)
+    {
+        'id': 'EVD-2025-M3-01',
+        'entityType': 'Evidence',
+        'evidenceCode': 'EVD-2025-M3-01',
+        'title': 'Seized Primary Mobile Handset (Samsung S23 Ultra) - Bitstream Extraction',
+        'canonicalName': 'Seized Primary Mobile Handset (Samsung S23 Ultra) - Bitstream Extraction',
+        'evidenceNumber': 'EVD-2025-M3-01',
+        'evidenceType': 'Digital Forensic Image',
+        'category': 'Digital Forensic Image',
+        'caseId': 'CASE-2025-M3-DATASET',
+        'case_id': 'CASE-2025-M3-DATASET',
+        'caseTitle': 'Operation Falcon Web - National Contraband & Communications Syndicate',
+        'seizureDate': '2025-01-14 04:00:00',
+        'collectedDate': '2025-01-14T04:00:00Z',
+        'seizingOfficer': 'Inspector Vikramaditya Rao (LEO-7729)',
+        'collectedBy': 'Inspector Vikramaditya Rao (LEO-7729)',
+        'custodian': 'FSL Cyber Vault, Locker #08',
+        'storageLocation': 'FSL Cyber Vault, Locker #08',
+        'fileSizeBytes': 14891240000,
+        'sha256Hash': 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
+        'originalHashSHA256': 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
+        'currentHashSHA256': 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
+        'integrityStatus': 'MATCH',
+        'lastVerifiedAt': '2025-01-20 10:15:00',
+        'verifiedBy': 'M6 Automated SHA-256 Ledger Node',
+        'chainOfCustody': [
+            {'timestamp': '2025-01-14 04:00:00', 'action': 'SEIZURE_FARADAY_LOCK', 'officer': 'Insp. Vikramaditya Rao', 'notes': 'Seized from prime suspect P00001. Enclosed in RF-shielded evidence pouch.'},
+            {'timestamp': '2025-01-14 11:30:00', 'action': 'TABLEAU_PHYSICAL_IMAGING', 'officer': 'Scientific Officer V. Kulkarni', 'notes': 'RAW bitstream dump verified via cryptographic hashing.'},
+            {'timestamp': '2025-01-20 10:15:00', 'action': 'PERIODIC_AUDIT', 'officer': 'M6 Security Daemon', 'notes': 'Hash audit confirmed 100% integrity.'}
+        ],
+        'bsaSection63Certificate': {
+            'certificateId': 'BSA-63-FSL-2025-0811',
+            'issuer': 'Central Forensic Science Laboratory, CBI / MHA',
+            'hashAlgorithm': 'SHA-256',
+            'signedAt': '2025-01-14 16:00:00',
+            'status': 'VALID'
+        },
+        'bsaSection65BCertificateId': 'BSA-63-FSL-2025-0811',
+        'associatedEntities': [
+            {'entityId': 'P00001', 'entityType': 'Person', 'label': 'P00001 (Prime Suspect)'},
+            {'entityId': 'C0000001', 'entityType': 'Call', 'label': 'Call C0000001'}
+        ],
+        'description': 'Bitstream physical forensic clone of target smartphone containing encrypted VoIP communications, coordinates, and contact records.',
+        'confidence': 1.0,
+        'metadata': {'chainOfCustodyVerified': True, 'ledgerTimestamp': '2025-01-14T04:15:00Z'}
+    },
+    {
+        'id': 'EVD-2025-M3-02',
+        'entityType': 'Evidence',
+        'evidenceCode': 'EVD-2025-M3-02',
+        'title': 'Certified Core Banking Transaction Audit Dump - Acc #99214430',
+        'canonicalName': 'Certified Core Banking Transaction Audit Dump - Acc #99214430',
+        'evidenceNumber': 'EVD-2025-M3-02',
+        'evidenceType': 'Bank Statement',
+        'category': 'Bank Statement',
+        'caseId': 'CASE-2025-M3-DATASET',
+        'case_id': 'CASE-2025-M3-DATASET',
+        'caseTitle': 'Operation Falcon Web - National Contraband & Communications Syndicate',
+        'seizureDate': '2025-01-15 14:00:00',
+        'collectedDate': '2025-01-15T14:00:00Z',
+        'seizingOfficer': 'SI Priyanka Sen (CID EIU)',
+        'collectedBy': 'SI Priyanka Sen (CID EIU)',
+        'custodian': 'CID Economic Intelligence Locker',
+        'storageLocation': 'CID Economic Intelligence Locker',
+        'fileSizeBytes': 5219000,
+        'sha256Hash': '9b71d224bd62f3785d96d46ad3ea3d73319bfbc2890caadae2dff72519673ca7',
+        'originalHashSHA256': '9b71d224bd62f3785d96d46ad3ea3d73319bfbc2890caadae2dff72519673ca7',
+        'currentHashSHA256': '9b71d224bd62f3785d96d46ad3ea3d73319bfbc2890caadae2dff72519673ca7',
+        'integrityStatus': 'MATCH',
+        'lastVerifiedAt': '2025-01-20 10:15:00',
+        'verifiedBy': 'M6 Automated SHA-256 Ledger Node',
+        'chainOfCustody': [
+            {'timestamp': '2025-01-15 14:00:00', 'action': 'LEGAL_SUBPOENA_EXTRACTION', 'officer': 'SI Priyanka Sen', 'notes': 'Certified digital ledger extracted with digital signature.'}
+        ],
+        'bsaSection63Certificate': {
+            'certificateId': 'BSA-63-BNK-2025-4421',
+            'issuer': 'HDFC Bank Compliance Directorate',
+            'hashAlgorithm': 'SHA-256',
+            'signedAt': '2025-01-15 13:45:00',
+            'status': 'VALID'
+        },
+        'bsaSection65BCertificateId': 'BSA-63-BNK-2025-4421',
+        'associatedEntities': [
+            {'entityId': 'T0000001', 'entityType': 'Transaction', 'label': 'Transaction T0000001 (INR 45,00,000)'},
+            {'entityId': 'P00005', 'entityType': 'Person', 'label': 'P00005 (Beneficiary)'}
+        ],
+        'description': 'Certified banking ledger showing un-invoiced RTGS transfers between syndicate accounts without legitimate underlying trade documentation.',
+        'confidence': 1.0,
+        'metadata': {'chainOfCustodyVerified': True}
+    },
+    {
+        'id': 'EVD-2025-M3-03',
+        'entityType': 'Evidence',
+        'evidenceCode': 'EVD-2025-M3-03',
+        'title': 'Tampered Telecom Tower Carrier Dump (Integrity Alert Demonstration)',
+        'canonicalName': 'Tampered Telecom Tower Carrier Dump (Integrity Alert Demonstration)',
+        'evidenceNumber': 'EVD-2025-M3-03',
+        'evidenceType': 'CDR Dump',
+        'category': 'CDR Dump',
+        'caseId': 'CASE-2025-M3-DATASET',
+        'case_id': 'CASE-2025-M3-DATASET',
+        'caseTitle': 'Operation Falcon Web - National Contraband & Communications Syndicate',
+        'seizureDate': '2025-01-16 09:00:00',
+        'collectedDate': '2025-01-16T09:00:00Z',
+        'seizingOfficer': 'Inspector Vikramaditya Rao',
+        'collectedBy': 'Inspector Vikramaditya Rao',
+        'custodian': 'Desk Terminal Quarantine Locker',
+        'storageLocation': 'Desk Terminal Quarantine Locker',
+        'fileSizeBytes': 2845000,
+        'sha256Hash': 'a1b2c3d4e5f60718293a4b5c6d7e8f90123456789abcdef0123456789abcdef0',
+        'originalHashSHA256': 'a1b2c3d4e5f60718293a4b5c6d7e8f90123456789abcdef0123456789abcdef0',
+        'currentHashSHA256': 'f9e8d7c6b5a403928172635443322110ffeeddccbbaa99887766554433221100',
+        'integrityStatus': 'MISMATCH',
+        'lastVerifiedAt': '2025-01-20 10:15:00',
+        'verifiedBy': 'M6 Automated SHA-256 Ledger Node',
+        'chainOfCustody': [
+            {'timestamp': '2025-01-16 09:00:00', 'action': 'INGEST_AND_HASH', 'officer': 'Insp. Vikramaditya Rao', 'notes': 'Genesis SHA-256 computed.'},
+            {'timestamp': '2025-01-19 18:22:00', 'action': 'CHECKSUM_FAIL_ALERT', 'officer': 'M6 Evidence Daemon', 'notes': 'TAMPER ALERT: Live node hash mismatch detected! File marked compromised.'}
+        ],
+        'bsaSection63Certificate': {
+            'certificateId': 'BSA-63-TEL-2025-0099',
+            'issuer': 'Telecom Regulatory Carrier Audit Cell',
+            'hashAlgorithm': 'SHA-256',
+            'signedAt': '2025-01-16 08:30:00',
+            'status': 'REVOKED'
+        },
+        'bsaSection65BCertificateId': 'BSA-63-TEL-2025-0099',
+        'associatedEntities': [
+            {'entityId': 'C0000004', 'entityType': 'Call', 'label': 'Call C0000004'}
+        ],
+        'description': 'Demonstration artifact showcasing CrimeNet AI automated tamper detection. Bitstream modifications trigger real-time integrity alerts.',
+        'confidence': 1.0,
+        'metadata': {'chainOfCustodyVerified': False}
+    },
+
+    # 2. CASE-VIDEO-001 (Financial Syndicate)
+    {
+        'id': 'EVD-VIDEO-001',
+        'entityType': 'Evidence',
+        'evidenceCode': 'EVD-VIDEO-001',
+        'title': 'Seized Shell Company Accounting Hard Drive (256GB RAW)',
+        'canonicalName': 'Seized Shell Company Accounting Hard Drive (256GB RAW)',
+        'evidenceNumber': 'EVD-VIDEO-001',
+        'evidenceType': 'Digital Forensic Image',
+        'category': 'Digital Forensic Image',
+        'caseId': 'CASE-VIDEO-001',
+        'case_id': 'CASE-VIDEO-001',
+        'caseTitle': 'Operation Golden Fleece - Financial Syndicate',
+        'seizureDate': '2026-01-05 10:00:00',
+        'collectedDate': '2026-01-05T10:00:00Z',
+        'seizingOfficer': 'DSP Ananya Sen (Economic Offences Wing)',
+        'collectedBy': 'DSP Ananya Sen (Economic Offences Wing)',
+        'custodian': 'State Cyber Forensic Lab 1',
+        'storageLocation': 'State Cyber Forensic Lab 1, Rack 4',
+        'fileSizeBytes': 256000000000,
+        'sha256Hash': 'a1b2c3d4e5f67890123456789abcdef0123456789abcdef0123456789abcdef0',
+        'originalHashSHA256': 'a1b2c3d4e5f67890123456789abcdef0123456789abcdef0123456789abcdef0',
+        'currentHashSHA256': 'a1b2c3d4e5f67890123456789abcdef0123456789abcdef0123456789abcdef0',
+        'integrityStatus': 'MATCH',
+        'lastVerifiedAt': '2026-01-10 12:00:00',
+        'verifiedBy': 'M6 Automated Integrity Daemon',
+        'chainOfCustody': [
+            {'timestamp': '2026-01-05 10:00:00', 'action': 'OFFICE_RAID_SEIZURE', 'officer': 'DSP Ananya Sen', 'notes': 'Seized from principal office safe under warrant.'},
+            {'timestamp': '2026-01-05 15:30:00', 'action': 'FORENSIC_CLONING', 'officer': 'Forensic Examiner R. Nair', 'notes': 'Cloned to forensic image E01.'}
+        ],
+        'bsaSection63Certificate': {
+            'certificateId': 'BSA-63-EOW-2026-0101',
+            'issuer': 'Directorate of Forensic Science Services',
+            'hashAlgorithm': 'SHA-256',
+            'signedAt': '2026-01-05 16:00:00',
+            'status': 'VALID'
+        },
+        'bsaSection65BCertificateId': 'BSA-63-EOW-2026-0101',
+        'associatedEntities': [
+            {'entityId': 'P00101_CASE-VIDEO-001', 'entityType': 'Person', 'label': 'Person_00101 (Syndicate Head)'}
+        ],
+        'description': 'Contains clandestine hawala reconciliation spreadsheets, offshore beneficiary accounts, and shell entity formation documents.',
+        'confidence': 1.0,
+        'metadata': {'chainOfCustodyVerified': True}
+    },
+    {
+        'id': 'EVD-VIDEO-001-B',
+        'entityType': 'Evidence',
+        'evidenceCode': 'EVD-VIDEO-001-B',
+        'title': 'Certified Bank RTGS Inward Ledger - ICICI & Axis Feeder Accounts',
+        'canonicalName': 'Certified Bank RTGS Inward Ledger - ICICI & Axis Feeder Accounts',
+        'evidenceNumber': 'EVD-VIDEO-001-B',
+        'evidenceType': 'Bank Statement',
+        'category': 'Bank Statement',
+        'caseId': 'CASE-VIDEO-001',
+        'case_id': 'CASE-VIDEO-001',
+        'caseTitle': 'Operation Golden Fleece - Financial Syndicate',
+        'seizureDate': '2026-01-06 14:00:00',
+        'collectedDate': '2026-01-06T14:00:00Z',
+        'seizingOfficer': 'Inspector S. Roy',
+        'collectedBy': 'Inspector S. Roy',
+        'custodian': 'Court Evidence Vault, Mumbai',
+        'storageLocation': 'Court Evidence Vault, Mumbai',
+        'fileSizeBytes': 8420000,
+        'sha256Hash': 'b2c3d4e5f67890123456789abcdef0123456789abcdef0123456789abcdef01a',
+        'originalHashSHA256': 'b2c3d4e5f67890123456789abcdef0123456789abcdef0123456789abcdef01a',
+        'currentHashSHA256': 'b2c3d4e5f67890123456789abcdef0123456789abcdef0123456789abcdef01a',
+        'integrityStatus': 'MATCH',
+        'lastVerifiedAt': '2026-01-10 12:00:00',
+        'verifiedBy': 'M6 Automated Integrity Daemon',
+        'chainOfCustody': [
+            {'timestamp': '2026-01-06 14:00:00', 'action': 'SUBPOENA_COLLECTION', 'officer': 'Insp. S. Roy', 'notes': 'Received from Nodal Compliance Officer.'}
+        ],
+        'bsaSection63Certificate': {
+            'certificateId': 'BSA-63-BNK-2026-0102',
+            'issuer': 'ICICI Bank Regulatory Affairs',
+            'hashAlgorithm': 'SHA-256',
+            'signedAt': '2026-01-06 15:30:00',
+            'status': 'VALID'
+        },
+        'bsaSection65BCertificateId': 'BSA-63-BNK-2026-0102',
+        'associatedEntities': [
+            {'entityId': 'P00104_CASE-VIDEO-001', 'entityType': 'Person', 'label': 'Person_00104 (Account Holder)'}
+        ],
+        'description': 'Direct bank evidence proving INR 1.25 Crore smurfed across multiple bogus accounts in under 48 hours.',
+        'confidence': 1.0,
+        'metadata': {'chainOfCustodyVerified': True}
+    },
+
+    # 3. CASE-VIDEO-002 (Narcotics Ring)
+    {
+        'id': 'EVD-VIDEO-002',
+        'entityType': 'Evidence',
+        'evidenceCode': 'EVD-VIDEO-002',
+        'title': 'Intercepted Satellite Communications Voice Capture & Transcripts',
+        'canonicalName': 'Intercepted Satellite Communications Voice Capture & Transcripts',
+        'evidenceNumber': 'EVD-VIDEO-002',
+        'evidenceType': 'Telecom Data',
+        'category': 'CDR Dump',
+        'caseId': 'CASE-VIDEO-002',
+        'case_id': 'CASE-VIDEO-002',
+        'caseTitle': 'Operation White Dust - Narcotics Ring',
+        'seizureDate': '2026-01-07 02:30:00',
+        'collectedDate': '2026-01-07T02:30:00Z',
+        'seizingOfficer': 'Superintendent R. Patil (NCB / Special Cell)',
+        'collectedBy': 'Superintendent R. Patil (NCB / Special Cell)',
+        'custodian': 'Special Cell Evidence Repository',
+        'storageLocation': 'Special Cell Evidence Repository',
+        'fileSizeBytes': 45000000,
+        'sha256Hash': 'c3d4e5f67890123456789abcdef0123456789abcdef0123456789abcdef01a2b',
+        'originalHashSHA256': 'c3d4e5f67890123456789abcdef0123456789abcdef0123456789abcdef01a2b',
+        'currentHashSHA256': 'c3d4e5f67890123456789abcdef0123456789abcdef0123456789abcdef01a2b',
+        'integrityStatus': 'MATCH',
+        'lastVerifiedAt': '2026-01-10 12:00:00',
+        'verifiedBy': 'M6 Automated Integrity Daemon',
+        'chainOfCustody': [
+            {'timestamp': '2026-01-07 02:30:00', 'action': 'WARRANT_INTERCEPT', 'officer': 'SP R. Patil', 'notes': 'Court-authorized interception log.'}
+        ],
+        'bsaSection63Certificate': {
+            'certificateId': 'BSA-63-NCB-2026-0201',
+            'issuer': 'Narcotics Control Bureau Cyber Wing',
+            'hashAlgorithm': 'SHA-256',
+            'signedAt': '2026-01-07 04:00:00',
+            'status': 'VALID'
+        },
+        'bsaSection65BCertificateId': 'BSA-63-NCB-2026-0201',
+        'associatedEntities': [
+            {'entityId': 'P00201_CASE-VIDEO-002', 'entityType': 'Person', 'label': 'Person_00201 (Ring Leader)'}
+        ],
+        'description': 'Intercepted encrypted satellite phone recordings establishing coordinate handoffs for sea shipment.',
+        'confidence': 1.0,
+        'metadata': {'chainOfCustodyVerified': True}
+    },
+    {
+        'id': 'EVD-VIDEO-002-B',
+        'entityType': 'Evidence',
+        'evidenceCode': 'EVD-VIDEO-002-B',
+        'title': 'Chemical Analysis Certificate & Laboratory Assay Report',
+        'canonicalName': 'Chemical Analysis Certificate & Laboratory Assay Report',
+        'evidenceNumber': 'EVD-VIDEO-002-B',
+        'evidenceType': 'Seizure Memo',
+        'category': 'Seized Physical Item',
+        'caseId': 'CASE-VIDEO-002',
+        'case_id': 'CASE-VIDEO-002',
+        'caseTitle': 'Operation White Dust - Narcotics Ring',
+        'seizureDate': '2026-01-07 11:00:00',
+        'collectedDate': '2026-01-07T11:00:00Z',
+        'seizingOfficer': 'Senior Analyst Dr. M. Joshi',
+        'collectedBy': 'Senior Analyst Dr. M. Joshi',
+        'custodian': 'Government Opium & Chemical Works Vault',
+        'storageLocation': 'Government Opium & Chemical Works Vault',
+        'fileSizeBytes': 1200000,
+        'sha256Hash': 'd4e5f67890123456789abcdef0123456789abcdef0123456789abcdef01a2b3c',
+        'originalHashSHA256': 'd4e5f67890123456789abcdef0123456789abcdef0123456789abcdef01a2b3c',
+        'currentHashSHA256': 'd4e5f67890123456789abcdef0123456789abcdef0123456789abcdef01a2b3c',
+        'integrityStatus': 'MATCH',
+        'lastVerifiedAt': '2026-01-10 12:00:00',
+        'verifiedBy': 'M6 Automated Integrity Daemon',
+        'chainOfCustody': [
+            {'timestamp': '2026-01-07 11:00:00', 'action': 'CHEMICAL_TESTING', 'officer': 'Dr. M. Joshi', 'notes': 'Spectrometry confirmation completed.'}
+        ],
+        'bsaSection63Certificate': {
+            'certificateId': 'BSA-63-FSL-2026-0202',
+            'issuer': 'State Forensic Science Laboratory Chemical Wing',
+            'hashAlgorithm': 'SHA-256',
+            'signedAt': '2026-01-07 12:30:00',
+            'status': 'VALID'
+        },
+        'bsaSection65BCertificateId': 'BSA-63-FSL-2026-0202',
+        'associatedEntities': [
+            {'entityId': 'P00204_CASE-VIDEO-002', 'entityType': 'Person', 'label': 'Person_00204 (Courier)'}
+        ],
+        'description': 'Certified forensic spectroscopy report confirming high-purity chemical composition under NDPS Act provisions.',
+        'confidence': 1.0,
+        'metadata': {'chainOfCustodyVerified': True}
+    },
+
+    # 4. CASE-VIDEO-003 (Cyber Fraud)
+    {
+        'id': 'EVD-VIDEO-003',
+        'entityType': 'Evidence',
+        'evidenceCode': 'EVD-VIDEO-003',
+        'title': 'C2 Cloud Server Memory Dump & Phishing Kit Source Code',
+        'canonicalName': 'C2 Cloud Server Memory Dump & Phishing Kit Source Code',
+        'evidenceNumber': 'EVD-VIDEO-003',
+        'evidenceType': 'Server Logs',
+        'category': 'Digital Forensic Image',
+        'caseId': 'CASE-VIDEO-003',
+        'case_id': 'CASE-VIDEO-003',
+        'caseTitle': 'Operation Phishnet - Cyber Fraud',
+        'seizureDate': '2026-01-08 03:00:00',
+        'collectedDate': '2026-01-08T03:00:00Z',
+        'seizingOfficer': 'Cyber Cell Inspector T. Deshmukh',
+        'collectedBy': 'Cyber Cell Inspector T. Deshmukh',
+        'custodian': 'National Cyber Crime Forensic Repository',
+        'storageLocation': 'National Cyber Crime Forensic Repository',
+        'fileSizeBytes': 6400000000,
+        'sha256Hash': 'e5f67890123456789abcdef0123456789abcdef0123456789abcdef01a2b3c4d',
+        'originalHashSHA256': 'e5f67890123456789abcdef0123456789abcdef0123456789abcdef01a2b3c4d',
+        'currentHashSHA256': 'e5f67890123456789abcdef0123456789abcdef0123456789abcdef01a2b3c4d',
+        'integrityStatus': 'MATCH',
+        'lastVerifiedAt': '2026-01-10 12:00:00',
+        'verifiedBy': 'M6 Automated Integrity Daemon',
+        'chainOfCustody': [
+            {'timestamp': '2026-01-08 03:00:00', 'action': 'LIVE_VOLATILITY_CAPTURE', 'officer': 'Insp. T. Deshmukh', 'notes': 'Live RAM captured prior to host power-off.'}
+        ],
+        'bsaSection63Certificate': {
+            'certificateId': 'BSA-63-CYBER-2026-0301',
+            'issuer': 'CERT-In / I4C Forensic Division',
+            'hashAlgorithm': 'SHA-256',
+            'signedAt': '2026-01-08 05:00:00',
+            'status': 'VALID'
+        },
+        'bsaSection65BCertificateId': 'BSA-63-CYBER-2026-0301',
+        'associatedEntities': [
+            {'entityId': 'P00301_CASE-VIDEO-003', 'entityType': 'Person', 'label': 'Person_00301 (Master Hacker)'}
+        ],
+        'description': 'RAM snapshot and source scripts proving automated redirection of OTP verification pages and fraudulent credential harvesting.',
+        'confidence': 1.0,
+        'metadata': {'chainOfCustodyVerified': True}
+    },
+
+    # 5. CASE-VIDEO-004 (Human Trafficking)
+    {
+        'id': 'EVD-VIDEO-004',
+        'entityType': 'Evidence',
+        'evidenceCode': 'EVD-VIDEO-004',
+        'title': 'Seized Safehouse Route Ledger & Counterfeit Visa Templates',
+        'canonicalName': 'Seized Safehouse Route Ledger & Counterfeit Visa Templates',
+        'evidenceNumber': 'EVD-VIDEO-004',
+        'evidenceType': 'Document',
+        'category': 'Seized Physical Item',
+        'caseId': 'CASE-VIDEO-004',
+        'case_id': 'CASE-VIDEO-004',
+        'caseTitle': 'Operation Iron Shield - Human Trafficking',
+        'seizureDate': '2026-01-09 18:30:00',
+        'collectedDate': '2026-01-09T18:30:00Z',
+        'seizingOfficer': 'ACP K. Mehra (Anti-Human Trafficking Unit)',
+        'collectedBy': 'ACP K. Mehra (Anti-Human Trafficking Unit)',
+        'custodian': 'AHTU Central Evidence Vault',
+        'storageLocation': 'AHTU Central Evidence Vault',
+        'fileSizeBytes': 18000000,
+        'sha256Hash': 'f67890123456789abcdef0123456789abcdef0123456789abcdef01a2b3c4d5e',
+        'originalHashSHA256': 'f67890123456789abcdef0123456789abcdef0123456789abcdef01a2b3c4d5e',
+        'currentHashSHA256': 'f67890123456789abcdef0123456789abcdef0123456789abcdef01a2b3c4d5e',
+        'integrityStatus': 'MATCH',
+        'lastVerifiedAt': '2026-01-10 12:00:00',
+        'verifiedBy': 'M6 Automated Integrity Daemon',
+        'chainOfCustody': [
+            {'timestamp': '2026-01-09 18:30:00', 'action': 'SAFEHOUSE_RAID', 'officer': 'ACP K. Mehra', 'notes': 'Discovered in concealed wall cavity.'}
+        ],
+        'bsaSection63Certificate': {
+            'certificateId': 'BSA-63-AHTU-2026-0401',
+            'issuer': 'State Crime Investigation Department',
+            'hashAlgorithm': 'SHA-256',
+            'signedAt': '2026-01-09 20:00:00',
+            'status': 'VALID'
+        },
+        'bsaSection65BCertificateId': 'BSA-63-AHTU-2026-0401',
+        'associatedEntities': [
+            {'entityId': 'P00401_CASE-VIDEO-004', 'entityType': 'Person', 'label': 'Person_00401 (Logistics Handler)'}
+        ],
+        'description': 'Handwritten route itinerary and digital master files matching fake immigration clearance stamps and victim transport manifests.',
+        'confidence': 1.0,
+        'metadata': {'chainOfCustodyVerified': True}
+    }
+]
+
+# Insert all case evidence into DEMO_ENTITIES
+DEMO_ENTITIES.extend(ALL_CASE_EVIDENCE)
+
+# DISCREPANCIES CATALOG
+CASE_DISCREPANCIES: Dict[str, List[Dict[str, Any]]] = {
+    'CASE-2025-M3-DATASET': [
+        {
+            'id': 'DISCREPANCY-M3-01',
+            'caseId': 'CASE-2025-M3-DATASET',
+            'title': 'Contradiction: Suspect Alibi Statement vs Telecom CDR Tower Triangulation',
+            'status': 'DATA DISCREPANCY DETECTED',
+            'conflictingField': 'Suspect Location at 2025-01-14 02:40 AM',
+            'sourceA': {
+                'sourceName': 'Accused Formal Statement (Case Diary Entry #14)',
+                'documentRef': 'FIR Case Diary Entry #14-B',
+                'timestamp': '2025-01-14 02:40:00',
+                'recordedValue': 'Hotel Blue Diamond, Koregaon Park, Pune',
+                'excerpt': '"I stayed at my hotel room in Pune from 11:00 PM and did not travel until morning."'
+            },
+            'sourceB': {
+                'sourceName': 'Telecom CDR Tower Dump (BSA §63 Certified)',
+                'documentRef': 'Carrier Audit Dump AIRTEL-CDR-20250114.csv',
+                'timestamp': '2025-01-14 02:40:18',
+                'recordedValue': 'Nhava Sheva Sector 4 Tower (Cell ID: 19402, 120km from Pune)',
+                'excerpt': 'Subscriber handset pinged Sector 4 mast directly overlooking port container transit yard.'
+            },
+            'analyticalNotes': 'Suspect alibi statement is mathematically irreconcilable with the 120km geographic distance to Sector 4 cell tower.',
+            'investigatorActions': [
+                'Subpoena Hotel Blue Diamond CCTV footage and guest registry.',
+                'Request LAC timing advance logs for 50-meter pinpoint radio positioning.',
+                'Schedule formal confrontation interview with the accused.'
+            ]
+        },
+        {
+            'id': 'DISCREPANCY-M3-02',
+            'caseId': 'CASE-2025-M3-DATASET',
+            'title': 'Discrepancy: Shipping Cargo Declaration vs Physical Weighbridge Panchnama',
+            'status': 'DATA DISCREPANCY DETECTED',
+            'conflictingField': 'Declared Gross Consignment Weight',
+            'sourceA': {
+                'sourceName': 'Customs Electronic Import General Manifest (IGM #239104)',
+                'documentRef': 'ICEGATE Electronic Manifest Filing',
+                'timestamp': '2025-01-10 16:00:00',
+                'recordedValue': 'HS Code 08041020: Fresh Dates, Gross Weight 18,200 kg',
+                'excerpt': 'Declared cargo: 800 cartons of fresh fruit in refrigerated container.'
+            },
+            'sourceB': {
+                'sourceName': 'Physical Port Weighbridge Receipt & Seizure Memo',
+                'documentRef': 'Central Weighbridge Memo #WB-99120',
+                'timestamp': '2025-01-14 03:00:00',
+                'recordedValue': 'Gross Weight 19,450 kg (+1,250 kg surplus unmanifested cavity payload)',
+                'excerpt': 'Physical gross weight exceeds declared documentation by 1,250 kg, confirming false ceiling concealment cavity.'
+            },
+            'analyticalNotes': 'Surplus weight confirms secondary unmanifested payload concealed within refrigeration structure.',
+            'investigatorActions': [
+                'Issue summons to container freight forwarder and clearing house agent.',
+                'Secure weighbridge calibration certificate for court evidence ledger.'
+            ]
+        }
+    ],
+    'CASE-VIDEO-001': [
+        {
+            'id': 'DISCREPANCY-V1-01',
+            'caseId': 'CASE-VIDEO-001',
+            'title': 'Financial Mismatch: Declared Annual Income vs RTGS Hawala Inflow',
+            'status': 'DATA DISCREPANCY DETECTED',
+            'conflictingField': 'Account Beneficiary Turnover Legitimacy',
+            'sourceA': {
+                'sourceName': 'Income Tax Return (ITR-4 Filing AY 2025-26)',
+                'documentRef': 'CBDT Electronic Tax Filing Portal',
+                'timestamp': '2025-07-31 10:00:00',
+                'recordedValue': 'Declared Gross Income: INR 3,60,000 / annum',
+                'excerpt': 'Assessee declares modest freelance commission earnings.'
+            },
+            'sourceB': {
+                'sourceName': 'HDFC Core Banking Ledger (BSA Certified)',
+                'documentRef': 'Bank Statement HDFC-99214430',
+                'timestamp': '2026-01-08 16:45:00',
+                'recordedValue': 'Credit Turnover: INR 1,25,00,000 via multi-layered RTGS',
+                'excerpt': 'Account received 18 high-velocity remittances followed by immediate outward RTGS dispersion.'
+            },
+            'analyticalNotes': 'Severe turnover mismatch (347x declared income) strongly corroborates mule account facilitation under PMLA §3.',
+            'investigatorActions': [
+                'Issue summons under PMLA Section 50 for personal appearance.',
+                'Freeze beneficiary accounts via FIU-IND STR protocol.'
+            ]
+        }
+    ],
+    'CASE-VIDEO-002': [
+        {
+            'id': 'DISCREPANCY-V2-01',
+            'caseId': 'CASE-VIDEO-002',
+            'title': 'Vessel AIS Tracker Telemetry vs Harbour Master Log Entry',
+            'status': 'DATA DISCREPANCY DETECTED',
+            'conflictingField': 'Vessel Offshore Coordinates at Sea Berth',
+            'sourceA': {
+                'sourceName': 'Harbour Master Manual Check-in Register',
+                'documentRef': 'Berth Log #BM-2026-09',
+                'timestamp': '2026-01-07 01:15:00',
+                'recordedValue': 'Stationary at Outer Anchorage Berth 3',
+                'excerpt': 'Skipper logged vessel anchored with main propulsion disabled.'
+            },
+            'sourceB': {
+                'sourceName': 'Coast Guard Radar & AIS Transponder Recording',
+                'documentRef': 'ICG Coastal Surveillance Radar Tape #07',
+                'timestamp': '2026-01-07 01:18:22',
+                'recordedValue': 'Underway at 14 knots heading 240 degrees southwest',
+                'excerpt': 'Target vessel rendezvoused with unflagged high-speed skiff at coordinates 18.91N 72.82E.'
+            },
+            'analyticalNotes': 'Direct radar confrontation invalidates manual harbour log entry, demonstrating intentional AIS falsification.',
+            'investigatorActions': [
+                'Impound vessel navigational chart plotter.',
+                'Detain crew for formal statement recording under NDPS Section 67.'
+            ]
+        }
+    ],
+    'CASE-VIDEO-003': [
+        {
+            'id': 'DISCREPANCY-V3-01',
+            'caseId': 'CASE-VIDEO-003',
+            'title': 'Domain WHOIS Registrant vs TLS Certificate Server Origin',
+            'status': 'DATA DISCREPANCY DETECTED',
+            'conflictingField': 'Infrastructure Identity & Geolocation',
+            'sourceA': {
+                'sourceName': 'ICANN WHOIS Registration Record',
+                'documentRef': 'Domain Registrar Filing: sbi-secure-portal.net',
+                'timestamp': '2026-01-02 08:00:00',
+                'recordedValue': 'Registrant: Ramesh Patel, Surat, Gujarat (Indian Resident)',
+                'excerpt': 'Registered with dummy local KYC details.'
+            },
+            'sourceB': {
+                'sourceName': 'BGP Route & Reverse DNS Telemetry',
+                'documentRef': 'Cloudflare & AWS Ingress Traffic Analysis',
+                'timestamp': '2026-01-08 03:12:00',
+                'recordedValue': 'Origin IP: 185.220.101.42 (Anonymous Tor Exit Relay, Frankfurt)',
+                'excerpt': 'All credential submissions routed to offshore Telegram Bot token via foreign reverse-proxy.'
+            },
+            'analyticalNotes': 'Proves synthetic identity was deployed for domain masking while command server operated abroad.',
+            'investigatorActions': [
+                'Issue MLAT request to foreign cloud provider.',
+                'Subpoena domain registrar payment gateway transaction logs.'
+            ]
+        }
+    ],
+    'CASE-VIDEO-004': [
+        {
+            'id': 'DISCREPANCY-V4-01',
+            'caseId': 'CASE-VIDEO-004',
+            'title': 'Fastag Toll Booth Timestamp vs Transport Manifest Schedule',
+            'status': 'DATA DISCREPANCY DETECTED',
+            'conflictingField': 'Vehicle Route & Transit Timeline',
+            'sourceA': {
+                'sourceName': 'Commercial Transport Waybill',
+                'documentRef': 'Consignment Waybill #TR-9902',
+                'timestamp': '2026-01-09 14:00:00',
+                'recordedValue': 'Intended Route: Mumbai to Surat via NH48',
+                'excerpt': 'Goods carrier registered for scheduled agricultural equipment transport.'
+            },
+            'sourceB': {
+                'sourceName': 'NHAI Fastag Toll Plaza Record',
+                'documentRef': 'Khed Shivapur Toll Gate Camera 03',
+                'timestamp': '2026-01-09 17:42:10',
+                'recordedValue': 'Diverted South: Pune-Bangalore Corridor (NH4)',
+                'excerpt': 'Vehicle crossed toll heading towards isolated rural safehouse cluster, contrary to manifest.'
+            },
+            'analyticalNotes': 'Unauthorized route diversion confirms intentional transit to secondary unmonitored drop point.',
+            'investigatorActions': [
+                'Alert regional police check-posts along NH4.',
+                'Seize vehicle GPS tracker unit upon interception.'
+            ]
+        }
+    ]
+}
+
+def get_case_discrepancies(case_id: str) -> List[Dict[str, Any]]:
+    if case_id in CASE_DISCREPANCIES:
+        return CASE_DISCREPANCIES[case_id]
+    # Default to M3 dataset discrepancies if case not found
+    return CASE_DISCREPANCIES.get('CASE-2025-M3-DATASET', [])
+
+

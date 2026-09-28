@@ -6,7 +6,7 @@ export interface CaseDossier {
   leadInvestigator: string;
   assignedTeam: string[];
   status: 'Active' | 'Under Review' | 'Charge Sheeted' | 'Archived';
-  priority: 'High' | 'Medium' | 'Critical';
+  priority: 'Critical' | 'High' | 'Medium' | 'Low';
   openedDate: string;
   lastUpdated: string;
   policeStation: string;

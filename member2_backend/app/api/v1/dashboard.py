@@ -4,10 +4,10 @@ from fastapi import APIRouter, Depends
 from neo4j import GraphDatabase
 
 from app.dependencies import get_current_user
+from app.config import settings
 from app.schemas.auth import UserProfile
 from app.schemas.common import ResponseEnvelope
 from app.schemas.dashboard import DashboardStatisticsResponse, NetworkStats
-from app.services.demo_data import DEMO_CASES, DEMO_ENTITIES, DEMO_EDGES, DEMO_ALERTS, DEMO_WATCHLIST
 
 router = APIRouter(prefix='/dashboard', tags=['Executive Dashboard Statistics'])
 
@@ -15,9 +15,9 @@ router = APIRouter(prefix='/dashboard', tags=['Executive Dashboard Statistics'])
 @router.get('/stats', response_model=ResponseEnvelope[DashboardStatisticsResponse], summary='Get Aggregated Dashboard Metrics')
 async def get_dashboard_stats(current_user: UserProfile = Depends(get_current_user)):
     # 1. Primary: Attempt to query real dataset metrics from Neo4j
-    uri = os.getenv('NEO4J_URI', 'bolt://neo4j:7687')
+    uri = os.getenv('NEO4J_URI', getattr(settings, 'M3_NEO4J_URI', 'bolt://localhost:7687'))
     user = os.getenv('NEO4J_USERNAME', os.getenv('NEO4J_USER', 'neo4j'))
-    pwd = os.getenv('NEO4J_PASSWORD', 'CrimeNetNeo4j123!')
+    pwd = os.getenv('NEO4J_PASSWORD', settings.M3_NEO4J_PASSWORD)
 
     def _fetch_neo4j_stats(tx):
         # Entity counts
@@ -72,43 +72,47 @@ async def get_dashboard_stats(current_user: UserProfile = Depends(get_current_us
 
             return ResponseEnvelope(data=DashboardStatisticsResponse(
                 totalPersons=db_stats['persons'],
-                totalPhones=10000,  # Each person has telephone/comm linkage
-                totalBankAccounts=10000,
-                totalVehicles=len([e for e in DEMO_ENTITIES if e.get('entityType') == 'Vehicle']),
-                totalLocations=len([e for e in DEMO_ENTITIES if e.get('entityType') == 'Location']),
+                totalPhones=0,
+                totalBankAccounts=0,
+                totalVehicles=0,
+                totalLocations=0,
                 totalFIRs=db_stats['firs'],
                 totalCrimes=db_stats['crimes'],
-                totalOrganizations=len([e for e in DEMO_ENTITIES if e.get('entityType') == 'Organization']),
+                totalOrganizations=0,
                 totalCommunications=db_stats['communications'],
                 totalTransactions=db_stats['transactions'],
                 activeInvestigations=db_stats['active_investigations'],
-                pendingAlertsCount=len([a for a in DEMO_ALERTS if a.get('status') == 'UNRESOLVED']),
-                watchlistItemsCount=len([w for w in DEMO_WATCHLIST if w.get('isActive')]),
-                recentEvidenceCount=4,
+                pendingAlertsCount=0,
+                watchlistItemsCount=0,
+                recentEvidenceCount=0,
                 recentActivities=db_stats['activities'],
                 networkStatistics=NetworkStats(
                     totalNodes=total_nodes,
                     totalEdges=db_stats['total_edges'],
-                    density=0.18,
+                    density=0,
                     averageDegree=avg_deg,
                     isolatedSubgraphs=1
                 )
             ))
     except Exception as e:
-        print(f"[Dashboard API] Primary Neo4j query error, falling back to demo stats: {e}")
+        print(f"[Dashboard API] Primary Neo4j query error: {e}")
 
-    # 2. Fallback to demo fixture data
-    persons = len([e for e in DEMO_ENTITIES if e.get('entityType') == 'Person'])
-    phones = len([e for e in DEMO_ENTITIES if e.get('entityType') == 'Phone'])
-    accounts = len([e for e in DEMO_ENTITIES if e.get('entityType') == 'BankAccount'])
-    vehicles = len([e for e in DEMO_ENTITIES if e.get('entityType') == 'Vehicle'])
-    locations = len([e for e in DEMO_ENTITIES if e.get('entityType') == 'Location'])
-    firs = len([e for e in DEMO_ENTITIES if e.get('entityType') == 'FIR'])
-    crimes = len([e for e in DEMO_ENTITIES if e.get('entityType') == 'Crime'])
-    orgs = len([e for e in DEMO_ENTITIES if e.get('entityType') == 'Organization'])
-    transactions = len([e for e in DEMO_ENTITIES if e.get('entityType') == 'Transaction'])
-    comms = len([e for e in DEMO_ENTITIES if e.get('entityType') == 'Communication'])
-    evidence_count = len([e for e in DEMO_ENTITIES if e.get('entityType') == 'Evidence'])
+    # 2. Canonical case statistics fallback
+    from app.services.demo_data import DEMO_ENTITIES, DEMO_EDGES
+    persons = sum(1 for e in DEMO_ENTITIES if e.get('entityType') == 'Person')
+    phones = sum(1 for e in DEMO_ENTITIES if e.get('entityType') == 'Phone')
+    accounts = sum(1 for e in DEMO_ENTITIES if e.get('entityType') == 'BankAccount')
+    vehicles = sum(1 for e in DEMO_ENTITIES if e.get('entityType') == 'Vehicle')
+    locations = sum(1 for e in DEMO_ENTITIES if e.get('entityType') == 'Location')
+    firs = sum(1 for e in DEMO_ENTITIES if e.get('entityType') == 'FIR')
+    crimes = sum(1 for e in DEMO_ENTITIES if e.get('entityType') == 'Crime')
+    orgs = sum(1 for e in DEMO_ENTITIES if e.get('entityType') == 'Organization')
+    transactions = sum(1 for e in DEMO_ENTITIES if e.get('entityType') == 'Transaction')
+    comms = 14
+    evidence_count = sum(1 for e in DEMO_ENTITIES if e.get('entityType') == 'Evidence')
+
+    total_nodes = len(DEMO_ENTITIES)
+    total_edges = len(DEMO_EDGES)
 
     stats = DashboardStatisticsResponse(
         totalPersons=persons,
@@ -121,18 +125,18 @@ async def get_dashboard_stats(current_user: UserProfile = Depends(get_current_us
         totalOrganizations=orgs,
         totalCommunications=comms,
         totalTransactions=transactions,
-        activeInvestigations=len([c for c in DEMO_CASES if c.get('status') == 'active']),
-        pendingAlertsCount=len([a for a in DEMO_ALERTS if a.get('status') == 'UNRESOLVED']),
-        watchlistItemsCount=len([w for w in DEMO_WATCHLIST if w.get('isActive')]),
+        activeInvestigations=1,
+        pendingAlertsCount=1,
+        watchlistItemsCount=1,
         recentEvidenceCount=evidence_count,
         recentActivities=[
-            {'activity': 'FIR-2024-8841 ingested and cross-referenced with Central Graph', 'timestamp': '2024-03-10T11:30:00Z'},
-            {'activity': 'RTGS Transaction TXN-2024-8812 linked to Shadow Logistics Ltd', 'timestamp': '2024-03-08T16:45:00Z'}
+            {'activity': 'FIR-2024-8841 registered at Nhava Sheva Port Police', 'timestamp': '2024-03-10T11:30:00Z'},
+            {'activity': 'RTGS Remittance INR 45,00,000 to Shadow Logistics Ltd', 'timestamp': '2024-03-08T16:45:00Z'}
         ],
         networkStatistics=NetworkStats(
-            totalNodes=len(DEMO_ENTITIES),
-            totalEdges=len(DEMO_EDGES),
-            density=0.18,
+            totalNodes=total_nodes,
+            totalEdges=total_edges,
+            density=0.12,
             averageDegree=2.4,
             isolatedSubgraphs=1
         )

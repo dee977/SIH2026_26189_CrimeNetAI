@@ -1,9 +1,9 @@
 export type UserRole = 
-  | 'System Administrator'
-  | 'Senior Authority'
-  | 'Senior Investigator'
-  | 'Investigator'
-  | 'Analyst / Viewer';
+  | 'ADMIN'
+  | 'INVESTIGATOR'
+  | 'ANALYST'
+  | 'AUDITOR'
+  | 'RESTRICTED';
 
 export type UserStatus = 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED' | 'SUSPENDED';
 

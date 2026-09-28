@@ -37,7 +37,10 @@ async def upload_document(
     if not file.filename:
         raise HTTPException(status_code=400, detail="INVALID FILE: Filename is empty.")
 
-    target_case_id = caseId or case_id or 'CASE-2024-MH-092'
+    target_case_id = caseId or case_id
+    if not target_case_id:
+        raise HTTPException(status_code=400, detail="INVALID REQUEST: caseId is required.")
+    
     content = await file.read()
     
     # Audit log start
@@ -84,29 +87,11 @@ async def upload_document(
 
 @router.get('/status/{job_id}', response_model=ResponseEnvelope[IngestJobStatusResponse], summary='Get Ingestion Job Status by Job ID')
 @router.get('/jobs/{job_id}', response_model=ResponseEnvelope[IngestJobStatusResponse], summary='Get Ingestion Job Status (Alias)')
-async def get_job_status(job_id: str):
+async def get_job_status(job_id: str, current_user: UserProfile = Depends(require_permission('ingest:upload'))):
     """Returns lifecycle status, stage, records, extracted entities, and SHA-256 hash."""
     job = get_ingest_job(job_id)
     if not job:
-        # Fallback realistic response for historical demo IDs
-        return ResponseEnvelope(data=IngestJobStatusResponse(
-            jobId=job_id,
-            status='COMPLETED',
-            stage='COMPLETED',
-            progressPercent=100,
-            docType='PDF',
-            fileName='seizure_panchnama_exhibit_p1.pdf',
-            caseId='CASE-2024-MH-092',
-            successfulRecords=14,
-            failedRecords=0,
-            duplicateRecords=0,
-            recordsProcessed=14,
-            recordsCreated=14,
-            entitiesExtracted=8,
-            relationshipsExtracted=6,
-            evidenceId='EVD-2024-0812',
-            sha256Hash='e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'
-        ))
+        raise HTTPException(status_code=404, detail="Job not found")
     return ResponseEnvelope(data=IngestJobStatusResponse(**job))
 
 
@@ -115,10 +100,13 @@ async def list_ingest_jobs(
     caseId: Optional[str] = Query(None),
     case_id: Optional[str] = Query(None),
     page: int = 1,
-    pageSize: int = 20
+    pageSize: int = 20,
+    current_user: UserProfile = Depends(require_permission('ingest:upload'))
 ):
     """Returns list of recent uploads and ingestion jobs."""
     target_case = caseId or case_id
+    if not target_case:
+        raise HTTPException(status_code=400, detail="INVALID REQUEST: caseId is required.")
     jobs = get_all_ingest_jobs(case_id=target_case)
     items = [IngestJobStatusResponse(**j) for j in jobs]
     return PaginatedResponse(
@@ -135,7 +123,8 @@ async def list_ingest_jobs(
 @router.post('/validate', response_model=ResponseEnvelope[CsvValidationResponse], summary='Validate CSV File & Preview Schema')
 async def validate_csv(
     file: UploadFile = File(...),
-    ingest_svc: IngestionService = Depends(get_ingestion_service)
+    ingest_svc: IngestionService = Depends(get_ingestion_service),
+    current_user: UserProfile = Depends(require_permission('ingest:upload'))
 ):
     """
     Pre-upload validation endpoint: inspects columns, detects known schemas,

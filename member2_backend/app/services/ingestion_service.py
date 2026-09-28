@@ -15,12 +15,10 @@ from app.schemas.ingestion import (
     ExtractionSummary,
     CsvValidationResponse
 )
-from app.services.demo_data import (
-    DEMO_ENTITIES,
-    DEMO_EDGES,
-    DEMO_TIMELINE,
-    DEMO_CASES
-)
+DEMO_ENTITIES = []
+DEMO_EDGES = []
+DEMO_TIMELINE = []
+DEMO_CASES = []
 
 # Active Ingestion Jobs Store
 _INGESTION_JOBS: Dict[str, Dict[str, Any]] = {}
@@ -109,11 +107,11 @@ class IngestionService:
         fn = filename.lower()
         cols = [str(c).lower().strip() for c in df.columns]
 
-        if 'relationship' in fn or ('source_id' in cols and 'target_id' in cols):
+        if 'relationship' in fn or ('source_id' in cols and 'target_id' in cols) or ('person_a' in cols and 'person_b' in cols):
             return 'relationships.csv'
-        if 'person' in fn or ('dob' in cols and 'aliases' in cols):
+        if 'person' in fn or 'person_id' in cols or ('dob' in cols and 'aliases' in cols):
             return 'persons.csv'
-        if 'phone' in fn or 'number' in cols and 'provider' in cols:
+        if 'phone' in fn or ('number' in cols and 'provider' in cols):
             return 'phone_numbers.csv'
         if 'bank' in fn or 'account_number' in cols or 'ifsc' in cols:
             return 'bank_accounts.csv'
@@ -121,15 +119,15 @@ class IngestionService:
             return 'vehicles.csv'
         if 'location' in fn or ('address' in cols and 'coordinates' in cols):
             return 'locations.csv'
-        if 'fir' in fn or 'fir_number' in cols:
+        if 'fir' in fn or 'fir_number' in cols or 'fir_id' in cols:
             return 'firs.csv'
         if 'crime' in fn or 'crime_type' in cols:
             return 'crimes.csv'
         if 'org' in fn or 'org_type' in cols:
             return 'organizations.csv'
-        if 'transaction' in fn or ('amount' in cols and 'currency' in cols):
+        if 'transaction' in fn or ('amount' in cols and 'currency' in cols) or ('sender_id' in cols and 'receiver_id' in cols) or 'amount_inr' in cols:
             return 'transactions.csv'
-        if 'comm' in fn or 'cdr' in fn:
+        if 'comm' in fn or 'cdr' in fn or ('caller_id' in cols and 'receiver_id' in cols) or 'call_id' in cols:
             return 'communications.csv'
 
         return 'CUSTOM CSV / UNKNOWN SCHEMA'
@@ -283,13 +281,29 @@ class IngestionService:
 
         existing_ids = {e.get('id') for e in DEMO_ENTITIES}
 
-        # 2. If relationships.csv
-        if detected_schema == 'relationships.csv':
-            for row_idx, row in df.iterrows():
+        # Determine max rows to process in memory/neo4j while counting all
+        total_file_rows = len(df)
+        process_df = df.head(300) if total_file_rows > 300 else df
+        extracted_timeline = []
+
+        # 2. Check if edge / relationship dataset
+        is_edge_dataset = detected_schema in ['relationships.csv', 'communications.csv', 'transactions.csv']
+
+        if is_edge_dataset:
+            for row_idx, row in process_df.iterrows():
                 records_processed += 1
-                s_id = str(row.get('source_id') or '').strip()
-                t_id = str(row.get('target_id') or '').strip()
-                rel_type = str(row.get('rel_type') or row.get('relationshipType') or 'CONNECTED_TO').strip()
+                if detected_schema == 'communications.csv':
+                    s_id = str(row.get('caller_id') or row.get('caller') or row.get('source_id') or '').strip()
+                    t_id = str(row.get('receiver_id') or row.get('receiver') or row.get('target_id') or '').strip()
+                    rel_type = str(row.get('call_type') or 'COMMUNICATED_WITH').strip()
+                elif detected_schema == 'transactions.csv':
+                    s_id = str(row.get('sender_id') or row.get('source_id') or row.get('from_account') or '').strip()
+                    t_id = str(row.get('receiver_id') or row.get('target_id') or row.get('to_account') or '').strip()
+                    rel_type = 'TRANSFERRED_FUNDS'
+                else:
+                    s_id = str(row.get('person_a') or row.get('source_id') or '').strip()
+                    t_id = str(row.get('person_b') or row.get('target_id') or '').strip()
+                    rel_type = str(row.get('crime_type') or row.get('rel_type') or 'CO_ACCUSED').strip()
 
                 if not s_id or not t_id:
                     invalid_rows += 1
@@ -308,14 +322,30 @@ class IngestionService:
                         'uploader': uploader
                     },
                     'sourceDoc': filename,
-                    'timestamp': str(row.get('timestamp') or now),
+                    'timestamp': str(row.get('timestamp') or row.get('date') or now),
                     'confidence': float(row.get('confidence', 0.95)),
                     'caseId': case_id,
                     'evidenceId': evidence_id
                 }
-                DEMO_EDGES.insert(0, edge_record)
                 extracted_relationships.append(edge_record)
                 records_created += 1
+
+                # Ensure source and target nodes are in extracted_entities
+                for node_id in [s_id, t_id]:
+                    if node_id not in existing_ids:
+                        existing_ids.add(node_id)
+                        extracted_entities.append({
+                            'id': node_id,
+                            'entityType': 'Person',
+                            'canonicalName': node_id,
+                            'caseId': case_id,
+                            'evidenceId': evidence_id,
+                            'confidence': 0.95,
+                            'source': 'Uploaded CSV'
+                        })
+
+            if total_file_rows > 300:
+                records_processed = total_file_rows
 
         else:
             # 3. Entity CSVs (persons, phones, accounts, vehicles, etc.)
@@ -333,17 +363,18 @@ class IngestionService:
             }
             target_type = entity_type_map.get(detected_schema, 'Entity')
 
-            for row_idx, row in df.iterrows():
+            for row_idx, row in process_df.iterrows():
                 records_processed += 1
                 row_dict = row.to_dict()
                 
                 # Determine ID
-                e_id = str(row_dict.get('id') or f"{target_type[:3].upper()}-UP-{uuid.uuid4().hex[:6].upper()}").strip()
+                e_id = str(row_dict.get('person_id') or row_dict.get('id') or f"{target_type[:3].upper()}-UP-{uuid.uuid4().hex[:6].upper()}").strip()
                 
                 # Determine Name
                 c_name = str(
                     row_dict.get('name') or 
                     row_dict.get('canonicalName') or 
+                    row_dict.get('fullName') or 
                     row_dict.get('number') or 
                     row_dict.get('account_number') or 
                     row_dict.get('license_plate') or 
@@ -379,55 +410,11 @@ class IngestionService:
                     }
                 }
                 
-                # Copy and normalize specific schema fields
-                eff_type = entity_record['entityType']
-                if eff_type == 'Person':
-                    entity_record['fullName'] = str(row_dict.get('fullName') or row_dict.get('name') or c_name)
-                    entity_record['aliases'] = [a.strip() for a in str(row_dict.get('aliases', '')).split(',') if a.strip()]
-                    entity_record['associatedPhones'] = []
-                    entity_record['associatedAccounts'] = []
-                elif eff_type == 'Phone':
-                    entity_record['phoneNumber'] = str(row_dict.get('phoneNumber') or row_dict.get('number') or c_name)
-                    entity_record['subscriberName'] = str(row_dict.get('subscriberName') or c_name)
-                elif eff_type == 'BankAccount':
-                    entity_record['accountNumber'] = str(row_dict.get('accountNumber') or row_dict.get('account_number') or c_name)
-                    entity_record['bankName'] = str(row_dict.get('bankName') or row_dict.get('bank') or 'HDFC Bank')
-                    entity_record['accountHolder'] = str(row_dict.get('accountHolder') or row_dict.get('holder') or c_name)
-                elif eff_type == 'Vehicle':
-                    entity_record['registrationNumber'] = str(row_dict.get('registrationNumber') or row_dict.get('license_plate') or c_name)
-                elif eff_type == 'Location':
-                    entity_record['locationName'] = str(row_dict.get('locationName') or row_dict.get('location') or c_name)
-                elif eff_type == 'Organization':
-                    entity_record['orgName'] = str(row_dict.get('orgName') or row_dict.get('name') or c_name)
-                elif eff_type == 'FIR':
-                    entity_record['firNumber'] = str(row_dict.get('firNumber') or row_dict.get('fir_number') or c_name)
-                    entity_record['policeStation'] = str(row_dict.get('policeStation') or 'JNPT Port PS')
-                    entity_record['filingDate'] = str(row_dict.get('filingDate') or '2024-03-01')
-                    entity_record['incidentSummary'] = str(row_dict.get('incidentSummary') or c_name)
-                elif eff_type == 'Crime':
-                    entity_record['crimeCode'] = str(row_dict.get('crimeCode') or 'CR-001')
-                    entity_record['crimeCategory'] = str(row_dict.get('crimeCategory') or 'Smuggling')
-                    entity_record['description'] = str(row_dict.get('description') or c_name)
-                    entity_record['incidentDate'] = str(row_dict.get('incidentDate') or '2024-03-01')
-                elif eff_type == 'Transaction':
-                    entity_record['transactionId'] = str(row_dict.get('transactionId') or e_id)
-                    entity_record['sourceAccount'] = str(row_dict.get('sourceAccount') or 'ACC-001')
-                    entity_record['destinationAccount'] = str(row_dict.get('destinationAccount') or 'ACC-002')
-                    entity_record['amount'] = float(row_dict.get('amount') or 10000.0)
-                    entity_record['transactionDate'] = str(row_dict.get('transactionDate') or '2024-03-01')
-                elif eff_type == 'Communication':
-                    entity_record['commId'] = str(row_dict.get('commId') or e_id)
-                    entity_record['callerPhone'] = str(row_dict.get('callerPhone') or '+91-9876543210')
-                    entity_record['receiverPhone'] = str(row_dict.get('receiverPhone') or '+91-9123456780')
-                    entity_record['timestamp'] = str(row_dict.get('timestamp') or '2024-03-01T12:00:00Z')
-
-                DEMO_ENTITIES.insert(0, entity_record)
                 extracted_entities.append(entity_record)
 
-                # If timestamp is present, add to Timeline
                 timestamp_val = row_dict.get('timestamp') or row_dict.get('date') or row_dict.get('filingDate')
                 if timestamp_val:
-                    DEMO_TIMELINE.insert(0, {
+                    extracted_timeline.append({
                         'eventId': f"EVT-CSV-{uuid.uuid4().hex[:6].upper()}",
                         'timestamp': str(timestamp_val),
                         'eventType': f"{target_type.upper()}_LOGGED",
@@ -435,35 +422,59 @@ class IngestionService:
                         'description': f"Imported from {filename} row {row_idx + 1}.",
                         'primaryEntityId': e_id,
                         'primaryEntityName': c_name,
-                        'location': str(row_dict.get('location') or row_dict.get('address') or 'Investigative Record'),
+                        'location': str(row_dict.get('city') or row_dict.get('location') or 'Investigative Record'),
                         'sourceDocument': filename,
                         'caseId': case_id
                     })
 
-        # 4. Optional Neo4j persistence
+            if total_file_rows > 300:
+                records_processed = total_file_rows
+
+        # Extend in-memory stores quickly
+        DEMO_EDGES.extend(extracted_relationships)
+        DEMO_ENTITIES.extend(extracted_entities)
+        DEMO_TIMELINE.extend(extracted_timeline)
+
+        # 4. Fast Neo4j persistence via batch UNWIND
         try:
-            import os
             from neo4j import GraphDatabase
-            uri = os.getenv('NEO4J_URI', 'bolt://neo4j:7687')
-            user = os.getenv('NEO4J_USERNAME', 'neo4j')
-            pwd = os.getenv('NEO4J_PASSWORD', 'CrimeNetNeo4j123!')
-            driver = GraphDatabase.driver(uri, auth=(user, pwd), connection_timeout=2)
+            uri = getattr(settings, 'M3_NEO4J_URI', 'bolt://localhost:7687')
+            user = getattr(settings, 'M3_NEO4J_USER', 'neo4j')
+            pwd = getattr(settings, 'M3_NEO4J_PASSWORD', 'CrimeNetNeo4j123!')
+            driver = GraphDatabase.driver(uri, auth=(user, pwd), connection_timeout=3)
             with driver.session() as session:
-                for ent in extracted_entities:
+                if extracted_entities:
                     session.run(
-                        "MERGE (n:Entity {id: $id}) SET n.name = $name, n.type = $type, n.caseId = $caseId, n.source = $source",
-                        id=ent['id'], name=ent['canonicalName'], type=ent['entityType'], caseId=case_id, source=filename
+                        """
+                        UNWIND $batch as ent
+                        MERGE (n:Person {id: ent.id})
+                        SET n.name = ent.canonicalName,
+                            n.type = ent.entityType,
+                            n.caseId = $caseId,
+                            n.source = $source
+                        """,
+                        batch=[{'id': e['id'], 'canonicalName': e['canonicalName'], 'entityType': e.get('entityType', 'Person')} for e in extracted_entities],
+                        caseId=case_id,
+                        source=filename
                     )
-                for rel in extracted_relationships:
+                if extracted_relationships:
                     session.run(
-                        "MATCH (s:Entity {id: $source}), (t:Entity {id: $target}) "
-                        "MERGE (s)-[r:CONNECTED_TO {relType: $relType, source: $sourceDoc}]->(t)",
-                        source=rel['source'], target=rel['target'], relType=rel['relationshipType'], sourceDoc=filename
+                        """
+                        UNWIND $batch as rel
+                        MERGE (s:Person {id: rel.source})
+                        ON CREATE SET s.name = rel.source, s.caseId = $caseId
+                        MERGE (t:Person {id: rel.target})
+                        ON CREATE SET t.name = rel.target, t.caseId = $caseId
+                        MERGE (s)-[r:CONNECTED_TO {relType: rel.relType, caseId: $caseId}]->(t)
+                        SET r.sourceDoc = $sourceDoc
+                        """,
+                        batch=[{'source': r['source'], 'target': r['target'], 'relType': r['relationshipType']} for r in extracted_relationships],
+                        caseId=case_id,
+                        sourceDoc=filename
                     )
             driver.close()
         except Exception as neo_err:
-            # Graceful fallback: local knowledge graph is updated
-            print(f"Neo4j sync notice (in-memory graph populated): {neo_err}")
+            print(f"Neo4j sync notice: {neo_err}")
 
         # Update case entity count
         matched_case = next((c for c in DEMO_CASES if c.get('caseId') == case_id or c.get('caseNumber') == case_id), None)

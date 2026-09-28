@@ -1,236 +1,172 @@
 import React, { useState } from 'react';
 import { useNavigationStore } from '../../store/navigationStore';
-import { useAuthStore } from '../../store/authStore';
-import { useNotificationStore } from '../../store/notificationStore';
-import { Shield, Lock, Mail, Phone, ArrowRight, UserCheck, AlertCircle } from 'lucide-react';
-import { UserRole } from '../../types/auth';
+import { supabase } from '../../services/supabaseClient';
+import { Mail, Lock, ArrowRight, Shield, AlertCircle } from 'lucide-react';
 
 export const LoginPage: React.FC = () => {
   const { setView } = useNavigationStore();
-  const { login } = useAuthStore();
-  const { addToast } = useNotificationStore();
 
-  const [loginMethod, setLoginMethod] = useState<'email' | 'phone'>('email');
-  const [identifier, setIdentifier] = useState('v.rao@cid.police.gov.in');
-  const [password, setPassword] = useState('••••••••••••');
-  const [selectedRole, setSelectedRole] = useState<UserRole>('Senior Investigator');
+  const [identifier, setIdentifier] = useState('');
+  const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setErrorMessage('');
     setIsLoading(true);
+    setErrorMessage('');
 
-    setTimeout(() => {
-      setIsLoading(false);
-      login(identifier, selectedRole);
-      addToast({
-        type: 'success',
-        title: 'Authentication Successful',
-        message: `Welcome, ${identifier}. Authenticated as ${selectedRole}.`
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: identifier,
+        password: password,
       });
-      setView('dashboard');
-    }, 600);
-  };
 
-  const handleQuickDemoLogin = (role: UserRole, email: string) => {
-    setIdentifier(email);
-    setSelectedRole(role);
-    login(email, role);
-    addToast({
-      type: 'success',
-      title: 'Demo Persona Activated',
-      message: `Logged in as ${role} for testing.`
-    });
-    setView('dashboard');
+      if (error) {
+        setErrorMessage(error.message);
+      } else {
+        // App.tsx auth listener handles redirect / state update, but we can setView here to ensure UI navigates
+        setView('dashboard');
+      }
+    } catch (err: any) {
+      setErrorMessage(err.message || 'Login failed');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
-    <div className="min-h-screen bg-[#080d1a] flex flex-col justify-center py-12 sm:px-6 lg:px-8 relative selection:bg-cyan-500/30">
+    <div className="min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)] flex overflow-hidden select-none">
       
-      {/* Background Decor */}
-      <div className="absolute inset-0 grid-bg opacity-25 pointer-events-none" />
-      <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
-
-      <div className="sm:mx-auto sm:w-full sm:max-w-md z-10 px-4">
-        
-        {/* Brand */}
-        <div className="text-center mb-6">
-          <div className="w-12 h-12 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 mx-auto mb-3 shadow-lg shadow-cyan-500/10">
-            <Shield className="w-6 h-6" />
-          </div>
-          <h2 className="text-2xl font-bold tracking-tight text-slate-100">Law Enforcement Terminal</h2>
-          <p className="text-xs text-slate-400 mt-1">CrimeNet AI Secure Authentication Station (M6 Node)</p>
+      {/* Left side abstract visual treatment */}
+      <div className="hidden lg:flex flex-col justify-between w-1/2 p-12 relative overflow-hidden bg-[var(--sidebar-bg)] border-r border-[var(--sidebar-hover)]">
+        {/* Abstract shapes / glow */}
+        <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
+          <div className="absolute top-[-20%] left-[-10%] w-[120%] h-[120%] bg-[radial-gradient(ellipse_at_top_left,rgba(37,99,235,0.15),transparent_50%)]" />
+          <div className="absolute bottom-[-10%] right-[-10%] w-[100%] h-[100%] bg-[radial-gradient(circle_at_bottom_right,rgba(6,182,212,0.1),transparent_40%)]" />
+          <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:40px_40px] opacity-20" />
         </div>
 
-        {/* Card */}
-        <div className="glass-panel bg-slate-950/85 rounded-2xl border-slate-800 p-7 shadow-2xl backdrop-blur-xl">
-          
-          {/* Email / Phone Toggle */}
-          <div className="flex rounded-lg bg-slate-900 p-1 mb-5 border border-slate-800">
-            <button
-              type="button"
-              onClick={() => {
-                setLoginMethod('email');
-                setIdentifier('v.rao@cid.police.gov.in');
-              }}
-              className={`flex-1 py-1.5 rounded-md text-xs font-medium transition-all ${
-                loginMethod === 'email' ? 'bg-cyan-500 text-slate-950 font-semibold shadow' : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              Email Address
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setLoginMethod('phone');
-                setIdentifier('+91-98200-11223');
-              }}
-              className={`flex-1 py-1.5 rounded-md text-xs font-medium transition-all ${
-                loginMethod === 'phone' ? 'bg-cyan-500 text-slate-950 font-semibold shadow' : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              Phone Number
-            </button>
+        <div className="relative z-10">
+          <div className="flex items-center gap-3 mb-8">
+            <div className="w-10 h-10 rounded-xl bg-[var(--primary)]/20 border border-[var(--primary)]/40 flex items-center justify-center text-[var(--accent)] shadow-sm shadow-[var(--primary)]/20">
+              <Shield className="w-5 h-5" />
+            </div>
+            <span className="font-bold text-xl text-white tracking-tight">CrimeNet AI</span>
           </div>
-
-          {errorMessage && (
-            <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/30 flex items-center gap-2 text-xs text-red-300">
-              <AlertCircle className="w-4 h-4 shrink-0" />
-              <span>{errorMessage}</span>
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            
-            <div>
-              <label className="block text-[11px] font-mono uppercase tracking-wider text-slate-400 mb-1.5">
-                {loginMethod === 'email' ? 'Officer Email' : 'Authorized Phone'}
-              </label>
-              <div className="relative">
-                {loginMethod === 'email' ? (
-                  <Mail className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
-                ) : (
-                  <Phone className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
-                )}
-                <input
-                  type={loginMethod === 'email' ? 'email' : 'text'}
-                  required
-                  value={identifier}
-                  onChange={(e) => setIdentifier(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-700 rounded-xl pl-9 pr-4 py-2.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-cyan-500"
-                />
-              </div>
-            </div>
-
-            <div>
-              <div className="flex justify-between items-center mb-1.5">
-                <label className="block text-[11px] font-mono uppercase tracking-wider text-slate-400">
-                  Password
-                </label>
-                <button
-                  type="button"
-                  onClick={() => setView('forgot-password')}
-                  className="text-[11px] text-cyan-400 hover:underline"
-                >
-                  Forgot password?
-                </button>
-              </div>
-              <div className="relative">
-                <Lock className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
-                <input
-                  type="password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-700 rounded-xl pl-9 pr-4 py-2.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-cyan-500"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-[11px] font-mono uppercase tracking-wider text-slate-400 mb-1.5">
-                Active Authorization Profile
-              </label>
-              <select
-                value={selectedRole}
-                onChange={(e) => setSelectedRole(e.target.value as UserRole)}
-                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-cyan-500 cursor-pointer"
-              >
-                <option value="Senior Investigator">Senior Investigator (Lead Case Officer)</option>
-                <option value="Senior Authority">Senior Authority (Review & Approvals)</option>
-                <option value="System Administrator">System Administrator (Master Control)</option>
-                <option value="Investigator">Investigator (Field Operations)</option>
-                <option value="Analyst / Viewer">Analyst / Viewer (Read-only)</option>
-              </select>
-            </div>
-
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs uppercase tracking-wider transition-colors shadow-lg shadow-cyan-500/20 flex items-center justify-center gap-2 mt-2"
-            >
-              {isLoading ? (
-                <span>Verifying Token...</span>
-              ) : (
-                <>
-                  <span>Sign In To Workstation</span>
-                  <ArrowRight className="w-4 h-4" />
-                </>
-              )}
-            </button>
-
-          </form>
-
-          {/* Quick Demo Switcher */}
-          <div className="mt-6 pt-5 border-t border-slate-800/80">
-            <p className="text-[10px] font-mono uppercase tracking-wider text-slate-400 mb-2 text-center">
-              Evaluator Quick Access (Hackathon Demo)
-            </p>
-            <div className="grid grid-cols-3 gap-2">
-              <button
-                type="button"
-                onClick={() => handleQuickDemoLogin('Senior Investigator', 'v.rao@cid.police.gov.in')}
-                className="p-2 rounded-lg bg-slate-900 hover:bg-slate-850 border border-slate-800 text-[11px] text-slate-300 text-left transition-colors flex items-center gap-1.5"
-              >
-                <UserCheck className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
-                <span className="truncate">Sr. Investigator</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => handleQuickDemoLogin('Senior Authority', 'r.verma@cid.police.gov.in')}
-                className="p-2 rounded-lg bg-slate-900 hover:bg-slate-850 border border-slate-800 text-[11px] text-slate-300 text-left transition-colors flex items-center gap-1.5"
-              >
-                <UserCheck className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                <span className="truncate">Sr. Authority</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => handleQuickDemoLogin('System Administrator', 'admin@cid.police.gov.in')}
-                className="p-2 rounded-lg bg-slate-900 hover:bg-slate-850 border border-slate-800 text-[11px] text-slate-300 text-left transition-colors flex items-center gap-1.5"
-              >
-                <UserCheck className="w-3.5 h-3.5 text-purple-400 shrink-0" />
-                <span className="truncate">System Admin</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Link to Register */}
-          <div className="mt-5 text-center">
-            <span className="text-xs text-slate-400">Need officer enrollment? </span>
-            <button
-              onClick={() => setView('register')}
-              className="text-xs font-semibold text-cyan-400 hover:underline"
-            >
-              Register Officer ID
-            </button>
-          </div>
-
+          <h1 className="text-4xl font-bold tracking-tight text-white leading-tight mb-4 max-w-lg">
+            Advanced Intelligence & Investigation Platform
+          </h1>
+          <p className="text-lg text-[var(--sidebar-text-muted)] max-w-md font-medium">
+            Secure, centralized tracking of financial networks, hidden relationships, and forensic evidence for law enforcement professionals.
+          </p>
         </div>
 
+        <div className="relative z-10 mt-auto">
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[var(--primary)]/20 border border-[var(--primary)]/30 text-[var(--accent)] text-xs font-mono mb-4">
+            <div className="w-1.5 h-1.5 rounded-full bg-[var(--success)] animate-pulse" />
+            System Online • Secure Environment
+          </div>
+          <p className="text-[10px] text-[var(--sidebar-text-muted)] font-mono">
+            UNAUTHORIZED ACCESS IS STRICTLY PROHIBITED AND WILL BE PROSECUTED.
+          </p>
+        </div>
       </div>
 
+      {/* Right side login form */}
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-[var(--bg-primary)]">
+        <div className="w-full max-w-md animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="lg:hidden text-center mb-8">
+            <div className="w-16 h-16 mx-auto bg-[var(--surface-blue)] border border-[var(--primary)]/20 rounded-2xl flex items-center justify-center text-[var(--primary)] mb-4 shadow-lg shadow-[var(--primary)]/10">
+              <Shield className="w-8 h-8" />
+            </div>
+            <h1 className="text-3xl font-bold tracking-tight mb-2 text-[var(--text-primary)]">CrimeNet Login</h1>
+          </div>
+
+          <div className="bg-[var(--bg-card)] shadow-lg shadow-black/5 border border-[var(--border)] rounded-2xl p-8">
+            <h2 className="text-xl font-bold text-[var(--text-primary)] mb-6 text-center lg:text-left">Sign In to Dashboard</h2>
+            
+            {errorMessage && (
+              <div className="mb-6 p-3 rounded-lg bg-[var(--danger)]/10 border border-[var(--danger)]/20 flex items-center gap-2 text-xs text-[var(--danger)]">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{errorMessage}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleSubmit} className="space-y-5">
+              <div>
+                <label className="block text-xs font-semibold text-[var(--text-primary)] mb-1.5">
+                  Email Address
+                </label>
+                <div className="relative">
+                  <Mail className="w-4 h-4 text-[var(--text-secondary)] absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="email"
+                    required
+                    value={identifier}
+                    onChange={(e) => setIdentifier(e.target.value)}
+                    className="w-full bg-white border border-[var(--border)] rounded-xl pl-10 pr-4 py-3 text-sm text-[var(--text-primary)] placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 focus:border-[var(--primary)] transition-all"
+                    placeholder="officer@agency.gov"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-[var(--text-primary)] mb-1.5">
+                  Password
+                </label>
+                <div className="relative">
+                  <Lock className="w-4 h-4 text-[var(--text-secondary)] absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="password"
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full bg-white border border-[var(--border)] rounded-xl pl-10 pr-4 py-3 text-sm text-[var(--text-primary)] placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 focus:border-[var(--primary)] transition-all"
+                    placeholder="••••••••"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between text-xs">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" className="rounded border-[var(--border)] text-[var(--primary)] focus:ring-[var(--primary)]" />
+                  <span className="text-[var(--text-secondary)] font-medium">Remember me</span>
+                </label>
+                <button 
+                  type="button" 
+                  onClick={() => setView('forgot-password')}
+                  className="text-[var(--primary)] hover:underline font-medium"
+                >
+                  Forgot Password?
+                </button>
+              </div>
+
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full py-3 mt-2 rounded-xl bg-[var(--primary)] hover:bg-[#1D4ED8] text-white font-semibold text-sm transition-all shadow-md flex items-center justify-center gap-2"
+              >
+                {isLoading ? (
+                  <span>Authenticating...</span>
+                ) : (
+                  <>
+                    <span>Sign In</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </>
+                )}
+              </button>
+            </form>
+            
+            <div className="mt-6 text-center text-xs text-[var(--text-secondary)]">
+              Don't have an account?{' '}
+              <button onClick={() => setView('register')} className="text-[var(--primary)] font-semibold hover:underline">
+                Request Access
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
