@@ -17,14 +17,12 @@ export async function apiRequest<T>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<ApiResponse<T>> {
-  const { data: { session } } = await supabase.auth.getSession();
-  const token = session?.access_token;
+  let { data: { session } } = await supabase.auth.getSession();
+  let token = session?.access_token || (typeof localStorage !== 'undefined' ? localStorage.getItem('crimenet_auth_token') : null);
 
-  // We are not adding 'Content-Type' if it's FormData, fetch handles it automatically.
-  // Wait, the previous code hardcoded Content-Type application/json. I should keep that but allow overriding or deleting if FormData.
   const isFormData = options.body instanceof FormData;
 
-  const headers: Record<string, string> = {
+  let headers: Record<string, string> = {
     ...(!isFormData ? { 'Content-Type': 'application/json' } : {}),
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...(options.headers as Record<string, string> || {})
@@ -32,9 +30,9 @@ export async function apiRequest<T>(
 
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000);
+    const timeoutId = setTimeout(() => controller.abort(), 20000);
 
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    let response = await fetch(`${API_BASE_URL}${endpoint}`, {
       ...options,
       headers,
       signal: controller.signal
@@ -42,9 +40,35 @@ export async function apiRequest<T>(
 
     clearTimeout(timeoutId);
 
+    // If 401, attempt silent session refresh before reporting failure
+    if (response.status === 401) {
+      try {
+        const { data: refreshData, error: refreshErr } = await supabase.auth.refreshSession();
+        if (!refreshErr && refreshData.session?.access_token) {
+          const newToken = refreshData.session.access_token;
+          try { localStorage.setItem('crimenet_auth_token', newToken); } catch (_) {}
+          const currentUser = useAuthStore.getState().user;
+          if (currentUser) {
+            useAuthStore.getState().setSession(newToken, currentUser);
+          }
+          headers = {
+            ...headers,
+            Authorization: `Bearer ${newToken}`
+          };
+          response = await fetch(`${API_BASE_URL}${endpoint}`, {
+            ...options,
+            headers
+          });
+        }
+      } catch (refreshCatch) {
+        console.warn('Silent session refresh attempt failed:', refreshCatch);
+      }
+    }
+
     if (!response.ok) {
       if (response.status === 401) {
-        useAuthStore.getState().logout();
+        // Do NOT automatically call logout() which disrupts the active session.
+        // Return unauthorized error gracefully for caller to handle.
         throw new Error('Unauthorized');
       } else if (response.status === 403) {
         throw new Error('Permission denied');

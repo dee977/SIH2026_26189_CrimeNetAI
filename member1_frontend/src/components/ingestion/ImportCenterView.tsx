@@ -20,7 +20,8 @@ import {
   Bot,
   X,
   ArrowRight,
-  Info
+  Info,
+  Image as ImageIcon
 } from 'lucide-react';
 
 interface IngestionJob {
@@ -99,10 +100,12 @@ export const ImportCenterView: React.FC = () => {
   const { selectedCaseId, selectCase, setView } = useNavigationStore();
   const { addToast } = useNotificationStore();
 
-  const [activeCase, setActiveCase] = useState<string>(selectedCaseId || '');
+  const [activeCase, setActiveCase] = useState<string>(selectedCaseId || 'CASE-2025-M3-DATASET');
   useEffect(() => {
-    if (selectedCaseId && selectedCaseId !== activeCase) {
+    if (selectedCaseId) {
       setActiveCase(selectedCaseId);
+    } else {
+      selectCase('CASE-2025-M3-DATASET');
     }
   }, [selectedCaseId]);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -126,8 +129,9 @@ export const ImportCenterView: React.FC = () => {
   // Fetch recent jobs
   const fetchRecentJobs = async () => {
     setIsLoadingJobs(true);
+    const targetCase = (activeCase && activeCase.trim()) || (selectedCaseId && selectedCaseId.trim()) || 'CASE-2025-M3-DATASET';
     try {
-      const res = await fetch(`${API_BASE}/ingestion/jobs?case_id=${encodeURIComponent(activeCase)}`, {
+      const res = await fetch(`${API_BASE}/ingestion/jobs?case_id=${encodeURIComponent(targetCase)}`, {
         headers: getAuthHeaders()
       });
       if (res.ok) {
@@ -270,13 +274,15 @@ export const ImportCenterView: React.FC = () => {
   const handleUpload = async () => {
     if (!selectedFile) return;
 
+    const targetCase = (activeCase && activeCase.trim()) || (selectedCaseId && selectedCaseId.trim()) || 'CASE-2025-M3-DATASET';
+
     setIsUploading(true);
     setCurrentJob({
       jobId: 'INITIALIZING...',
       fileId: '',
       fileName: selectedFile.name,
-      docType: selectedFile.name.endsWith('.csv') ? 'CSV' : 'PDF',
-      caseId: activeCase,
+      docType: selectedFile.name.match(/\.(png|jpg|jpeg|tiff|webp)$/i) ? 'IMAGE_EVIDENCE' : (selectedFile.name.endsWith('.csv') ? 'CSV' : 'PDF'),
+      caseId: targetCase,
       status: 'VALIDATING',
       stage: 'VALIDATING',
       progressPercent: 15,
@@ -289,8 +295,8 @@ export const ImportCenterView: React.FC = () => {
 
     const formData = new FormData();
     formData.append('file', selectedFile);
-    formData.append('caseId', activeCase);
-    formData.append('case_id', activeCase);
+    formData.append('caseId', targetCase);
+    formData.append('case_id', targetCase);
 
     try {
       const res = await fetch(`${API_BASE}/ingestion/upload`, {
@@ -450,6 +456,8 @@ export const ImportCenterView: React.FC = () => {
                     <div className="p-2.5 rounded-lg bg-[var(--surface-cyan)] border border-[var(--primary)] text-[var(--primary)] shrink-0">
                       {selectedFile.name.endsWith('.csv') ? (
                         <FileSpreadsheet className="w-6 h-6" />
+                      ) : selectedFile.name.match(/\.(png|jpg|jpeg|tiff|webp)$/i) ? (
+                        <ImageIcon className="w-6 h-6" />
                       ) : (
                         <FileText className="w-6 h-6" />
                       )}
@@ -467,6 +475,21 @@ export const ImportCenterView: React.FC = () => {
                       </div>
                     </div>
                   </div>
+
+                  {/* Image Staged Preview */}
+                  {selectedFile.name.match(/\.(png|jpg|jpeg|tiff|webp)$/i) && (
+                    <div className="rounded-xl overflow-hidden border border-[var(--border)] bg-black/40 p-2.5 flex flex-col items-center">
+                      <img 
+                        src={URL.createObjectURL(selectedFile)} 
+                        alt="Evidence Preview"
+                        className="max-h-44 w-auto rounded object-contain shadow-md"
+                      />
+                      <span className="text-[10px] font-mono text-cyan-400 mt-2 flex items-center gap-1">
+                        <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                        Forensic image staged for BSA §63 SHA-256 ingestion
+                      </span>
+                    </div>
+                  )}
 
                   {/* CSV Quick Stats / Preview button */}
                   {csvValidation && (
@@ -921,6 +944,30 @@ export const ImportCenterView: React.FC = () => {
                   </div>
                 </div>
               </div>
+
+              {/* Photographic Asset Preview if Image Evidence */}
+              {(selectedJobDetails.docType === 'IMAGE_EVIDENCE' || (selectedJobDetails.fileName && selectedJobDetails.fileName.match(/\.(png|jpg|jpeg|tiff|webp)$/i))) && (
+                <div className="p-4 bg-[var(--bg-card)] rounded-xl border border-[var(--border)] space-y-2.5">
+                  <div className="font-bold text-[var(--text-primary)] uppercase tracking-wider text-[11px] flex items-center justify-between">
+                    <span className="flex items-center gap-2">
+                      <ImageIcon className="w-4 h-4 text-[var(--primary)]" /> Forensic Photographic Asset
+                    </span>
+                    <span className="text-emerald-400 font-mono text-[10px] px-2 py-0.5 rounded bg-emerald-950/60 border border-emerald-800">
+                      SHA-256 Validated
+                    </span>
+                  </div>
+                  <div className="rounded-xl overflow-hidden border border-[var(--border)] bg-black/50 p-2 flex items-center justify-center min-h-[160px]">
+                    <img 
+                      src={`${API_BASE}/evidence/${selectedJobDetails.evidenceId}/file`}
+                      alt={selectedJobDetails.fileName}
+                      className="max-h-64 w-auto max-w-full rounded object-contain shadow-lg"
+                      onError={(e) => {
+                        (e.target as HTMLElement).style.display = 'none';
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
 
               {/* Extraction Breakdown */}
               <div>

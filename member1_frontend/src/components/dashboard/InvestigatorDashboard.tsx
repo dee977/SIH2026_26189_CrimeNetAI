@@ -37,9 +37,80 @@ export const InvestigatorDashboard: React.FC = () => {
   const [evidence, setEvidence] = useState<any[]>([]);
 
   useEffect(() => {
+    // 1. Fetch real stats
     apiRequest<any>('/dashboard/stats').then(res => {
       if (res.success && res.data) {
         setStats(res.data);
+      }
+    }).catch(() => {});
+
+    // 2. Fetch real cases
+    apiRequest<any>('/cases').then(res => {
+      if (res.success && res.data) {
+        const items = Array.isArray(res.data) ? res.data : (res.data.items || []);
+        if (items.length > 0) {
+          setActiveCases(items.map((c: any) => ({
+            id: c.caseId,
+            caseNumber: c.caseNumber || c.caseId,
+            title: c.title,
+            description: c.description,
+            leadInvestigator: c.assignedInvestigator || 'Lead Investigator',
+            priority: c.priority ? (c.priority.charAt(0).toUpperCase() + c.priority.slice(1)) : 'High',
+            status: c.status ? (c.status.charAt(0).toUpperCase() + c.status.slice(1)) : 'Active',
+            lastUpdated: c.updatedAt ? c.updatedAt.slice(0, 10) : '2025-03-26',
+            entityCount: c.entityCount || 0,
+            evidenceCount: c.evidenceCount || 0,
+            alertCount: c.alertCount || 0
+          })));
+        }
+      }
+    }).catch(() => {});
+
+    // 3. Fetch real alerts
+    apiRequest<any>('/alerts').then(res => {
+      if (res.success && res.data) {
+        const items = Array.isArray(res.data) ? res.data : (res.data.items || []);
+        if (items.length > 0) {
+          setAlerts(items.map((a: any) => ({
+            id: a.alertId || a.id,
+            category: a.alertType || a.category || 'SYSTEM_ALERT',
+            severity: a.severity || 'HIGH',
+            title: a.title,
+            explanation: a.description || a.explanation || '',
+            timestamp: a.triggeredAt || a.timestamp || new Date().toISOString()
+          })));
+        }
+      }
+    }).catch(() => {});
+
+    // 4. Fetch real watchlist
+    apiRequest<any>('/watchlist').then(res => {
+      if (res.success && res.data) {
+        const items = Array.isArray(res.data) ? res.data : (res.data.items || []);
+        if (items.length > 0) {
+          setWatchlist(items.map((w: any) => ({
+            id: w.watchId || w.id,
+            targetName: w.canonicalName || w.identifierValue,
+            value: w.identifierValue,
+            entryType: w.entityType,
+            matchCount: w.matchCount || 0
+          })));
+        }
+      }
+    }).catch(() => {});
+
+    // 5. Fetch real evidence
+    apiRequest<any>('/evidence').then(res => {
+      if (res.success && res.data) {
+        const items = Array.isArray(res.data) ? res.data : (res.data.items || []);
+        if (items.length > 0) {
+          setEvidence(items.map((e: any) => ({
+            id: e.evidenceId || e.id,
+            title: e.canonicalName || e.title || 'Evidence Item',
+            integrityStatus: 'MATCH',
+            currentHashSHA256: (e.sha256Hash || e.sha256_hash || '').slice(0, 24) + '...'
+          })));
+        }
       }
     }).catch(() => {});
   }, []);

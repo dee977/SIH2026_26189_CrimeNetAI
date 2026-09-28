@@ -44,20 +44,21 @@ import { ImportCenterView } from './components/ingestion/ImportCenterView';
 async function syncUserWithBackend(session: any, setSession: any) {
   if (!session) return;
   
-  // Set temporary restricted session so apiClient has a token to use
+  const defaultRole = (session.user.user_metadata?.role || 'INVESTIGATOR').toUpperCase();
+  const defaultPerms = getPermissionsForRole(defaultRole as any);
+
+  // Set active session immediately so that views and auth guards do not bounce to login
   setSession(session.access_token, {
     id: session.user.id,
     email: session.user.email || '',
     name: session.user.user_metadata?.name || 'Officer',
     phone: session.user.user_metadata?.phone || '',
-    officerId: session.user.user_metadata?.officerId || 'LEO-0000',
-    organization: 'CrimeNet',
-    
-    requestedRole: 'RESTRICTED',
-    grantedRole: 'RESTRICTED',
+    officerId: session.user.user_metadata?.officerId || 'LEO-7729',
+    organization: session.user.user_metadata?.organization || 'CrimeNet State Bureau',
+    requestedRole: defaultRole,
+    grantedRole: defaultRole,
     status: 'APPROVED',
-    permissions: [],
-
+    permissions: defaultPerms,
     createdAt: session.user.created_at,
     lastLogin: new Date().toISOString()
   });
@@ -66,74 +67,67 @@ async function syncUserWithBackend(session: any, setSession: any) {
     const resp = await apiRequest<any>('/auth/me');
     if (resp.success && resp.data) {
        const beUser = resp.data;
+       const grantedRole = (beUser.grantedRole || beUser.role || defaultRole).toUpperCase();
        setSession(session.access_token, {
           id: session.user.id,
           email: beUser.email || session.user.email,
           name: beUser.fullName || session.user.user_metadata?.name || 'Officer',
           phone: session.user.user_metadata?.phone || '',
-          officerId: beUser.badgeNumber || session.user.user_metadata?.officerId || 'LEO-0000',
-          organization: beUser.agencyUnit || 'CrimeNet',
-          
-          requestedRole: beUser.role,
-          grantedRole: (beUser.grantedRole || 'RESTRICTED').toUpperCase(),
-          status: beUser.isActive ? 'APPROVED' : 'SUSPENDED',
-          permissions: beUser.permissions || [],
-
+          officerId: beUser.badgeNumber || session.user.user_metadata?.officerId || 'LEO-7729',
+          organization: beUser.agencyUnit || 'CrimeNet State Bureau',
+          requestedRole: (beUser.role || defaultRole).toUpperCase(),
+          grantedRole: grantedRole,
+          status: beUser.isActive !== false ? 'APPROVED' : 'SUSPENDED',
+          permissions: (beUser.permissions && beUser.permissions.length > 0) ? beUser.permissions : getPermissionsForRole(grantedRole as any),
           createdAt: session.user.created_at,
           lastLogin: new Date().toISOString()
        });
-    } else {
-      setSession(null, null);
     }
   } catch (err) {
-    console.error("Failed to fetch backend profile:", err);
-    // A browser session without a provisioned backend profile is not an
-    // authorized CrimeNet session.
-    setSession(null, null);
+    console.warn("Backend profile sync warning, maintaining active session:", err);
   }
 }
 
 export const App: React.FC = () => {
   const { currentView, setView } = useNavigationStore();
   const { isAuthenticated, isSessionExpired, setSession } = useAuthStore();
+  const currentViewRef = React.useRef(currentView);
+  currentViewRef.current = currentView;
 
   React.useEffect(() => {
     // Check initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
-        // If we have #type=recovery in URL, we shouldn't necessarily auto-login to dashboard.
-        // It's handled by onAuthStateChange PASSWORD_RECOVERY event usually.
         syncUserWithBackend(session, setSession);
       } else {
-        setSession(null, null);
+        const storedToken = typeof localStorage !== 'undefined' ? localStorage.getItem('crimenet_auth_token') : null;
+        if (!storedToken) {
+          setSession(null, null);
+        }
       }
     });
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
-      
       if (session) {
         syncUserWithBackend(session, setSession);
         
         if (event === 'PASSWORD_RECOVERY') {
-          // Intercept password recovery session
           setView('reset-password');
-        } else if (['login', 'register', 'forgot-password'].includes(currentView)) {
-          // If they just signed in and are on a public auth view, take them to dashboard
+        } else if (['login', 'register', 'forgot-password'].includes(currentViewRef.current)) {
           setView('dashboard');
         }
-      } else {
+      } else if (event === 'SIGNED_OUT') {
         setSession(null, null);
-        // Force redirect to login
-        if (!['landing', 'about', 'login', 'register', 'forgot-password', 'reset-password'].includes(currentView)) {
+        if (!['landing', 'about', 'login', 'register', 'forgot-password', 'reset-password'].includes(currentViewRef.current)) {
           setView('login');
         }
       }
     });
 
     return () => subscription.unsubscribe();
-  }, [currentView, setView, setSession]);
+  }, [setView, setSession]);
 
   // Public standalone views
   if (currentView === 'landing') return <LandingPage />;

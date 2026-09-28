@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigationStore } from '../../store/navigationStore';
 import { useNotificationStore } from '../../store/notificationStore';
 import { SYNTHETIC_CASES } from '../../data/syntheticData';
@@ -163,6 +163,45 @@ export const CaseManagementView: React.FC = () => {
 
   const [cases, setCases] = useState<CaseDossier[]>(DEMO_5_CASES);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const loadCases = async () => {
+    try {
+      const res = await apiRequest<any>('/cases');
+      if (res.success && res.data) {
+        const backendCases = Array.isArray(res.data) ? res.data : (res.data.items || []);
+        if (backendCases.length > 0) {
+          const mapped: CaseDossier[] = backendCases.map((bc: any) => ({
+            id: bc.caseId,
+            caseNumber: bc.caseNumber || bc.caseId,
+            title: bc.title || 'Investigation Case',
+            description: bc.description || '',
+            leadInvestigator: bc.assignedInvestigator || 'Lead Investigator',
+            assignedTeam: [bc.assignedTeam || 'Special Task Force'],
+            status: bc.status ? (bc.status.charAt(0).toUpperCase() + bc.status.slice(1)) : 'Active',
+            priority: bc.priority ? (bc.priority.charAt(0).toUpperCase() + bc.priority.slice(1)) : 'High',
+            openedDate: bc.createdAt ? bc.createdAt.slice(0, 10) : '2025-01-15',
+            lastUpdated: bc.updatedAt ? bc.updatedAt.slice(0, 10) : '2025-03-26',
+            policeStation: bc.policeStation || 'Central Cyber Grid',
+            jurisdiction: bc.jurisdiction || 'Special Crime Branch',
+            entityCount: bc.entityCount || 0,
+            evidenceCount: bc.evidenceCount || 0,
+            alertCount: bc.alertCount || 0,
+            associatedFIRs: bc.associatedFIRs || [],
+            accessClassification: 'RESTRICTED',
+            auditHistory: []
+          }));
+          setCases(mapped);
+        }
+      }
+    } catch (err) {
+      console.warn('Failed to fetch dynamic cases, using fallback:', err);
+    }
+  };
+
+  useEffect(() => {
+    loadCases();
+  }, []);
 
   // New Case State
   const [newTitle, setNewTitle] = useState('');
@@ -177,62 +216,90 @@ export const CaseManagementView: React.FC = () => {
 
   const handleCreateSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const caseNumberId = `CASE-2025-LEO-0${cases.length + 101}`;
-    const newCase: CaseDossier = {
-      id: caseNumberId,
-      caseNumber: caseNumberId,
-      title: newTitle || 'New Organized Network Inquiry',
-      description: newDesc || 'Inquiry registered to investigate cross-border contraband operations.',
-      leadInvestigator: newInvestigator || 'Inspector Vikramaditya Rao (LEO-7729)',
-      assignedTeam: [newInvestigator.split('(')[0].trim(), 'SI Priyanka Sen'],
-      status: newStatus,
-      priority: newPriority,
-      openedDate: new Date().toISOString().replace('T', ' ').slice(0, 10),
-      lastUpdated: new Date().toISOString().replace('T', ' ').slice(0, 10),
-      policeStation: newStation,
-      jurisdiction: newJurisdiction,
-      entityCount: 1,
-      evidenceCount: 1,
-      alertCount: 0,
-      associatedFIRs: newFIR ? [newFIR] : [`FIR-2025-${caseNumberId.slice(-3)}`],
-      accessClassification: newClassification,
-      auditHistory: [
-        {
-          timestamp: new Date().toISOString().replace('T', ' ').slice(0, 19),
-          officer: newInvestigator,
-          action: 'CASE_CREATION',
-          details: `Dossier initialized with ${newPriority} priority and ${newClassification} classification.`
-        }
-      ]
-    };
-
-    try {
-      await apiRequest('/cases', {
-        method: 'POST',
-        body: JSON.stringify({
-          title: newCase.title,
-          description: newCase.description,
-          assignedInvestigator: newCase.leadInvestigator,
-          assignedTeam: newStation,
-          priority: newPriority.toLowerCase(),
-          caseType: 'Organized Crime Investigation'
-        })
-      });
-    } catch (err) {
-      console.warn('Backend sync warning for new case, saved to active session:', err);
+    if (!newTitle.trim()) {
+      addToast({ type: 'error', title: 'Validation Error', message: 'Case Title is required.' });
+      return;
     }
 
-    setCases([newCase, ...cases]);
-    setIsCreateModalOpen(false);
-    setNewTitle('');
-    setNewDesc('');
-    setNewFIR('');
+    setIsSubmitting(true);
 
-    addToast({
-      type: 'success',
-      title: 'Investigation Dossier Created',
-      message: `${newCase.caseNumber} registered with Priority [${newPriority.toUpperCase()}].`
-    });
+    try {
+      const res = await apiRequest<any>('/cases', {
+        method: 'POST',
+        body: JSON.stringify({
+          title: newTitle.trim(),
+          description: newDesc.trim() || 'Organized crime investigation case dossier.',
+          assignedInvestigator: newInvestigator.trim(),
+          assignedTeam: newStation.trim(),
+          policeStation: newStation.trim(),
+          jurisdiction: newJurisdiction.trim(),
+          priority: newPriority.toLowerCase(),
+          status: newStatus.toLowerCase(),
+          caseType: 'Organized Crime Investigation',
+          accessClassification: newClassification
+        })
+      });
+
+      if (res.success && res.data) {
+        const createdCase = res.data;
+        const mappedCreated: CaseDossier = {
+          id: createdCase.caseId,
+          caseNumber: createdCase.caseNumber || createdCase.caseId,
+          title: createdCase.title || newTitle,
+          description: createdCase.description || newDesc,
+          leadInvestigator: createdCase.assignedInvestigator || newInvestigator,
+          assignedTeam: [newStation],
+          status: newStatus,
+          priority: newPriority,
+          openedDate: (createdCase.createdAt || new Date().toISOString()).slice(0, 10),
+          lastUpdated: (createdCase.updatedAt || new Date().toISOString()).slice(0, 10),
+          policeStation: newStation,
+          jurisdiction: newJurisdiction,
+          entityCount: createdCase.entityCount || 0,
+          evidenceCount: createdCase.evidenceCount || 0,
+          alertCount: createdCase.alertCount || 0,
+          associatedFIRs: newFIR ? [newFIR] : [],
+          accessClassification: newClassification,
+          auditHistory: [
+            {
+              timestamp: new Date().toISOString().replace('T', ' ').slice(0, 19),
+              officer: newInvestigator,
+              action: 'CASE_CREATION',
+              details: `Dossier initialized with ${newPriority} priority.`
+            }
+          ]
+        };
+
+        setCases(prev => [mappedCreated, ...prev]);
+        setIsCreateModalOpen(false);
+        setNewTitle('');
+        setNewDesc('');
+        setNewFIR('');
+
+        addToast({
+          type: 'success',
+          title: 'Case Dossier Created',
+          message: `${mappedCreated.caseNumber}: "${mappedCreated.title}" registered in Supabase.`
+        });
+
+        // Background reload to sync all properties
+        loadCases();
+      } else {
+        addToast({
+          type: 'error',
+          title: 'Creation Failed',
+          message: res.error || 'Server rejected case creation request.'
+        });
+      }
+    } catch (err: any) {
+      addToast({
+        type: 'error',
+        title: 'Network Error',
+        message: err.message || 'Unable to connect to backend server.'
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -483,9 +550,11 @@ export const CaseManagementView: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 rounded-xl bg-[var(--primary)] text-white hover:bg-cyan-400 text-slate-950 font-bold uppercase tracking-wider shadow"
+                  disabled={isSubmitting}
+                  className="px-5 py-2 rounded-xl bg-[var(--primary)] text-white hover:bg-cyan-400 text-slate-950 font-bold uppercase tracking-wider shadow disabled:opacity-50 flex items-center gap-2"
                 >
-                  Create Dossier
+                  {isSubmitting && <span className="w-3.5 h-3.5 border-2 border-slate-900 border-t-transparent rounded-full animate-spin" />}
+                  <span>{isSubmitting ? 'Creating Case...' : 'Create Dossier'}</span>
                 </button>
               </div>
             </form>

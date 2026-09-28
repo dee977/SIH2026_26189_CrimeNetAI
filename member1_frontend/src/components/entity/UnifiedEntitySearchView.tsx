@@ -36,11 +36,7 @@ export const UnifiedEntitySearchView: React.FC = () => {
   useEffect(() => {
     let isMounted = true;
     
-    if (!selectedCaseId) {
-      setLiveEntities([]);
-      setLiveDetail(null);
-      return;
-    }
+    const activeCase = selectedCaseId || 'CASE-2025-M3-DATASET';
 
     setIsLoading(true);
     setError(null);
@@ -48,7 +44,7 @@ export const UnifiedEntitySearchView: React.FC = () => {
     const filter = activeTab === 'ALL' ? undefined : activeTab;
     const q = searchQuery.trim();
 
-    searchEntities(q, selectedCaseId, { type: filter })
+    searchEntities(q, activeCase, { type: filter })
       .then(res => {
         if (isMounted) {
           if (res.success && res.data && res.data.length > 0) {
@@ -58,7 +54,7 @@ export const UnifiedEntitySearchView: React.FC = () => {
             }
           } else {
             // Direct query fallback
-            fetchEntities(selectedCaseId, filter)
+            fetchEntities(activeCase, filter)
               .then(entRes => {
                 if (isMounted && entRes.success && entRes.data && entRes.data.length > 0) {
                   setLiveEntities(entRes.data);
@@ -77,7 +73,7 @@ export const UnifiedEntitySearchView: React.FC = () => {
       })
       .catch((err) => {
         if (isMounted) {
-          fetchEntities(selectedCaseId, filter)
+          fetchEntities(activeCase, filter)
             .then(entRes => {
               if (isMounted && entRes.success && entRes.data && entRes.data.length > 0) {
                 setLiveEntities(entRes.data);

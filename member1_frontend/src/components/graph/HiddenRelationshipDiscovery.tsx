@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigationStore } from '../../store/navigationStore';
 import { getCaseGraphBundle } from '../../data/caseGraphs';
-import { fetchHiddenPaths } from '../../services/graphService';
+import { fetchHiddenPaths, fetchGraphData } from '../../services/graphService';
 import { HiddenPathResult, GraphNode, GraphEdge } from '../../types/graph';
 import { 
   GitMerge, 
@@ -30,18 +30,41 @@ export const HiddenRelationshipDiscovery: React.FC = () => {
   const caseBundle = getCaseGraphBundle(selectedCaseId);
   const [sourceId, setSourceId] = useState<string>(caseBundle.candidateSources[0]?.id || 'P00004');
   const [targetId, setTargetId] = useState<string>(caseBundle.candidateTargets[0]?.id || 'P00001');
+  const [sourcesList, setSourcesList] = useState<{ id: string; name?: string; label?: string; type?: string }[]>(caseBundle.candidateSources);
+  const [targetsList, setTargetsList] = useState<{ id: string; name?: string; label?: string; type?: string }[]>(caseBundle.candidateTargets);
   
   const [pathResult, setPathResult] = useState<HiddenPathResult>(caseBundle.defaultHiddenPath);
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
   // Synchronize dropdowns and path whenever selectedCaseId changes
   useEffect(() => {
-    const bundle = getCaseGraphBundle(selectedCaseId);
-    const firstSource = bundle.candidateSources[0]?.id || 'P00004';
-    const firstTarget = bundle.candidateTargets[0]?.id || 'P00001';
+    const activeCase = selectedCaseId || 'CASE-2025-M3-DATASET';
+    const bundle = getCaseGraphBundle(activeCase);
     
-    setSourceId(firstSource);
-    setTargetId(firstTarget);
+    fetchGraphData(activeCase).then((res: any) => {
+      if (res.success && res.data && res.data.nodes && res.data.nodes.length > 0) {
+        const liveNodes = res.data.nodes.map((n: any) => ({ id: n.id, name: n.label, type: n.entityType }));
+        const mergedSrc = [...bundle.candidateSources];
+        const mergedTgt = [...bundle.candidateTargets];
+        liveNodes.forEach((ln: any) => {
+          if (!mergedSrc.some(s => s.id === ln.id)) mergedSrc.push(ln);
+          if (!mergedTgt.some(t => t.id === ln.id)) mergedTgt.push(ln);
+        });
+        setSourcesList(mergedSrc);
+        setTargetsList(mergedTgt);
+        if (mergedSrc[0]) setSourceId(mergedSrc[0].id);
+        if (mergedTgt[1] || mergedTgt[0]) setTargetId((mergedTgt[1] || mergedTgt[0]).id);
+      } else {
+        setSourcesList(bundle.candidateSources);
+        setTargetsList(bundle.candidateTargets);
+        setSourceId(bundle.candidateSources[0]?.id || 'P00004');
+        setTargetId(bundle.candidateTargets[0]?.id || 'P00001');
+      }
+    }).catch(() => {
+      setSourcesList(bundle.candidateSources);
+      setTargetsList(bundle.candidateTargets);
+    });
+
     setPathResult(bundle.defaultHiddenPath);
   }, [selectedCaseId]);
 
@@ -113,9 +136,9 @@ export const HiddenRelationshipDiscovery: React.FC = () => {
               onChange={(e) => setSourceId(e.target.value)}
               className="w-full bg-[var(--bg-card)] border border-[var(--border)] rounded-xl px-3 py-2 text-xs text-[var(--text-primary)] focus:outline-none focus:border-[var(--primary)] font-medium"
             >
-              {caseBundle.candidateSources.map(cand => (
+              {sourcesList.map(cand => (
                 <option key={cand.id} value={cand.id}>
-                  {cand.name} ({cand.type})
+                  {cand.name || cand.label} ({cand.type})
                 </option>
               ))}
             </select>
@@ -136,9 +159,9 @@ export const HiddenRelationshipDiscovery: React.FC = () => {
               onChange={(e) => setTargetId(e.target.value)}
               className="w-full bg-[var(--bg-card)] border border-[var(--border)] rounded-xl px-3 py-2 text-xs text-[var(--text-primary)] focus:outline-none focus:border-[var(--primary)] font-medium"
             >
-              {caseBundle.candidateTargets.map(cand => (
+              {targetsList.map(cand => (
                 <option key={cand.id} value={cand.id}>
-                  {cand.name} ({cand.type})
+                  {cand.name || cand.label} ({cand.type})
                 </option>
               ))}
             </select>

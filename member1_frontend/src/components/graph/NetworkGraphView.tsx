@@ -1,5 +1,7 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import cytoscape, { Core, EventObject } from 'cytoscape';
+// @ts-ignore
+import fcose from 'cytoscape-fcose';
 import { GraphNode, GraphEdge, HiddenPathResult } from '../../types/graph';
 import { EntityType } from '../../types/entities';
 import { useNavigationStore } from '../../store/navigationStore';
@@ -37,7 +39,13 @@ import {
   Download
 } from 'lucide-react';
 
-type LayoutType = 'cose' | 'concentric' | 'breadthfirst' | 'circle';
+try {
+  cytoscape.use(fcose);
+} catch (_) {
+  // Already registered or fallback
+}
+
+type LayoutType = 'fcose' | 'cose' | 'concentric' | 'breadthfirst' | 'circle';
 
 export const NetworkGraphView: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -49,41 +57,86 @@ export const NetworkGraphView: React.FC = () => {
   const [filterType, setFilterType] = useState<string>('ALL');
   const [confidenceThreshold, setConfidenceThreshold] = useState<number>(0.5);
   const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
-  const [activeLayout, setActiveLayout] = useState<LayoutType>('cose');
+  const [activeLayout, setActiveLayout] = useState<LayoutType>('fcose');
   const [colorByCommunity, setColorByCommunity] = useState<boolean>(false);
-  const [hideIsolated, setHideIsolated] = useState<boolean>(true);
+  const [hideIsolated, setHideIsolated] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const [dataSourceMode, setDataSourceMode] = useState<'INTELLIGENCE_WEB' | 'NEO4J_RAW'>('INTELLIGENCE_WEB');
+  const [dataSourceMode, setDataSourceMode] = useState<'LIVE_DB' | 'DEMO_MODE'>('LIVE_DB');
   const [activeConduit, setActiveConduit] = useState<HiddenPathResult | null>(null);
 
-  // Load curated bundle for active case
+  // Load curated bundle for active case (used for fallback or Demo Mode)
   const activeBundle = useMemo(() => getCaseGraphBundle(selectedCaseId), [selectedCaseId]);
 
-  // Live Neo4j graph data state
-  const [rawNeo4jData, setRawNeo4jData] = useState<{ nodes: GraphNode[]; edges: GraphEdge[] }>({
-    nodes: [],
-    edges: []
+  // Keep a lastGoodData ref so an empty or errored response never clears the canvas
+  const lastGoodDataRef = useRef<{ nodes: GraphNode[]; edges: GraphEdge[] }>({
+    nodes: activeBundle.nodes,
+    edges: activeBundle.edges
   });
 
-  // Fetch live Neo4j on case switch
+  // Live backend graph data state
+  const [rawNeo4jData, setRawNeo4jData] = useState<{ nodes: GraphNode[]; edges: GraphEdge[] }>({
+    nodes: activeBundle.nodes,
+    edges: activeBundle.edges
+  });
+
+  // Fetch live graph from backend on case switch
   useEffect(() => {
     const activeCaseId = selectedCaseId || 'CASE-2025-M3-DATASET';
     fetchGraphData(activeCaseId).then(res => {
-      if (res.success && res.data && res.data.nodes && res.data.nodes.length > 0) {
-        setRawNeo4jData({
-          nodes: res.data.nodes,
-          edges: res.data.edges || []
-        });
+      const resNodes = res?.data?.nodes;
+      const resEdges = res?.data?.edges;
+
+      if (res?.success && Array.isArray(resNodes) && resNodes.length > 0) {
+        console.log('[Graph] data received', resNodes.length, (resEdges || []).length);
+        
+        // Normalize nodes
+        const normNodes: GraphNode[] = resNodes.map(n => ({
+          ...n,
+          id: String(n.id || (n as any).entityId),
+          label: n.label || (n as any).name || (n as any).canonicalName || String(n.id),
+          entityType: (n.entityType || (n as any).type || 'Person') as EntityType
+        }));
+
+        // Normalize edges, ensuring source and target are strings
+        let normEdges: GraphEdge[] = (resEdges || []).map((e, idx) => ({
+          ...e,
+          id: String(e.id || `edge-${idx}`),
+          source: String(e.source || (e as any).sourceId || (e as any).source_id),
+          target: String(e.target || (e as any).targetId || (e as any).target_id),
+          relationType: e.relationType || (e as any).relationshipType || (e as any).type || 'LINKED_TO',
+          confidence: (typeof e.confidence === 'number') ? e.confidence : 0.95
+        }));
+
+        const nIdSet = new Set(normNodes.map(n => n.id));
+        normEdges = normEdges.filter(e => nIdSet.has(e.source) && nIdSet.has(e.target));
+
+        // If edges are empty after filtering, retain activeBundle edges if they match
+        if (normEdges.length === 0 && activeBundle.edges.length > 0) {
+          const bundleEdges = activeBundle.edges.filter(e => nIdSet.has(e.source) && nIdSet.has(e.target));
+          if (bundleEdges.length > 0) {
+            normEdges = bundleEdges;
+          }
+        }
+
+        const validData = {
+          nodes: normNodes,
+          edges: normEdges.length > 0 ? normEdges : activeBundle.edges
+        };
+
+        lastGoodDataRef.current = validData;
+        setRawNeo4jData(validData);
       } else {
+        console.log('[Graph] WARNING – received empty data, keeping previous');
         setRawNeo4jData({
-          nodes: activeBundle.nodes,
-          edges: activeBundle.edges
+          nodes: lastGoodDataRef.current.nodes.length > 0 ? lastGoodDataRef.current.nodes : activeBundle.nodes,
+          edges: lastGoodDataRef.current.edges.length > 0 ? lastGoodDataRef.current.edges : activeBundle.edges
         });
       }
-    }).catch(() => {
+    }).catch(err => {
+      console.log('[Graph] WARNING – received empty data, keeping previous', err);
       setRawNeo4jData({
-        nodes: activeBundle.nodes,
-        edges: activeBundle.edges
+        nodes: lastGoodDataRef.current.nodes.length > 0 ? lastGoodDataRef.current.nodes : activeBundle.nodes,
+        edges: lastGoodDataRef.current.edges.length > 0 ? lastGoodDataRef.current.edges : activeBundle.edges
       });
     });
 
@@ -92,9 +145,20 @@ export const NetworkGraphView: React.FC = () => {
     setActiveConduit(null);
   }, [selectedCaseId, activeBundle]);
 
-  // Active dataset depending on mode
-  const currentNodes = dataSourceMode === 'INTELLIGENCE_WEB' ? activeBundle.nodes : (rawNeo4jData.nodes.length > 0 ? rawNeo4jData.nodes : activeBundle.nodes);
-  const currentEdges = dataSourceMode === 'INTELLIGENCE_WEB' ? activeBundle.edges : (rawNeo4jData.edges.length > 0 ? rawNeo4jData.edges : activeBundle.edges);
+  // Primary path: Use live backend database data; fallback safely to lastGoodData / bundle
+  const currentNodes = useMemo(() => {
+    if (dataSourceMode === 'LIVE_DB' && rawNeo4jData.nodes.length > 0) {
+      return rawNeo4jData.nodes;
+    }
+    return activeBundle.nodes || [];
+  }, [dataSourceMode, activeBundle.nodes, rawNeo4jData.nodes]);
+
+  const currentEdges = useMemo(() => {
+    if (dataSourceMode === 'LIVE_DB' && rawNeo4jData.edges.length > 0) {
+      return rawNeo4jData.edges;
+    }
+    return activeBundle.edges || [];
+  }, [dataSourceMode, activeBundle.edges, rawNeo4jData.edges]);
 
   // Compute node degrees for filtering isolated nodes
   const nodeDegrees = useMemo(() => {
@@ -163,147 +227,36 @@ export const NetworkGraphView: React.FC = () => {
     return colors[(communityId - 1) % colors.length] || '#06b6d4';
   };
 
-  // Cytoscape initialization and updates
+  // Initialize Cytoscape instance once on container mount
   useEffect(() => {
     if (!containerRef.current) return;
-
-    // Filter nodes
-    const filteredNodes = currentNodes.filter(n => {
-      const eType = n.entityType || (n as any).type || 'Person';
-      if (filterType !== 'ALL' && eType.toLowerCase() !== filterType.toLowerCase()) {
-        return false;
-      }
-      if (hideIsolated && (nodeDegrees.get(n.id) || 0) === 0) {
-        return false;
-      }
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase();
-        const matches = (
-          (n.label && n.label.toLowerCase().includes(q)) ||
-          n.id.toLowerCase().includes(q) ||
-          eType.toLowerCase().includes(q)
-        );
-        if (!matches) return false;
-      }
-      return true;
-    });
-
-    const nodeIds = new Set(filteredNodes.map(n => n.id));
-
-    // STRICT CHECK: Edges MUST only connect visible, existing nodes
-    const filteredEdges = currentEdges.filter(e => {
-      if (!e.source || !e.target) return false;
-      if (!nodeIds.has(e.source) || !nodeIds.has(e.target)) return false;
-      if (e.confidence !== undefined && e.confidence < confidenceThreshold) return false;
-      return true;
-    });
-
-    const elements = [
-      ...filteredNodes.map(node => {
-        const eType = (node.entityType || (node as any).type || 'Person') as EntityType;
-        const isApex = Boolean((node.analytics?.degreeCentrality || 0) >= 0.65 || (node.label && node.label.toLowerCase().includes('kingpin')));
-        const communityId = node.analytics?.communityId || 1;
-        
-        const finalColor = colorByCommunity ? getCommunityColor(communityId) : getNodeColor(eType);
-        const finalBorderColor = colorByCommunity ? getCommunityColor(communityId) : getNodeBorderColor(eType, isApex);
-
-        const nodeDegree = nodeDegrees.get(node.id) || 1;
-        const nodeSize = isApex ? 56 : (nodeDegree >= 3 ? 46 : 38);
-
-        return {
-          data: {
-            id: node.id,
-            label: node.label || node.id,
-            displayLabel: node.label && node.label.length > 22 ? `${node.label.slice(0, 20)}…` : (node.label || node.id),
-            type: eType,
-            color: finalColor,
-            borderColor: finalBorderColor,
-            size: nodeSize,
-            isApex: isApex ? 'true' : 'false',
-            communityId,
-            degree: nodeDegree,
-            raw: node
-          }
-        };
-      }),
-      ...filteredEdges.map(edge => {
-        let edgeColor = '#475569';
-        const rType = edge.relationType || (edge as any).relationshipType || 'LINKED_TO';
-        if (rType.includes('CALL') || rType.includes('PHONE')) edgeColor = '#14b8a6';
-        else if (rType.includes('WIRE') || rType.includes('ESCROW') || rType.includes('TRANSACT') || rType.includes('DEBIT')) edgeColor = '#f59e0b';
-        else if (rType.includes('OWNER') || rType.includes('DIRECTOR') || rType.includes('SHELL')) edgeColor = '#c084fc';
-        else if (rType.includes('ACCUSED') || rType.includes('CONSPIRATOR') || rType.includes('CRIME')) edgeColor = '#f43f5e';
-        else if (rType.includes('EVIDENCE') || rType.includes('SEIZURE')) edgeColor = '#22c55e';
-
-        return {
-          data: {
-            id: edge.id,
-            source: edge.source,
-            target: edge.target,
-            label: edge.relationType || (edge as any).relationshipType || 'LINKED_TO',
-            confidence: edge.confidence || 0.95,
-            edgeColor,
-            raw: edge
-          }
-        };
-      })
-    ];
-
-    // Determine layout config
-    let layoutConfig: any = { name: 'cose', animate: false, padding: 50 };
-    if (activeLayout === 'cose') {
-      layoutConfig = {
-        name: 'cose',
-        animate: false,
-        padding: 50,
-        nodeRepulsion: () => 500000,
-        idealEdgeLength: () => 140,
-        edgeElasticity: () => 100,
-        componentSpacing: 100
-      };
-    } else if (activeLayout === 'concentric') {
-      layoutConfig = {
-        name: 'concentric',
-        concentric: (node: any) => node.data('degree') || 1,
-        levelWidth: () => 2,
-        padding: 40,
-        animate: false
-      };
-    } else if (activeLayout === 'breadthfirst') {
-      layoutConfig = {
-        name: 'breadthfirst',
-        directed: true,
-        padding: 40,
-        spacingFactor: 1.25,
-        animate: false
-      };
-    } else if (activeLayout === 'circle') {
-      layoutConfig = {
-        name: 'circle',
-        padding: 40,
-        animate: false
-      };
-    }
+    if (cyRef.current) return;
 
     const cy = cytoscape({
       container: containerRef.current,
-      elements,
+      elements: [],
+      minZoom: 0.15,
+      maxZoom: 3.5,
+      wheelSensitivity: 0.25,
       style: [
         {
           selector: 'node',
           style: {
+            'shape': 'ellipse',
             'background-color': 'data(color)',
             'label': 'data(displayLabel)',
             'color': '#f8fafc',
-            'font-size': '10.5px',
-            'font-weight': 'bold',
-            'font-family': 'Inter, system-ui, sans-serif',
+            'font-size': '11px',
+            'font-weight': 600,
+            'font-family': 'Inter, system-ui, -apple-system, sans-serif',
             'text-valign': 'bottom',
-            'text-margin-y': 7,
-            'text-background-color': '#090d16',
-            'text-background-opacity': 0.9,
-            'text-background-padding': '4px',
-            'text-background-shape': 'roundrectangle',
+            'text-margin-y': 8,
+            'text-wrap': 'wrap',
+            'text-max-width': '95px',
+            'text-outline-width': 2.5,
+            'text-outline-color': '#0f172a',
+            'text-outline-opacity': 0.95,
+            'text-background-opacity': 0,
             'width': 'data(size)',
             'height': 'data(size)',
             'border-width': 2.5,
@@ -342,17 +295,18 @@ export const NetworkGraphView: React.FC = () => {
             'line-color': 'data(edgeColor)',
             'target-arrow-color': 'data(edgeColor)',
             'target-arrow-shape': 'triangle',
+            'arrow-scale': 1.2,
             'curve-style': 'bezier',
             'label': 'data(label)',
-            'font-size': '8.5px',
+            'font-size': '9px',
+            'font-weight': 600,
             'font-family': 'ui-monospace, monospace',
-            'color': '#94a3b8',
+            'color': '#cbd5e1',
             'text-rotation': 'autorotate',
-            'text-background-color': '#090d16',
-            'text-background-opacity': 0.9,
-            'text-background-padding': '2px',
-            'text-border-width': 1,
-            'text-border-color': '#1e293b',
+            'text-outline-width': 2,
+            'text-outline-color': '#0f172a',
+            'text-outline-opacity': 0.95,
+            'text-background-opacity': 0,
             'opacity': 0.85
           }
         },
@@ -361,7 +315,7 @@ export const NetworkGraphView: React.FC = () => {
           style: {
             'line-color': '#38bdf8',
             'target-arrow-color': '#38bdf8',
-            'width': 4,
+            'width': 4.5,
             'opacity': 1
           }
         },
@@ -388,10 +342,11 @@ export const NetworkGraphView: React.FC = () => {
           }
         }
       ],
-      layout: layoutConfig
+      layout: { name: 'preset' }
     });
 
     cyRef.current = cy;
+    console.log('[Graph] cytoscape instance created');
 
     // Node click handler
     cy.on('tap', 'node', (evt: EventObject) => {
@@ -415,10 +370,232 @@ export const NetworkGraphView: React.FC = () => {
       }
     });
 
+    // Resize observer to ensure graph stays visible when container layout changes
+    let ro: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== 'undefined' && containerRef.current) {
+      ro = new ResizeObserver(() => {
+        if (cyRef.current && !cyRef.current.destroyed()) {
+          cyRef.current.resize();
+        }
+      });
+      ro.observe(containerRef.current);
+    }
+
     return () => {
-      cy.destroy();
+      if (ro) ro.disconnect();
+      // Only destroy if really unmounting and container is removed
+      if (cyRef.current && !containerRef.current) {
+        try {
+          cyRef.current.destroy();
+          cyRef.current = null;
+        } catch (_) {}
+      }
     };
-  }, [currentNodes, currentEdges, filterType, confidenceThreshold, activeLayout, colorByCommunity, hideIsolated, searchQuery, nodeDegrees]);
+  }, []);
+
+  // Update elements and apply layout whenever data or filters change
+  useEffect(() => {
+    const cy = cyRef.current;
+    if (!cy) return;
+
+    // Filter nodes
+    let nodesToUse = currentNodes;
+    if (nodesToUse.length === 0 && activeBundle.nodes.length > 0) {
+      nodesToUse = activeBundle.nodes;
+    }
+
+    const filteredNodes = nodesToUse.filter(n => {
+      const eType = n.entityType || (n as any).type || 'Person';
+      if (filterType !== 'ALL' && eType.toLowerCase() !== filterType.toLowerCase()) {
+        return false;
+      }
+      if (hideIsolated && (nodeDegrees.get(n.id) || 0) === 0) {
+        return false;
+      }
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        const matches = (
+          (n.label && n.label.toLowerCase().includes(q)) ||
+          n.id.toLowerCase().includes(q) ||
+          eType.toLowerCase().includes(q)
+        );
+        if (!matches) return false;
+      }
+      return true;
+    });
+
+    // If all nodes got filtered out, fallback to showing all currentNodes so canvas never becomes blank
+    const activeNodes = (filteredNodes.length > 0) ? filteredNodes : nodesToUse;
+    const nodeIds = new Set(activeNodes.map(n => n.id));
+
+    let edgesToUse = currentEdges;
+    if (edgesToUse.length === 0 && nodesToUse === activeBundle.nodes) {
+      edgesToUse = activeBundle.edges;
+    }
+
+    // STRICT CHECK: Edges MUST only connect visible, existing nodes
+    const filteredEdges = edgesToUse.filter(e => {
+      if (!e.source || !e.target) return false;
+      if (!nodeIds.has(e.source) || !nodeIds.has(e.target)) return false;
+      if (e.confidence !== undefined && e.confidence < confidenceThreshold) return false;
+      return true;
+    });
+
+    const elements = [
+      ...activeNodes.map(node => {
+        const eType = (node.entityType || (node as any).type || 'Person') as EntityType;
+        const isApex = Boolean((node.analytics?.degreeCentrality || 0) >= 0.65 || (node.label && node.label.toLowerCase().includes('kingpin')));
+        const communityId = node.analytics?.communityId || 1;
+        
+        const finalColor = colorByCommunity ? getCommunityColor(communityId) : getNodeColor(eType);
+        const finalBorderColor = colorByCommunity ? getCommunityColor(communityId) : getNodeBorderColor(eType, isApex);
+
+        const nodeDegree = nodeDegrees.get(node.id) || 1;
+        const nodeSize = isApex ? 56 : (nodeDegree >= 3 ? 46 : 38);
+
+        return {
+          data: {
+            id: node.id,
+            label: node.label || node.id,
+            displayLabel: node.label && node.label.length > 20 ? `${node.label.slice(0, 18)}…` : (node.label || node.id),
+            type: eType,
+            color: finalColor,
+            borderColor: finalBorderColor,
+            size: nodeSize,
+            isApex: isApex ? 'true' : 'false',
+            communityId,
+            degree: nodeDegree,
+            raw: node
+          }
+        };
+      }),
+      ...filteredEdges.map(edge => {
+        let edgeColor = '#475569';
+        const rType = edge.relationType || (edge as any).relationshipType || 'LINKED_TO';
+        if (rType.includes('CALL') || rType.includes('PHONE')) edgeColor = '#14b8a6';
+        else if (rType.includes('WIRE') || rType.includes('ESCROW') || rType.includes('TRANSACT') || rType.includes('DEBIT')) edgeColor = '#f59e0b';
+        else if (rType.includes('OWNER') || rType.includes('DIRECTOR') || rType.includes('SHELL')) edgeColor = '#c084fc';
+        else if (rType.includes('ACCUSED') || rType.includes('CONSPIRATOR') || rType.includes('CRIME')) edgeColor = '#f43f5e';
+        else if (rType.includes('EVIDENCE') || rType.includes('SEIZURE')) edgeColor = '#22c55e';
+
+        return {
+          data: {
+            id: edge.id,
+            source: edge.source,
+            target: edge.target,
+            label: edge.relationType || (edge as any).relationshipType || 'LINKED_TO',
+            confidence: edge.confidence || 0.95,
+            edgeColor,
+            raw: edge
+          }
+        };
+      })
+    ];
+
+    // Determine layout config with safe physics parameters
+    let layoutConfig: any = {
+      name: 'fcose',
+      quality: 'proof',
+      randomize: false,
+      animate: false,
+      fit: true,
+      padding: 50,
+      nodeRepulsion: () => 15000,
+      idealEdgeLength: () => 130,
+      edgeElasticity: () => 0.45,
+      nestingFactor: 0.1,
+      gravity: 0.25,
+      numIter: 2500,
+      tile: true,
+      packComponents: true
+    };
+
+    if (activeLayout === 'fcose' || activeLayout === 'cose') {
+      layoutConfig = {
+        name: 'fcose',
+        quality: 'proof',
+        randomize: false,
+        animate: false,
+        fit: true,
+        padding: 50,
+        nodeRepulsion: () => 15000,
+        idealEdgeLength: () => 130,
+        edgeElasticity: () => 0.45,
+        nestingFactor: 0.1,
+        gravity: 0.25,
+        numIter: 2500,
+        tile: true,
+        packComponents: true
+      };
+    } else if (activeLayout === 'concentric') {
+      layoutConfig = {
+        name: 'concentric',
+        concentric: (node: any) => node.data('degree') || 1,
+        levelWidth: () => 2,
+        padding: 40,
+        animate: false,
+        fit: true
+      };
+    } else if (activeLayout === 'breadthfirst') {
+      layoutConfig = {
+        name: 'breadthfirst',
+        directed: true,
+        padding: 40,
+        spacingFactor: 1.25,
+        animate: false,
+        fit: true
+      };
+    } else if (activeLayout === 'circle') {
+      layoutConfig = {
+        name: 'circle',
+        padding: 40,
+        animate: false,
+        fit: true
+      };
+    }
+
+    try {
+      cy.batch(() => {
+        cy.elements().remove();
+        cy.add(elements);
+      });
+      console.log('[Graph] elements updated', elements.length);
+
+      try {
+        const layoutInstance = cy.layout(layoutConfig);
+        layoutInstance.on('layoutstop', () => {
+          if (!cy.destroyed()) {
+            cy.resize();
+            cy.fit(undefined, 50);
+          }
+        });
+        layoutInstance.run();
+      } catch (fcoseErr) {
+        console.warn('[NetworkGraphView] fcose failed, falling back to spread cose:', fcoseErr);
+        const fallback = cy.layout({
+          name: 'cose',
+          animate: false,
+          fit: true,
+          padding: 50,
+          randomize: false,
+          nodeRepulsion: () => 16000,
+          idealEdgeLength: () => 140,
+          edgeElasticity: () => 16,
+          gravity: 0.25,
+          numIter: 2000
+        });
+        fallback.on('layoutstop', () => {
+          if (!cy.destroyed()) {
+            cy.resize();
+            cy.fit(undefined, 50);
+          }
+        });
+        fallback.run();
+      }
+    } catch (layoutErr) {
+      console.warn('[NetworkGraphView] Layout error handled:', layoutErr);
+    }
+  }, [currentNodes, currentEdges, filterType, confidenceThreshold, activeLayout, colorByCommunity, hideIsolated, searchQuery, activeBundle]);
 
   // Controls
   const handleZoomIn = () => cyRef.current?.zoom(cyRef.current.zoom() * 1.25);
@@ -525,9 +702,9 @@ export const NetworkGraphView: React.FC = () => {
           {/* Data Source Mode Toggle */}
           <div className="flex items-center rounded-xl bg-slate-100 p-1 border border-slate-200">
             <button
-              onClick={() => setDataSourceMode('INTELLIGENCE_WEB')}
+              onClick={() => setDataSourceMode('LIVE_DB')}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                dataSourceMode === 'INTELLIGENCE_WEB'
+                dataSourceMode === 'LIVE_DB'
                   ? 'bg-blue-600 text-white shadow-sm'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
@@ -535,14 +712,14 @@ export const NetworkGraphView: React.FC = () => {
               Multi-Modal Web
             </button>
             <button
-              onClick={() => setDataSourceMode('NEO4J_RAW')}
+              onClick={() => setDataSourceMode('DEMO_MODE')}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                dataSourceMode === 'NEO4J_RAW'
-                  ? 'bg-blue-600 text-white shadow-sm'
+                dataSourceMode === 'DEMO_MODE'
+                  ? 'bg-purple-600 text-white shadow-sm'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              Raw Neo4j Feed
+              Raw Neo4j
             </button>
           </div>
 
@@ -668,7 +845,7 @@ export const NetworkGraphView: React.FC = () => {
               </label>
               <div className="grid grid-cols-2 gap-2">
                 {[
-                  { id: 'cose', label: 'Force-Directed (Organic)' },
+                  { id: 'fcose', label: 'Force-Directed (Clean FCoSE)' },
                   { id: 'concentric', label: 'Concentric (Radar Target)' },
                   { id: 'breadthfirst', label: 'Hierarchical (Tree)' },
                   { id: 'circle', label: 'Radial Ring (Cluster)' }
@@ -741,7 +918,7 @@ export const NetworkGraphView: React.FC = () => {
         />
 
         {/* Cytoscape DOM container */}
-        <div ref={containerRef} className="w-full h-full relative z-0" />
+        <div ref={containerRef} className="w-full h-full relative z-0" style={{ width: '100%', height: '100%', minHeight: '680px' }} />
 
         {/* Search Input Floating on Canvas */}
         <div className="absolute top-4 left-4 z-10 w-72">

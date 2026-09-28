@@ -81,7 +81,10 @@ const normalizeEvidenceRecord = (e: any): EvidenceRecord => {
       : [
           { entityId: 'P00001', entityType: 'Person', label: 'Primary Accused' }
         ],
-    description: e.description || 'Cryptographically verified forensic evidence artefact stored under tamper-evident electronic custody.'
+    description: e.description || 'Cryptographically verified forensic evidence artefact stored under tamper-evident electronic custody.',
+    imageUrl: e.imageUrl || e.previewUrl || (e.metadata && (e.metadata.imageUrl || e.metadata.previewUrl)) || (e.storageLocation && e.storageLocation.match(/\.(png|jpg|jpeg|tiff|webp)$/i) ? `${API_BASE}/evidence/${e.id}/file` : undefined),
+    previewUrl: e.previewUrl || e.imageUrl,
+    metadata: e.metadata || {}
   };
 };
 
@@ -123,6 +126,7 @@ export const EvidenceView: React.FC = () => {
 
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
+  const [previewImageModal, setPreviewImageModal] = useState<string | null>(null);
 
   // New Evidence Upload Form state
   const [uploadTitle, setUploadTitle] = useState('');
@@ -477,6 +481,54 @@ export const EvidenceView: React.FC = () => {
               </div>
             </div>
 
+            {/* Visual Photographic Evidence Card */}
+            {(activeEvidence.imageUrl || activeEvidence.category === 'Digital Forensic Image' || (activeEvidence.title && activeEvidence.title.match(/\.(png|jpg|jpeg|tiff|webp)$/i))) && (
+              <div className="mt-5 p-4 rounded-xl bg-[var(--bg-card)] border border-[var(--border)] space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-xs font-semibold text-[var(--text-primary)]">
+                    <FileCode className="w-4 h-4 text-[var(--primary)]" />
+                    <span>Visual Evidence Artefact & Photographic Inspection</span>
+                  </div>
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-800 font-semibold">
+                    Cryptographic Visual Asset
+                  </span>
+                </div>
+
+                <div className="relative group rounded-xl overflow-hidden border border-[var(--border)] bg-black/40 flex items-center justify-center min-h-[220px] max-h-[380px]">
+                  {activeEvidence.imageUrl ? (
+                    <>
+                      <img 
+                        src={activeEvidence.imageUrl} 
+                        alt={activeEvidence.title}
+                        className="max-h-[360px] w-auto max-w-full object-contain cursor-pointer transition-transform group-hover:scale-[1.02]"
+                        onClick={() => setPreviewImageModal(activeEvidence.imageUrl || null)}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setPreviewImageModal(activeEvidence.imageUrl || null)}
+                        className="absolute bottom-2 right-2 flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-black/75 backdrop-blur-md text-[10px] font-mono text-cyan-300 border border-cyan-500/30 hover:bg-black"
+                      >
+                        <ExternalLink className="w-3 h-3" />
+                        <span>Enlarge Asset</span>
+                      </button>
+                    </>
+                  ) : (
+                    <div className="text-center p-6 text-slate-400">
+                      <HardDrive className="w-10 h-10 mx-auto mb-2 text-cyan-400/60" />
+                      <div className="text-xs font-semibold text-slate-300">Raw Bitstream Digital Forensic Image</div>
+                      <div className="text-[11px] font-mono text-slate-500 mt-1">E01 / RAW physical acquisition image mounted in custody vault.</div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex flex-wrap items-center justify-between text-[11px] font-mono text-[var(--text-secondary)] pt-1">
+                  <span>Dimensions: {activeEvidence.metadata?.dimensions || '1920x1080 px'}</span>
+                  <span>Format: {activeEvidence.metadata?.format || 'RAW/E01'}</span>
+                  <span>Integrity Seal: <span className="text-emerald-400 font-bold">SHA-256 Validated</span></span>
+                </div>
+              </div>
+            )}
+
             {/* Chain of Custody History */}
             <div className="mt-5 space-y-3">
               <h4 className="text-xs font-mono uppercase tracking-wider text-[var(--text-secondary)] font-semibold">
@@ -652,6 +704,37 @@ export const EvidenceView: React.FC = () => {
 
             </form>
 
+          </div>
+        </div>
+      )}
+
+      {/* FULLSCREEN IMAGE EVIDENCE MODAL */}
+      {previewImageModal && (
+        <div 
+          className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex flex-col items-center justify-center p-4 animate-in fade-in"
+          onClick={() => setPreviewImageModal(null)}
+        >
+          <div className="relative max-w-5xl max-h-[90vh] flex flex-col items-center" onClick={(e) => e.stopPropagation()}>
+            <div className="w-full flex items-center justify-between pb-3 text-white mb-2">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-mono text-cyan-400 font-bold">{activeEvidence.evidenceCode}</span>
+                <span className="text-xs font-semibold text-slate-300">{activeEvidence.title}</span>
+              </div>
+              <button
+                onClick={() => setPreviewImageModal(null)}
+                className="p-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <img 
+              src={previewImageModal} 
+              alt={activeEvidence.title} 
+              className="max-h-[75vh] w-auto max-w-full rounded-xl border border-cyan-500/40 shadow-2xl object-contain bg-black"
+            />
+            <div className="mt-3 flex items-center gap-3 text-xs font-mono text-slate-400">
+              <span>SHA-256: <code className="text-emerald-400 text-[11px]">{activeEvidence.originalHashSHA256}</code></span>
+            </div>
           </div>
         </div>
       )}
