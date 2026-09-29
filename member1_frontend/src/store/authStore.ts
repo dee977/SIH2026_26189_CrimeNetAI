@@ -52,18 +52,35 @@ export function getPermissionsForRole(role: UserRole): string[] {
   }
 }
 
+const initialToken = typeof localStorage !== 'undefined' ? localStorage.getItem('crimenet_auth_token') : null;
+let initialUser: UserProfile | null = null;
+try {
+  const storedUser = typeof localStorage !== 'undefined' ? localStorage.getItem('crimenet_user_profile') : null;
+  if (storedUser) {
+    initialUser = JSON.parse(storedUser);
+  }
+} catch (_) {}
+
 export const useAuthStore = create<AuthState>((set) => ({
-  user: null,
-  token: null,
-  isAuthenticated: false,
+  user: initialUser,
+  token: initialToken,
+  isAuthenticated: !!initialToken && !!initialUser,
   isSessionExpired: false,
   pendingOfficers: [],
 
   setSession: (token, user) => {
     if (token) {
-      try { localStorage.setItem('crimenet_auth_token', token); } catch (_) {}
+      try { 
+        localStorage.setItem('crimenet_auth_token', token); 
+        if (user) {
+          localStorage.setItem('crimenet_user_profile', JSON.stringify(user));
+        }
+      } catch (_) {}
     } else {
-      try { localStorage.removeItem('crimenet_auth_token'); } catch (_) {}
+      try { 
+        localStorage.removeItem('crimenet_auth_token'); 
+        localStorage.removeItem('crimenet_user_profile');
+      } catch (_) {}
     }
     set({
       token,
@@ -76,6 +93,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     await supabase.auth.signOut();
     try {
       localStorage.removeItem('crimenet_auth_token');
+      localStorage.removeItem('crimenet_user_profile');
       localStorage.removeItem('crimenet_active_role');
       localStorage.removeItem('auth-store');
     } catch (_) {}

@@ -37,9 +37,8 @@ async def upload_document(
     if not file.filename:
         raise HTTPException(status_code=400, detail="INVALID FILE: Filename is empty.")
 
-    target_case_id = caseId or case_id
-    if not target_case_id:
-        raise HTTPException(status_code=400, detail="INVALID REQUEST: caseId is required.")
+    raw_case_id = (caseId if caseId and str(caseId).strip() else None) or (case_id if case_id and str(case_id).strip() else None)
+    target_case_id = str(raw_case_id).strip() if raw_case_id else 'CASE-2025-M3-DATASET'
     
     content = await file.read()
     
@@ -105,9 +104,7 @@ async def list_ingest_jobs(
 ):
     """Returns list of recent uploads and ingestion jobs."""
     target_case = caseId or case_id
-    if not target_case:
-        raise HTTPException(status_code=400, detail="INVALID REQUEST: caseId is required.")
-    jobs = get_all_ingest_jobs(case_id=target_case)
+    jobs = get_all_ingest_jobs(case_id=target_case if target_case else None)
     items = [IngestJobStatusResponse(**j) for j in jobs]
     return PaginatedResponse(
         items=items,

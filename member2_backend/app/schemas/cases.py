@@ -9,12 +9,18 @@ class CaseStatusEnum(str):
     ARCHIVED = 'archived'
 
 class CaseCreateRequest(BaseModel):
-    title: str = Field(..., min_length=3, max_length=255)
-    description: str = Field(..., min_length=10)
-    assignedInvestigator: str = Field(..., description='Investigator ID or Name')
-    assignedTeam: str = Field(..., description='Investigation Team or Unit')
-    caseType: str = Field(default='Organized Crime Network')
-    priority: str = Field(default='high', description='low | medium | high | critical')
+    title: str = Field(..., min_length=2, max_length=255)
+    description: Optional[str] = Field(default='Case investigation record.')
+    caseId: Optional[str] = None
+    caseNumber: Optional[str] = None
+    assignedInvestigator: Optional[str] = 'Inspector Vikramaditya Rao (LEO-7729)'
+    assignedTeam: Optional[str] = 'Special Investigation Team'
+    policeStation: Optional[str] = 'Central Police Station'
+    jurisdiction: Optional[str] = 'State Police CID'
+    caseType: Optional[str] = 'Organized Crime Network'
+    priority: Optional[str] = 'high'
+    status: Optional[str] = 'active'
+    accessClassification: Optional[str] = 'RESTRICTED'
     initialEntityIds: Optional[List[str]] = Field(default_factory=list)
     initialEvidenceIds: Optional[List[str]] = Field(default_factory=list)
 
@@ -23,6 +29,8 @@ class CaseUpdateRequest(BaseModel):
     description: Optional[str] = None
     assignedInvestigator: Optional[str] = None
     assignedTeam: Optional[str] = None
+    policeStation: Optional[str] = None
+    jurisdiction: Optional[str] = None
     status: Optional[str] = None
     priority: Optional[str] = None
     notes: Optional[str] = None

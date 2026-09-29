@@ -29,6 +29,25 @@ class UserProfileModel(Base):
     role = Column(String, nullable=False)
     is_active = Column(Boolean, default=True)
 
+class AccessRequestModel(Base):
+    __tablename__ = 'access_requests'
+    __table_args__ = {'extend_existing': True}
+    id = Column(String, primary_key=True, index=True)
+    user_id = Column(String, nullable=False, index=True)
+    user_email = Column(String, nullable=False, index=True)
+    officer_name = Column(String, nullable=True)
+    badge_number = Column(String, nullable=True)
+    department = Column(String, nullable=True)
+    requested_role = Column(String, nullable=False)
+    status = Column(String, default='pending', nullable=False)
+    reason = Column(Text, nullable=True)
+    warrant_ref = Column(String, nullable=True)
+    assigned_case_id = Column(String, nullable=True)
+    assigned_case_title = Column(String, nullable=True)
+    reviewed_by = Column(String, nullable=True)
+    reviewed_at = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
 class CaseMembershipModel(Base):
     """Server-side case ACL.  A token never conveys case access by itself."""
     __tablename__ = 'case_memberships'
@@ -123,4 +142,27 @@ class IngestJobModel(Base):
     started_at = Column(DateTime(timezone=True), server_default=func.now())
     completed_at = Column(DateTime(timezone=True), nullable=True)
     error_details = Column(Text, nullable=True)
+
+class EntityModel(Base):
+    __tablename__ = 'entities'
+    id = Column(Integer, primary_key=True)
+    entity_id = Column(String, unique=True, nullable=False, index=True)
+    case_id = Column(String, ForeignKey('cases.case_id'), nullable=True, index=True)
+    entity_type = Column(String, nullable=False, index=True)
+    canonical_name = Column(String, nullable=False, index=True)
+    confidence = Column(String, default='0.95')
+    properties = Column(JSON, default=dict, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+class RelationshipModel(Base):
+    __tablename__ = 'relationships'
+    id = Column(Integer, primary_key=True)
+    relationship_id = Column(String, unique=True, nullable=False, index=True)
+    case_id = Column(String, ForeignKey('cases.case_id'), nullable=True, index=True)
+    source_id = Column(String, nullable=False, index=True)
+    target_id = Column(String, nullable=False, index=True)
+    relationship_type = Column(String, nullable=False, index=True)
+    confidence = Column(String, default='0.95')
+    properties = Column(JSON, default=dict, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
 

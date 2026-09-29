@@ -134,36 +134,59 @@ export const TopNav: React.FC = () => {
         <div className="relative">
           <button
             onClick={() => setIsRoleDropdownOpen(!isRoleDropdownOpen)}
-            className="flex items-center gap-2.5 px-3 py-1.5 rounded-lg bg-white hover:bg-slate-50 border border-[var(--border)] text-[var(--text-primary)] transition-colors shadow-sm"
+            className="flex items-center gap-2.5 px-3 py-1.5 rounded-xl bg-slate-900/40 hover:bg-slate-800/80 border border-slate-700/80 text-[var(--text-primary)] transition-all shadow-sm"
           >
-            <div className="w-6 h-6 rounded-full bg-[var(--surface-blue)] border border-[var(--primary)]/20 flex items-center justify-center text-[var(--primary)]">
-              <User className="w-3.5 h-3.5" />
+            <div className="w-7 h-7 rounded-lg bg-blue-500/20 border border-blue-500/40 flex items-center justify-center text-cyan-400">
+              <User className="w-4 h-4" />
             </div>
             <div className="text-left hidden sm:block">
-              <div className="text-[11px] font-semibold text-[var(--text-primary)] leading-tight">
-                {user?.officerId || 'LEO-7729'}
+              <div className="text-[11px] font-bold text-white leading-tight flex items-center gap-1.5">
+                <span>{user?.name || user?.email?.split('@')[0] || 'Officer'}</span>
               </div>
-              <div className="text-[10px] text-[var(--text-secondary)] font-mono">
-                {user?.grantedRole || ((user as any)?.role === 'super_admin' ? 'System Administrator' : 'Senior Investigator')}
+              <div className="text-[10px] font-mono flex items-center gap-1">
+                <span className="text-slate-400">Logged in as:</span>
+                <span className={`font-bold px-1.5 py-0.2 rounded text-[9px] uppercase ${
+                  (user?.grantedRole || 'INVESTIGATOR') === 'ADMIN' ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40' :
+                  (user?.grantedRole || 'INVESTIGATOR') === 'INVESTIGATOR' ? 'bg-blue-500/20 text-blue-300 border border-blue-500/40' :
+                  (user?.grantedRole || 'INVESTIGATOR') === 'ANALYST' ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40' :
+                  'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                }`}>
+                  {user?.grantedRole || 'INVESTIGATOR'}
+                </span>
               </div>
             </div>
           </button>
 
           {isRoleDropdownOpen && (
-            <div className="absolute right-0 mt-2 w-64 rounded-xl bg-white border border-[var(--border)] shadow-lg p-2 z-50 animate-in fade-in slide-in-from-top-2">
-              <div className="px-3 py-2 border-b border-[var(--border)] text-[11px] text-[var(--text-secondary)]">
-                <p className="font-semibold text-[var(--text-primary)]">{user?.name}</p>
-                <p className="text-[10px] text-slate-500 font-mono">{user?.organization}</p>
-                <p className="text-[10px] text-[var(--primary)] font-mono mt-1">{user?.grantedRole}</p>
+            <div className="absolute right-0 mt-2 w-72 rounded-2xl bg-[#0f172a] border border-slate-800 shadow-2xl p-3 z-50 animate-in fade-in slide-in-from-top-2 text-xs">
+              <div className="pb-3 border-b border-slate-800">
+                <p className="font-bold text-white text-sm">{user?.name || 'Officer'}</p>
+                <p className="text-[11px] text-slate-400 font-mono mt-0.5">{user?.email}</p>
+                <div className="mt-2 flex items-center justify-between">
+                  <span className="text-[10px] text-slate-400 font-mono">Statutory Role:</span>
+                  <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded border uppercase ${
+                    (user?.grantedRole || 'INVESTIGATOR') === 'ADMIN' ? 'bg-rose-500/20 text-rose-300 border-rose-500/40' :
+                    (user?.grantedRole || 'INVESTIGATOR') === 'INVESTIGATOR' ? 'bg-blue-500/20 text-blue-300 border-blue-500/40' :
+                    (user?.grantedRole || 'INVESTIGATOR') === 'ANALYST' ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40' :
+                    'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                  }`}>
+                    {user?.grantedRole || 'INVESTIGATOR'}
+                  </span>
+                </div>
               </div>
 
-              <div className="pt-1 border-t border-[var(--border)] space-y-1">
+              <div className="py-2 border-b border-slate-800 space-y-1">
+                <div className="text-[10px] font-mono text-slate-400">Badge: {user?.officerId || 'LEO-7729'}</div>
+                <div className="text-[10px] font-mono text-slate-400">Unit: {user?.organization || 'CrimeNet State Bureau'}</div>
+              </div>
+
+              <div className="pt-2 space-y-1">
                 <button
                   onClick={() => {
                     setIsRoleDropdownOpen(false);
                     triggerSessionExpiry();
                   }}
-                  className="w-full text-left px-3 py-1.5 rounded-lg text-xs text-[var(--warning)] hover:bg-amber-50 flex items-center gap-2 transition-colors"
+                  className="w-full text-left px-3 py-2 rounded-xl text-xs text-amber-300 hover:bg-amber-950/30 flex items-center gap-2 transition-colors"
                 >
                   <Clock className="w-3.5 h-3.5" />
                   <span>Simulate Session Expiry</span>
@@ -175,7 +198,7 @@ export const TopNav: React.FC = () => {
                     logout();
                     setView('login');
                   }}
-                  className="w-full text-left px-3 py-1.5 rounded-lg text-xs text-[var(--danger)] hover:bg-red-50 flex items-center gap-2 transition-colors"
+                  className="w-full text-left px-3 py-2 rounded-xl text-xs text-rose-400 hover:bg-rose-950/30 flex items-center gap-2 transition-colors"
                 >
                   <LogOut className="w-3.5 h-3.5" />
                   <span>Logout Session</span>

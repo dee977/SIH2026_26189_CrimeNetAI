@@ -53,10 +53,12 @@ class Settings(BaseSettings):
     M5_GRAPH_ML_SERVICE_URL: str = 'http://localhost:8005'
     M6_SECURITY_SERVICE_URL: str = 'http://localhost:8006'
     DATABASE_URL: str = 'sqlite:///./crimenet.db'
+    DIRECT_URL: Optional[str] = None
     SUPABASE_URL: Optional[str] = None
     SUPABASE_KEY: Optional[str] = None
+    SUPABASE_SERVICE_ROLE_KEY: Optional[str] = None
 
-    DOWNSTREAM_FALLBACK_MODE: bool = False
+    DOWNSTREAM_FALLBACK_MODE: bool = True
 
     # Ingestion & File Storage Configuration
     UPLOAD_DIR: str = './uploads'

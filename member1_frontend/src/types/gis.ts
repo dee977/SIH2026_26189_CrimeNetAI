@@ -1,7 +1,7 @@
 export interface MapMarkerLocation {
   id: string;
   name: string;
-  category: 'Crime Scene' | 'Suspect Location' | 'Cell Tower' | 'Warehouse' | 'Port / Terminal' | 'Financial Branch';
+  category: 'Crime Scene' | 'Suspect Location' | 'Cell Tower' | 'Warehouse' | 'Port / Terminal' | 'Financial Branch' | string;
   latitude: number;
   longitude: number;
   accuracyRadiusMeters?: number;

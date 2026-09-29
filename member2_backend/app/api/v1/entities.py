@@ -100,13 +100,13 @@ async def get_all_entities(
     type: Optional[str] = Query(None),
     query: Optional[str] = Query(None),
     case_id: Optional[str] = Query(None),
+    caseId: Optional[str] = Query(None),
     page: int = Query(1, ge=1),
     pageSize: int = Query(50, ge=1, le=500),
     m3_client: M3GraphDataClient = Depends(get_m3_client)
 ):
-    if not case_id:
-        raise HTTPException(status_code=400, detail='case_id is required')
-    raw = await m3_client.query_entities(entity_type=type, query=query, case_id=case_id, limit=pageSize)
+    target_case = case_id or caseId or 'CASE-2025-M3-DATASET'
+    raw = await m3_client.query_entities(entity_type=type, query=query, case_id=target_case, limit=pageSize)
     items = []
     for r in raw:
         lbl = r.get('entityType', 'Person')
@@ -138,74 +138,74 @@ async def get_all_entities(
 
 
 @router.get('/persons', response_model=PaginatedResponse[PersonEntity], summary='Query Person Entities')
-async def get_persons(query: Optional[str] = None, page: int = 1, pageSize: int = 20, m3_client: M3GraphDataClient = Depends(get_m3_client)):
-    raw = await m3_client.query_entities(entity_type='Person', query=query, limit=pageSize)
+async def get_persons(query: Optional[str] = None, case_id: Optional[str] = Query(None), caseId: Optional[str] = Query(None), page: int = 1, pageSize: int = 20, m3_client: M3GraphDataClient = Depends(get_m3_client)):
+    raw = await m3_client.query_entities(entity_type='Person', query=query, case_id=case_id or caseId, limit=pageSize)
     items = [_safe_person(r) for r in raw]
     return PaginatedResponse(items=items, pagination=PaginationMeta(page=page, pageSize=pageSize, totalRecords=len(items), totalPages=1))
 
 @router.get('/phones', response_model=PaginatedResponse[PhoneEntity], summary='Query Phone Entities')
-async def get_phones(query: Optional[str] = None, page: int = 1, pageSize: int = 20, m3_client: M3GraphDataClient = Depends(get_m3_client)):
-    raw = await m3_client.query_entities(entity_type='Phone', query=query, limit=pageSize)
+async def get_phones(query: Optional[str] = None, case_id: Optional[str] = Query(None), caseId: Optional[str] = Query(None), page: int = 1, pageSize: int = 20, m3_client: M3GraphDataClient = Depends(get_m3_client)):
+    raw = await m3_client.query_entities(entity_type='Phone', query=query, case_id=case_id or caseId, limit=pageSize)
     items = [_safe_phone(r) for r in raw]
     return PaginatedResponse(items=items, pagination=PaginationMeta(page=page, pageSize=pageSize, totalRecords=len(items), totalPages=1))
 
 @router.get('/bank-accounts', response_model=PaginatedResponse[BankAccountEntity], summary='Query Bank Accounts')
-async def get_bank_accounts(query: Optional[str] = None, page: int = 1, pageSize: int = 20, m3_client: M3GraphDataClient = Depends(get_m3_client)):
-    raw = await m3_client.query_entities(entity_type='BankAccount', query=query, limit=pageSize)
+async def get_bank_accounts(query: Optional[str] = None, case_id: Optional[str] = Query(None), caseId: Optional[str] = Query(None), page: int = 1, pageSize: int = 20, m3_client: M3GraphDataClient = Depends(get_m3_client)):
+    raw = await m3_client.query_entities(entity_type='BankAccount', query=query, case_id=case_id or caseId, limit=pageSize)
     items = [_safe_bank(r) for r in raw]
     return PaginatedResponse(items=items, pagination=PaginationMeta(page=page, pageSize=pageSize, totalRecords=len(items), totalPages=1))
 
 @router.get('/vehicles', response_model=PaginatedResponse[VehicleEntity], summary='Query Vehicles')
-async def get_vehicles(query: Optional[str] = None, page: int = 1, pageSize: int = 20, m3_client: M3GraphDataClient = Depends(get_m3_client)):
-    raw = await m3_client.query_entities(entity_type='Vehicle', query=query, limit=pageSize)
+async def get_vehicles(query: Optional[str] = None, case_id: Optional[str] = Query(None), caseId: Optional[str] = Query(None), page: int = 1, pageSize: int = 20, m3_client: M3GraphDataClient = Depends(get_m3_client)):
+    raw = await m3_client.query_entities(entity_type='Vehicle', query=query, case_id=case_id or caseId, limit=pageSize)
     items = [_safe_vehicle(r) for r in raw]
     return PaginatedResponse(items=items, pagination=PaginationMeta(page=page, pageSize=pageSize, totalRecords=len(items), totalPages=1))
 
 @router.get('/locations', response_model=PaginatedResponse[LocationEntity], summary='Query Locations')
-async def get_locations(query: Optional[str] = None, page: int = 1, pageSize: int = 20, m3_client: M3GraphDataClient = Depends(get_m3_client)):
-    raw = await m3_client.query_entities(entity_type='Location', query=query, limit=pageSize)
+async def get_locations(query: Optional[str] = None, case_id: Optional[str] = Query(None), caseId: Optional[str] = Query(None), page: int = 1, pageSize: int = 20, m3_client: M3GraphDataClient = Depends(get_m3_client)):
+    raw = await m3_client.query_entities(entity_type='Location', query=query, case_id=case_id or caseId, limit=pageSize)
     items = [_safe_location(r) for r in raw]
     return PaginatedResponse(items=items, pagination=PaginationMeta(page=page, pageSize=pageSize, totalRecords=len(items), totalPages=1))
 
 @router.get('/organizations', response_model=PaginatedResponse[OrganizationEntity], summary='Query Organizations')
-async def get_organizations(query: Optional[str] = None, page: int = 1, pageSize: int = 20, m3_client: M3GraphDataClient = Depends(get_m3_client)):
-    raw = await m3_client.query_entities(entity_type='Organization', query=query, limit=pageSize)
+async def get_organizations(query: Optional[str] = None, case_id: Optional[str] = Query(None), caseId: Optional[str] = Query(None), page: int = 1, pageSize: int = 20, m3_client: M3GraphDataClient = Depends(get_m3_client)):
+    raw = await m3_client.query_entities(entity_type='Organization', query=query, case_id=case_id or caseId, limit=pageSize)
     items = [_safe_org(r) for r in raw]
     return PaginatedResponse(items=items, pagination=PaginationMeta(page=page, pageSize=pageSize, totalRecords=len(items), totalPages=1))
 
 @router.get('/firs', response_model=PaginatedResponse[FIREntity], summary='Query FIRs')
-async def get_firs(query: Optional[str] = None, page: int = 1, pageSize: int = 20, m3_client: M3GraphDataClient = Depends(get_m3_client)):
-    raw = await m3_client.query_entities(entity_type='FIR', query=query, limit=pageSize)
+async def get_firs(query: Optional[str] = None, case_id: Optional[str] = Query(None), caseId: Optional[str] = Query(None), page: int = 1, pageSize: int = 20, m3_client: M3GraphDataClient = Depends(get_m3_client)):
+    raw = await m3_client.query_entities(entity_type='FIR', query=query, case_id=case_id or caseId, limit=pageSize)
     items = [_safe_fir(r) for r in raw]
     return PaginatedResponse(items=items, pagination=PaginationMeta(page=page, pageSize=pageSize, totalRecords=len(items), totalPages=1))
 
 @router.get('/crimes', response_model=PaginatedResponse[CrimeEntity], summary='Query Crimes')
-async def get_crimes(query: Optional[str] = None, page: int = 1, pageSize: int = 20, m3_client: M3GraphDataClient = Depends(get_m3_client)):
-    raw = await m3_client.query_entities(entity_type='Crime', query=query, limit=pageSize)
+async def get_crimes(query: Optional[str] = None, case_id: Optional[str] = Query(None), caseId: Optional[str] = Query(None), page: int = 1, pageSize: int = 20, m3_client: M3GraphDataClient = Depends(get_m3_client)):
+    raw = await m3_client.query_entities(entity_type='Crime', query=query, case_id=case_id or caseId, limit=pageSize)
     items = [_safe_crime(r) for r in raw]
     return PaginatedResponse(items=items, pagination=PaginationMeta(page=page, pageSize=pageSize, totalRecords=len(items), totalPages=1))
 
 @router.get('/transactions', response_model=PaginatedResponse[TransactionEntity], summary='Query Transactions')
-async def get_transactions(query: Optional[str] = None, page: int = 1, pageSize: int = 20, m3_client: M3GraphDataClient = Depends(get_m3_client)):
-    raw = await m3_client.query_entities(entity_type='Transaction', query=query, limit=pageSize)
+async def get_transactions(query: Optional[str] = None, case_id: Optional[str] = Query(None), caseId: Optional[str] = Query(None), page: int = 1, pageSize: int = 20, m3_client: M3GraphDataClient = Depends(get_m3_client)):
+    raw = await m3_client.query_entities(entity_type='Transaction', query=query, case_id=case_id or caseId, limit=pageSize)
     items = [_safe_transaction(r) for r in raw]
     return PaginatedResponse(items=items, pagination=PaginationMeta(page=page, pageSize=pageSize, totalRecords=len(items), totalPages=1))
 
 @router.get('/communications', response_model=PaginatedResponse[CommunicationEntity], summary='Query Communications')
-async def get_communications(query: Optional[str] = None, page: int = 1, pageSize: int = 20, m3_client: M3GraphDataClient = Depends(get_m3_client)):
-    raw = await m3_client.query_entities(entity_type='Communication', query=query, limit=pageSize)
+async def get_communications(query: Optional[str] = None, case_id: Optional[str] = Query(None), caseId: Optional[str] = Query(None), page: int = 1, pageSize: int = 20, m3_client: M3GraphDataClient = Depends(get_m3_client)):
+    raw = await m3_client.query_entities(entity_type='Communication', query=query, case_id=case_id or caseId, limit=pageSize)
     items = [_safe_communication(r) for r in raw]
     return PaginatedResponse(items=items, pagination=PaginationMeta(page=page, pageSize=pageSize, totalRecords=len(items), totalPages=1))
 
 @router.get('/evidence', response_model=PaginatedResponse[EvidenceEntity], summary='Query Evidence')
-async def get_evidence(query: Optional[str] = None, page: int = 1, pageSize: int = 20, m3_client: M3GraphDataClient = Depends(get_m3_client)):
-    raw = await m3_client.query_entities(entity_type='Evidence', query=query, limit=pageSize)
+async def get_evidence(query: Optional[str] = None, case_id: Optional[str] = Query(None), caseId: Optional[str] = Query(None), page: int = 1, pageSize: int = 20, m3_client: M3GraphDataClient = Depends(get_m3_client)):
+    raw = await m3_client.query_entities(entity_type='Evidence', query=query, case_id=case_id or caseId, limit=pageSize)
     items = [_safe_evidence(r) for r in raw]
     return PaginatedResponse(items=items, pagination=PaginationMeta(page=page, pageSize=pageSize, totalRecords=len(items), totalPages=1))
 
 @router.get('/{id}', response_model=ResponseEnvelope[dict], summary='Get Normalized Entity by ID')
-async def get_entity_by_id(id: str, case_id: Optional[str] = Query(None), m3_client: M3GraphDataClient = Depends(get_m3_client)):
-    target_case = case_id or 'CASE-2024-001'
+async def get_entity_by_id(id: str, case_id: Optional[str] = Query(None), caseId: Optional[str] = Query(None), m3_client: M3GraphDataClient = Depends(get_m3_client)):
+    target_case = case_id or caseId or 'CASE-2025-M3-DATASET'
     ent = await m3_client.get_node_by_id(id, target_case)
     if not ent:
         raise ResourceNotFoundError('Entity', id)

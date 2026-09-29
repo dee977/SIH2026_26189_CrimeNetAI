@@ -1,93 +1,137 @@
-# CrimeNet AI - Local Development Setup Guide
+# CrimeNet AI — Local Development & Dynamic Execution Guide (SIH 2026 – SIH26189)
 
-Welcome to the CrimeNet AI project. This guide will help you set up the project locally on your Windows machine.
+This guide documents how to run CrimeNet AI in **Fully Dynamic Mode** connected directly to the real Supabase PostgreSQL database on port 5432.
 
-## Prerequisites
-- **Python**: 3.11 or higher
-- **Node.js**: 18 or 20 (for Vite frontend)
-- **Docker** (Optional, but highly recommended if you want to run Redis/Celery locally)
+---
 
-## Backend Setup (FastAPI)
+## 1. Architecture & Dynamic Pipeline
 
-1. **Navigate to the backend directory**:
-   ```powershell
-   cd member2_backend
-   ```
+CrimeNet AI no longer relies on hardcoded static files (`syntheticData.ts`, `caseGraphs.ts`). All core modules query live backend APIs backed by Supabase PostgreSQL:
 
-2. **Create and activate a virtual environment**:
-   ```powershell
-   python -m venv venv
-   .\venv\Scripts\Activate.ps1
-   ```
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    CrimeNet AI Frontend                     │
+│    (Vite + React + Tailwind + Cytoscape.js + Recharts)      │
+│                 http://localhost:5173                       │
+└──────────────────────────────┬──────────────────────────────┘
+                               │ API Requests / JWT Bearer
+                               ▼
+┌─────────────────────────────────────────────────────────────┐
+│                    CrimeNet AI Backend                      │
+│                (FastAPI / Uvicorn API Gateway)              │
+│                 http://localhost:8000                       │
+└──────────────┬───────────────────────────────┬──────────────┘
+               │                               │
+               ▼ DIRECT_URL (Port 5432)        ▼ JWT Verification
+┌────────────────────────────────────────┐ ┌──────────────────┐
+│         Supabase PostgreSQL            │ │  Supabase Auth   │
+│  - cases                               │ │  (JWKS / Tokens) │
+│  - entities (43+ seeded)               │ └──────────────────┘
+│  - relationships (29+ graph edges)     │
+│  - evidence_items (SHA-256 / BSA §65B) │
+│  - alerts & watchlist                  │
+└────────────────────────────────────────┘
+```
 
-3. **Install Python dependencies**:
-   ```powershell
-   pip install -r requirements.txt
-   ```
+---
 
-4. **Environment Variables**:
-   Copy the example environment file to create your own local `.env`:
-   ```powershell
-   copy .env.example .env
-   ```
-   *Note: Obtain the actual Supabase `DATABASE_URL`, `SUPABASE_URL`, and `SUPABASE_KEY` from a team member. Do not commit your `.env` file.*
+## 2. Environment Configuration
 
-5. **Database Setup**:
-   The backend defaults to using SQLite (`sqlite:///./crimenet.db`) if no `DATABASE_URL` is provided. If you want to use the team's remote PostgreSQL (Supabase), ensure your `.env` is configured with the correct `DATABASE_URL`. The tables are automatically created on startup.
+### Backend: `member2_backend/.env`
+```env
+PROJECT_NAME=CrimeNet AI Backend
+ENVIRONMENT=development
+DEBUG=True
+API_V1_STR=/api/v1
+BACKEND_HOST=0.0.0.0
+BACKEND_PORT=8000
 
-6. **Start the Backend**:
-   ```powershell
-   uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
-   ```
+# Supabase Auth
+SUPABASE_URL=https://jzdrpxsyuyuxkabpgfwr.supabase.co
+SUPABASE_KEY=sb_publishable_Z2PmIQ6XiTe01Xijp_zyQA_C1nxJdKo
 
-## Frontend Setup (React / Vite)
+# PostgreSQL Connection (DIRECT_URL on port 5432 for SQLAlchemy)
+DATABASE_URL=postgresql://postgres.jzdrpxsyuyuxkabpgfwr:VaghasiyaDeep%402008@aws-0-ap-south-1.pooler.supabase.com:5432/postgres
+DIRECT_URL=postgresql://postgres.jzdrpxsyuyuxkabpgfwr:VaghasiyaDeep%402008@aws-0-ap-south-1.pooler.supabase.com:5432/postgres
 
-1. **Navigate to the frontend directory** (in a new terminal):
-   ```powershell
-   cd member1_frontend
-   ```
+# Safety net fallback if external microservices are offline
+DOWNSTREAM_FALLBACK_MODE=True
+UPLOAD_DIR=./uploads
+```
 
-2. **Install Node dependencies**:
-   ```powershell
-   npm install
-   ```
+### Frontend: `member1_frontend/.env`
+```env
+VITE_API_BASE_URL=http://localhost:8000/api/v1
+VITE_SUPABASE_URL=https://jzdrpxsyuyuxkabpgfwr.supabase.co
+VITE_SUPABASE_ANON_KEY=sb_publishable_Z2PmIQ6XiTe01Xijp_zyQA_C1nxJdKo
+```
 
-3. **Environment Variables**:
-   Copy the example environment file:
-   ```powershell
-   copy .env.example .env
-   ```
-   *Note: Vite defaults to `http://localhost:8000/api/v1` automatically for local development.*
+> [!WARNING]
+> **Key Rotation Advisory:** If database passwords or service role keys were committed to public repositories or shared in unencrypted channels, rotate them immediately in the [Supabase Project Dashboard](https://supabase.com/dashboard/project/jzdrpxsyuyuxkabpgfwr/settings/database).
 
-4. **Start the Frontend**:
-   ```powershell
-   npm run dev
-   ```
+---
 
-## URLs & Connectivity Verification
+## 3. Database Migration & Table Creation
 
-- **Frontend URL**: [http://localhost:5173](http://localhost:5173) (or whichever port Vite outputs)
-- **Backend URL**: [http://127.0.0.1:8000](http://127.0.0.1:8000)
-- **Backend API Docs**: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
-- **Backend Health Check**: [http://127.0.0.1:8000/health](http://127.0.0.1:8000/health)
+To initialize all required relational tables (`cases`, `entities`, `relationships`, `evidence_items`, `alerts`, `watchlist_items`, `user_profiles`, `case_memberships`, `ingestion_jobs`) in Supabase:
 
-**How to verify connectivity:**
-1. Open the **Backend Health Check** in your browser. It should return a JSON response with `"status": "healthy"`.
-2. Open the **Frontend URL**. You should see the CrimeNet AI login screen. Attempting to log in will test the connection between the frontend, the FastAPI backend, and Supabase.
+```powershell
+cd member2_backend
+.\venv\Scripts\python.exe scripts\create_tables.py
+```
 
-## Services & External Dependencies
+---
 
-- **Supabase / PostgreSQL**: You can use the existing remote Supabase database for development by providing the secrets in your `.env`. Otherwise, you can develop locally using the default SQLite fallback.
-- **Neo4j**: There is no remote Neo4j connection configured by default. If you need full graph functionality, you must run Neo4j locally (e.g., `docker run -p 7687:7687 -e NEO4J_AUTH=neo4j/password neo4j:latest`) and set `NEO4J_URI` and `NEO4J_PASSWORD` in your `.env`. Alternatively, set `DOWNSTREAM_FALLBACK_MODE=True` in your backend `.env` to safely mock missing downstream components.
-- **Redis & Celery**: The project includes a `docker-compose.yml` in `member2_backend` for Redis and Celery. You only need to run this (`docker-compose up -d`) if you are actively working on background jobs.
+## 4. Seeding Realistic Intelligence Data
 
-## Stopping Services
+To insert 6 active investigation cases, 40+ normalized multi-modal entities, graph relationships, cryptographic evidence records, and system alerts into Supabase:
 
-- In your terminals, press `CTRL+C` to stop `uvicorn` and `npm run dev`.
-- If you started Docker containers, run `docker-compose down` inside `member2_backend`.
+```powershell
+cd member2_backend
+.\venv\Scripts\python.exe scripts\seed_data.py
+```
 
-## Common Errors and Fixes
+---
 
-- **"ModuleNotFoundError: No module named 'app'"**: Ensure you are running `uvicorn` from inside the `member2_backend` directory, not the root of the repository.
-- **"Execution of scripts is disabled on this system"**: If you cannot activate your python virtual environment, run `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser` in PowerShell.
-- **API CORS errors or 404s**: Ensure the backend is running on port 8000 and that the frontend `.env` points to `http://localhost:8000/api/v1` (which is the default). Make sure you didn't accidentally include production URLs locally.
+## 5. Starting the Services
+
+### Start Backend (Port 8000):
+```powershell
+cd member2_backend
+.\venv\Scripts\uvicorn.exe app.main:app --host 127.0.0.1 --port 8000 --reload
+```
+- API Docs: `http://127.0.0.1:8000/docs`
+- Health Check: `http://127.0.0.1:8000/api/v1/health`
+
+### Start Frontend (Port 5173):
+```powershell
+cd member1_frontend
+npm run dev -- --host 127.0.0.1 --port 5173
+```
+- Web Application: `http://localhost:5173`
+
+---
+
+## 6. Creating / Authenticating Real Users in Supabase Auth
+
+1. Go to your shared Supabase Dashboard: `https://supabase.com/dashboard/project/jzdrpxsyuyuxkabpgfwr/auth/users`
+2. Click **Add User** -> **Create User**.
+3. Enter email (e.g. `inspector.rajesh@crimenet.gov.in`) and a password.
+4. Check **Auto Confirm User?** -> Click **Create User**.
+5. On `http://localhost:5173/login`, log in with these credentials.
+6. The backend automatically provisions the user in PostgreSQL with `role='INVESTIGATOR'` and full system permissions.
+
+---
+
+## 7. How to Go Fully Dynamic
+
+1. **Dashboard:**
+   - Navigating to `/dashboard` triggers `GET /api/v1/dashboard/stats`, querying live counts directly from PostgreSQL tables (`entities`, `relationships`, `cases`, `evidence_items`).
+   - Active investigations list, real-time alerts, and evidence items render dynamically from `/cases`, `/alerts`, and `/evidence`.
+
+2. **Network Graph:**
+   - The graph view calls `GET /api/v1/graph?case_id=...` to load real entities and edges from Supabase.
+   - You can toggle between **Live Database** (default) and **Demo Mode (Static)** in the graph view toolbar.
+
+3. **Multi-Modal Evidence Ingestion:**
+   - In the **Import Center** (`/ingest`), uploading a CSV, PDF, or image automatically parses text, extracts persons/phones/accounts/organizations, registers an immutable SHA-256 evidence record in PostgreSQL, and creates new nodes and relationships in the live network graph.

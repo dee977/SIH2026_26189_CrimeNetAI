@@ -193,6 +193,26 @@ def resolve_case_dossier_data(report_data: Optional[Dict[str, Any]] = None) -> D
         except Exception:
             pass
 
+    # Query dynamic PostgreSQL EvidenceModel items for this case
+    try:
+        from app.database import SessionLocal
+        from app.models import EvidenceModel
+        db = SessionLocal()
+        ev_rows = db.query(EvidenceModel).filter(EvidenceModel.case_id == case_id).all()
+        for r in ev_rows:
+            # Avoid duplicates if already present
+            if not any(ev['id'] == r.evidence_id for ev in evidence_items):
+                evidence_items.append({
+                    'id': r.evidence_id,
+                    'title': r.canonical_name,
+                    'hash': r.sha256_hash,
+                    'status': 'VALID',
+                    'category': r.evidence_type
+                })
+        db.close()
+    except Exception as e:
+        print(f"[PDF Dossier] Error querying EvidenceModel: {e}")
+
     if not evidence_items:
         try:
             from app.services.demo_data import ALL_CASE_EVIDENCE
@@ -213,12 +233,26 @@ def resolve_case_dossier_data(report_data: Optional[Dict[str, Any]] = None) -> D
         try:
             from app.services.demo_data import DEMO_ENTITIES
             matched_ents = [ent for ent in DEMO_ENTITIES if ent.get('caseId') == case_id or ent.get('case_id') == case_id]
-            for ent in matched_ents[:8]:
+            for ent in matched_ents[:15]:
                 entities.append({
                     'id': ent.get('id', 'ENT-01'),
                     'name': ent.get('canonicalName') or ent.get('title') or ent.get('id'),
                     'type': ent.get('entityType') or 'Entity',
                     'role': ent.get('role', 'Suspect')
+                })
+        except Exception:
+            pass
+
+    if not timeline:
+        try:
+            from app.services.demo_data import DEMO_TIMELINE
+            matched_tl = [t for t in DEMO_TIMELINE if t.get('caseId') == case_id or t.get('case_id') == case_id]
+            for t in matched_tl[:12]:
+                timeline.append({
+                    'timestamp': t.get('date') or t.get('timestamp', ''),
+                    'title': t.get('event') or t.get('title', 'Investigation Milestone'),
+                    'source': t.get('source', 'Evidence Document'),
+                    'details': t.get('description') or t.get('details', '')
                 })
         except Exception:
             pass

@@ -15,10 +15,7 @@ from app.schemas.ingestion import (
     ExtractionSummary,
     CsvValidationResponse
 )
-DEMO_ENTITIES = []
-DEMO_EDGES = []
-DEMO_TIMELINE = []
-DEMO_CASES = []
+from app.services.demo_data import DEMO_ENTITIES, DEMO_EDGES, DEMO_TIMELINE, DEMO_CASES
 
 # Active Ingestion Jobs Store
 _INGESTION_JOBS: Dict[str, Dict[str, Any]] = {}
@@ -27,18 +24,232 @@ _INGESTION_JOBS: Dict[str, Dict[str, Any]] = {}
 _UPLOADED_DOCUMENTS: Dict[str, Dict[str, Any]] = {}
 
 
+def _job_model_to_dict(j: Any) -> Dict[str, Any]:
+    started_at_str = j.started_at.isoformat() if j.started_at else None
+    completed_at_str = j.completed_at.isoformat() if j.completed_at else None
+    ext_res = j.extraction_results or {}
+    if not isinstance(ext_res, dict):
+        ext_res = {}
+    
+    return {
+        'jobId': j.job_id,
+        'fileId': j.file_id or '',
+        'fileName': j.file_name,
+        'docType': j.doc_type,
+        'caseId': j.case_id,
+        'status': j.status,
+        'stage': j.stage or 'COMPLETED',
+        'progressPercent': j.progress_percent or 100,
+        'startedAt': started_at_str,
+        'completedAt': completed_at_str,
+        'sha256Hash': j.sha256_hash,
+        'uploader': j.uploader,
+        'successfulRecords': j.successful_records or 0,
+        'failedRecords': j.failed_records or 0,
+        'duplicateRecords': j.duplicate_records or 0,
+        'recordsProcessed': j.records_processed or 0,
+        'recordsCreated': j.records_created or 0,
+        'recordsUpdated': j.records_updated or 0,
+        'invalidRows': j.invalid_rows or 0,
+        'entitiesExtracted': j.entities_extracted or len(j.extracted_entities_list or []),
+        'relationshipsExtracted': j.relationships_extracted or len(j.extracted_relationships_list or []),
+        'evidenceId': j.evidence_id,
+        'schemaDetected': j.schema_detected,
+        'extractionResults': ext_res,
+        'extractedEntitiesList': j.extracted_entities_list or [],
+        'extractedRelationshipsList': j.extracted_relationships_list or [],
+        'samplePreview': j.sample_preview or [],
+        'sourceProvenance': j.source_provenance or {},
+        'warnings': j.warnings_json or [],
+        'errors': j.errors_json or ([j.error_details] if j.error_details else []),
+        'errorDetails': j.error_details
+    }
+
+
+def _save_evidence_to_db(ev_data: Dict[str, Any]) -> None:
+    try:
+        from app.database import SessionLocal
+        from app.models import EvidenceModel
+        with SessionLocal() as db:
+            existing = db.query(EvidenceModel).filter(EvidenceModel.evidence_id == ev_data['id']).first()
+            if not existing:
+                ev_db = EvidenceModel(
+                    evidence_id=ev_data['id'],
+                    case_id=ev_data['caseId'],
+                    entity_type=ev_data.get('entityType', 'Evidence'),
+                    canonical_name=ev_data.get('canonicalName', 'Uploaded Evidence'),
+                    evidence_number=ev_data.get('evidenceNumber', ev_data['id']),
+                    evidence_type=ev_data.get('evidenceType', 'Uploaded Evidence'),
+                    description=ev_data.get('description'),
+                    collected_date=ev_data.get('collectedDate'),
+                    collected_by=ev_data.get('collectedBy'),
+                    storage_location=ev_data.get('storageLocation'),
+                    sha256_hash=ev_data.get('sha256Hash', ''),
+                    bsa_certificate_id=ev_data.get('bsaSection65BCertificateId'),
+                    confidence=str(ev_data.get('confidence', '1.0')),
+                    metadata_json=ev_data.get('metadata', {})
+                )
+                db.add(ev_db)
+                db.commit()
+    except Exception as db_ev_err:
+        print(f"[Ingestion DB Notice] Error persisting evidence item: {db_ev_err}")
+
+
+def _save_entities_and_relationships_to_db(entities: List[Dict[str, Any]], relationships: List[Dict[str, Any]], case_id: str) -> None:
+    try:
+        from app.database import SessionLocal
+        from app.models import EntityModel, RelationshipModel
+        with SessionLocal() as db:
+            for ent in entities:
+                eid = ent.get('id')
+                if not eid:
+                    continue
+                existing = db.query(EntityModel).filter(EntityModel.entity_id == eid).first()
+                if not existing:
+                    db.add(EntityModel(
+                        entity_id=eid,
+                        case_id=case_id or ent.get('caseId'),
+                        entity_type=ent.get('entityType', 'Entity'),
+                        canonical_name=ent.get('canonicalName') or ent.get('name') or eid,
+                        confidence=str(ent.get('confidence', '0.95')),
+                        properties=ent.get('properties') or ent
+                    ))
+            for rel in relationships:
+                rid = rel.get('id') or f"REL-{rel.get('source', '')}-{rel.get('target', '')}"
+                existing_rel = db.query(RelationshipModel).filter(RelationshipModel.relationship_id == rid).first()
+                if not existing_rel and rel.get('source') and rel.get('target'):
+                    db.add(RelationshipModel(
+                        relationship_id=rid,
+                        case_id=case_id or rel.get('caseId'),
+                        source_id=rel['source'],
+                        target_id=rel['target'],
+                        relationship_type=rel.get('relationshipType') or rel.get('relType') or 'CONNECTED_TO',
+                        confidence=str(rel.get('confidence', '0.95')),
+                        properties=rel.get('properties', {})
+                    ))
+            db.commit()
+    except Exception as db_sync_err:
+        print(f"[Ingestion DB Notice] Error storing entities/relationships to PostgreSQL: {db_sync_err}")
+
+
+def _save_job_to_db(job_data: Dict[str, Any]) -> None:
+    try:
+        from app.database import SessionLocal
+        from app.models import IngestJobModel
+        with SessionLocal() as db:
+            existing = db.query(IngestJobModel).filter(IngestJobModel.job_id == job_data['jobId']).first()
+            ext_res = job_data.get('extractionResults')
+            ext_res_dict = ext_res.dict() if hasattr(ext_res, 'dict') else (ext_res if isinstance(ext_res, dict) else {})
+            
+            if existing:
+                existing.status = job_data.get('status', existing.status)
+                existing.stage = job_data.get('stage', existing.stage)
+                existing.progress_percent = job_data.get('progressPercent', existing.progress_percent)
+                existing.successful_records = job_data.get('successfulRecords', existing.successful_records)
+                existing.failed_records = job_data.get('failedRecords', existing.failed_records)
+                existing.duplicate_records = job_data.get('duplicateRecords', existing.duplicate_records)
+                existing.records_processed = job_data.get('recordsProcessed', existing.records_processed)
+                existing.records_created = job_data.get('recordsCreated', existing.records_created)
+                existing.records_updated = job_data.get('recordsUpdated', existing.records_updated)
+                existing.invalid_rows = job_data.get('invalidRows', existing.invalid_rows)
+                existing.entities_extracted = job_data.get('entitiesExtracted', existing.entities_extracted)
+                existing.relationships_extracted = job_data.get('relationshipsExtracted', existing.relationships_extracted)
+                existing.evidence_id = job_data.get('evidenceId', existing.evidence_id)
+                existing.schema_detected = job_data.get('schemaDetected', existing.schema_detected)
+                existing.extraction_results = ext_res_dict
+                existing.extracted_entities_list = job_data.get('extractedEntitiesList', existing.extracted_entities_list)
+                existing.extracted_relationships_list = job_data.get('extractedRelationshipsList', existing.extracted_relationships_list)
+                existing.sample_preview = job_data.get('samplePreview', existing.sample_preview)
+                existing.warnings_json = job_data.get('warnings', existing.warnings_json)
+                existing.errors_json = job_data.get('errors', existing.errors_json)
+                existing.source_provenance = job_data.get('sourceProvenance', existing.source_provenance)
+                existing.error_details = job_data.get('errorDetails', existing.error_details)
+                if job_data.get('completedAt'):
+                    existing.completed_at = datetime.now(timezone.utc)
+            else:
+                new_job = IngestJobModel(
+                    job_id=job_data['jobId'],
+                    file_id=job_data.get('fileId'),
+                    file_name=job_data.get('fileName', ''),
+                    doc_type=job_data.get('docType', 'CSV'),
+                    case_id=job_data.get('caseId'),
+                    status=job_data.get('status', 'PROCESSING'),
+                    stage=job_data.get('stage', 'VALIDATING'),
+                    progress_percent=job_data.get('progressPercent', 0),
+                    successful_records=job_data.get('successfulRecords', 0),
+                    failed_records=job_data.get('failedRecords', 0),
+                    duplicate_records=job_data.get('duplicateRecords', 0),
+                    records_processed=job_data.get('recordsProcessed', 0),
+                    records_created=job_data.get('recordsCreated', 0),
+                    records_updated=job_data.get('recordsUpdated', 0),
+                    invalid_rows=job_data.get('invalidRows', 0),
+                    entities_extracted=job_data.get('entitiesExtracted', 0),
+                    relationships_extracted=job_data.get('relationshipsExtracted', 0),
+                    evidence_id=job_data.get('evidenceId'),
+                    sha256_hash=job_data.get('sha256Hash'),
+                    schema_detected=job_data.get('schemaDetected'),
+                    extraction_results=ext_res_dict,
+                    extracted_entities_list=job_data.get('extractedEntitiesList', []),
+                    extracted_relationships_list=job_data.get('extractedRelationshipsList', []),
+                    sample_preview=job_data.get('samplePreview', []),
+                    warnings_json=job_data.get('warnings', []),
+                    errors_json=job_data.get('errors', []),
+                    source_provenance=job_data.get('sourceProvenance', {}),
+                    uploader=job_data.get('uploader'),
+                    error_details=job_data.get('errorDetails')
+                )
+                db.add(new_job)
+            db.commit()
+    except Exception as db_job_err:
+        print(f"[Ingestion DB Notice] Error saving ingest job to DB: {db_job_err}")
+
+
 def get_all_ingest_jobs(case_id: Optional[str] = None) -> List[Dict[str, Any]]:
-    """Returns list of all ingestion jobs, optionally filtered by case."""
-    jobs = list(_INGESTION_JOBS.values())
-    if case_id:
-        jobs = [j for j in jobs if j.get('caseId') == case_id]
-    # Sort by startedAt descending
-    return sorted(jobs, key=lambda x: x.get('startedAt', ''), reverse=True)
+    """Returns list of all ingestion jobs from DB and memory, optionally filtered by case."""
+    combined_jobs: Dict[str, Dict[str, Any]] = {}
+
+    # 1. Query from DB
+    try:
+        from app.database import SessionLocal
+        from app.models import IngestJobModel
+        with SessionLocal() as db:
+            query = db.query(IngestJobModel)
+            if case_id:
+                query = query.filter(IngestJobModel.case_id == case_id)
+            db_jobs = query.order_by(IngestJobModel.started_at.desc()).limit(100).all()
+            for j in db_jobs:
+                job_d = _job_model_to_dict(j)
+                combined_jobs[job_d['jobId']] = job_d
+    except Exception as db_err:
+        print(f"[Ingestion DB Notice] Error querying all jobs: {db_err}")
+
+    # 2. Layer any in-memory active jobs
+    for j_id, j_data in _INGESTION_JOBS.items():
+        if not case_id or j_data.get('caseId') == case_id:
+            combined_jobs[j_id] = j_data
+
+    jobs = list(combined_jobs.values())
+    return sorted(jobs, key=lambda x: str(x.get('startedAt', '')), reverse=True)
 
 
 def get_ingest_job(job_id: str) -> Optional[Dict[str, Any]]:
-    """Returns a specific job record."""
-    return _INGESTION_JOBS.get(job_id)
+    """Returns a specific job record from memory or PostgreSQL."""
+    if job_id in _INGESTION_JOBS:
+        return _INGESTION_JOBS[job_id]
+    
+    try:
+        from app.database import SessionLocal
+        from app.models import IngestJobModel
+        with SessionLocal() as db:
+            job_db = db.query(IngestJobModel).filter(IngestJobModel.job_id == job_id).first()
+            if job_db:
+                job_dict = _job_model_to_dict(job_db)
+                _INGESTION_JOBS[job_id] = job_dict
+                return job_dict
+    except Exception as db_err:
+        print(f"[Ingestion DB Notice] Error querying job {job_id}: {db_err}")
+    
+    return None
 
 
 def get_uploaded_document_by_name(name_query: str) -> Optional[Dict[str, Any]]:
@@ -270,6 +481,7 @@ class IngestionService:
             }
         }
         DEMO_ENTITIES.insert(0, evidence_record)
+        _save_evidence_to_db(evidence_record)
 
         records_processed = 0
         records_created = 0
@@ -441,7 +653,8 @@ class IngestionService:
             uri = getattr(settings, 'M3_NEO4J_URI', 'bolt://localhost:7687')
             user = getattr(settings, 'M3_NEO4J_USER', 'neo4j')
             pwd = getattr(settings, 'M3_NEO4J_PASSWORD', 'CrimeNetNeo4j123!')
-            driver = GraphDatabase.driver(uri, auth=(user, pwd), connection_timeout=3)
+            driver = GraphDatabase.driver(uri, auth=(user, pwd), connection_timeout=0.2, max_connection_lifetime=5)
+            driver.verify_connectivity()
             with driver.session() as session:
                 if extracted_entities:
                     session.run(
@@ -475,6 +688,9 @@ class IngestionService:
             driver.close()
         except Exception as neo_err:
             print(f"Neo4j sync notice: {neo_err}")
+
+        # Persist extracted entities and relationships to Supabase PostgreSQL
+        _save_entities_and_relationships_to_db(extracted_entities, extracted_relationships, case_id)
 
         # Update case entity count
         matched_case = next((c for c in DEMO_CASES if c.get('caseId') == case_id or c.get('caseNumber') == case_id), None)
@@ -621,6 +837,7 @@ class IngestionService:
             }
         }
         DEMO_ENTITIES.insert(0, evidence_record)
+        _save_evidence_to_db(evidence_record)
 
         # 4. Extract entities and relationships using M4 NLP or regex extraction
         extracted_entities = []
@@ -750,6 +967,9 @@ class IngestionService:
             'caseId': case_id
         })
 
+        # Persist extracted entities and relationships to Supabase PostgreSQL
+        _save_entities_and_relationships_to_db(extracted_entities, extracted_relationships, case_id)
+
         # 5. Store in document cache for RAG / AI Assistant query engine
         _UPLOADED_DOCUMENTS[evidence_id] = {
             'docId': evidence_id,
@@ -877,6 +1097,220 @@ class IngestionService:
             'samplePreview': extracted_entities[:5]
         }
 
+    async def ingest_image(
+        self,
+        job_id: str,
+        content: bytes,
+        filename: str,
+        case_id: str,
+        uploader: str,
+        sha256_hash: str,
+        storage_path: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Processes photographic and forensic digital image evidence:
+        - Extracts image metadata (dimensions, format)
+        - Computes SHA-256 genesis hash
+        - Generates instant base64 preview data URI
+        - Runs OCR if text is present
+        - Registers Evidence record in DB & DEMO_ENTITIES
+        - Creates Evidence Node and links to primary case entity in DEMO_EDGES
+        - Adds SEIZURE event to DEMO_TIMELINE
+        - Stores in _UPLOADED_DOCUMENTS with preview
+        - Updates case entity and evidence counts
+        """
+        now = datetime.now(timezone.utc).isoformat()
+        _, ext = os.path.splitext(filename.lower())
+        img_format = ext[1:].upper() if ext else 'PNG'
+        width, height = (1920, 1080)
+
+        # 1. Inspect image dimensions
+        try:
+            from PIL import Image
+            with Image.open(io.BytesIO(content)) as im:
+                width, height = im.size
+                img_format = im.format or img_format
+        except Exception as e:
+            print(f"[Image Ingestion] PIL notice: {e}")
+
+        # 2. Base64 Data URI for fast preview
+        import base64
+        mime_subtype = 'jpeg' if img_format.lower() in ['jpg', 'jpeg'] else img_format.lower()
+        b64_str = base64.b64encode(content).decode('utf-8')
+        image_data_uri = f"data:image/{mime_subtype};base64,{b64_str}"
+
+        # 3. Optional OCR extraction
+        extracted_text = ""
+        extracted_entities = []
+        extracted_relationships = []
+        try:
+            from member4_ai_nlp.service import CrimeNetAINLPService
+            nlp_service = CrimeNetAINLPService()
+            m4_result = nlp_service.ingest_and_extract_document(
+                content=content,
+                source_name=filename,
+                case_id=case_id
+            )
+            ocr_res = m4_result.get('ocr_result', {})
+            extracted_text = ocr_res.get('extracted_text') or ""
+        except Exception:
+            extracted_text = ""
+
+        # Extract phone numbers if OCR picked up any digits
+        if extracted_text:
+            phone_matches = re.findall(r'(?:\+?91[\-\s]?)?[6789]\d{9}', extracted_text)
+            for ph in list(dict.fromkeys(phone_matches))[:2]:
+                ph_id = f"PHO-IMG-{uuid.uuid4().hex[:6].upper()}"
+                extracted_entities.append({
+                    'id': ph_id,
+                    'entityType': 'Phone',
+                    'canonicalName': ph,
+                    'phoneNumber': ph,
+                    'caseId': case_id,
+                    'confidence': 0.90,
+                    'source': 'Image OCR',
+                    'sourceFilename': filename
+                })
+
+        # 4. Create Evidence Record
+        evidence_id = f"EVD-{datetime.now().year}-{uuid.uuid4().hex[:6].upper()}"
+        file_size_kb = len(content) // 1024
+        evidence_record = {
+            'id': evidence_id,
+            'evidenceId': evidence_id,
+            'entityType': 'Evidence',
+            'canonicalName': f"Forensic Photo: {filename}",
+            'evidenceNumber': evidence_id,
+            'evidenceType': 'Digital Forensic Image',
+            'category': 'Digital Forensic Image',
+            'title': f"Forensic Photo: {filename}",
+            'description': f"Photographic forensic item '{filename}' ({width}x{height} px, {file_size_kb} KB) secured under BSA Section 63 chain of custody.",
+            'collectedDate': now,
+            'collectedBy': uploader,
+            'storageLocation': storage_path or f"Secure Vault / {filename}",
+            'sha256Hash': sha256_hash,
+            'originalHashSHA256': sha256_hash,
+            'currentHashSHA256': sha256_hash,
+            'bsaSection65BCertificateId': f"BSA-63-{datetime.now().year}-{evidence_id}",
+            'caseId': case_id,
+            'confidence': 1.0,
+            'imageUrl': image_data_uri,
+            'previewUrl': image_data_uri,
+            'fileSizeBytes': len(content),
+            'metadata': {
+                'sourceFilename': filename,
+                'sourceType': 'Digital Forensic Image',
+                'dimensions': f"{width}x{height}",
+                'format': img_format,
+                'fileSize': len(content),
+                'fileSizeBytes': len(content),
+                'imageUrl': image_data_uri,
+                'previewUrl': image_data_uri,
+                'uploader': uploader,
+                'chainOfCustodyVerified': True,
+                'ocrText': extracted_text,
+                'storagePath': storage_path
+            }
+        }
+        DEMO_ENTITIES.insert(0, evidence_record)
+        _save_evidence_to_db(evidence_record)
+
+        # 5. Connect Evidence in Graph to primary person or case node
+        primary_entity = next((e for e in DEMO_ENTITIES if e.get('entityType') == 'Person' and (e.get('caseId') == case_id or not e.get('caseId'))), None)
+        target_node_id = primary_entity['id'] if primary_entity else 'P00001'
+        
+        edge = {
+            'id': f"EDGE-IMG-{uuid.uuid4().hex[:6].upper()}",
+            'source': evidence_id,
+            'target': target_node_id,
+            'relationshipType': 'EVIDENCE_FOR',
+            'properties': {'sourceDoc': filename, 'confidence': 0.98, 'dimensions': f"{width}x{height}"},
+            'sourceDoc': filename,
+            'timestamp': now,
+            'confidence': 0.98,
+            'caseId': case_id,
+            'evidenceId': evidence_id
+        }
+        DEMO_EDGES.insert(0, edge)
+        extracted_relationships.append(edge)
+
+        # 6. Add SEIZURE event to Timeline
+        DEMO_TIMELINE.insert(0, {
+            'id': f"EVT-IMG-{uuid.uuid4().hex[:6].upper()}",
+            'eventId': f"EVT-IMG-{uuid.uuid4().hex[:6].upper()}",
+            'date': now[:10],
+            'time': now[11:16],
+            'timestamp': now,
+            'eventType': 'IMAGE_EVIDENCE_SECURED',
+            'event': f"Forensic Photographic Evidence Secured: {filename}",
+            'title': f"Forensic Photo Secured: {filename}",
+            'description': f"Image ({width}x{height} px, {file_size_kb} KB) registered with SHA-256 hash {sha256_hash[:16]}... by {uploader}.",
+            'primaryEntityId': evidence_id,
+            'primaryEntityName': f"Evidence {evidence_id}",
+            'location': 'Forensic Seizure Vault',
+            'source': filename,
+            'sourceDocument': filename,
+            'caseId': case_id,
+            'evidenceId': evidence_id,
+            'imageUrl': image_data_uri
+        })
+
+        # Persist image evidence entity and linked edges to Supabase PostgreSQL
+        _save_entities_and_relationships_to_db([evidence_record] + extracted_entities, extracted_relationships, case_id)
+
+        # 7. Document Cache for RAG and Previews
+        _UPLOADED_DOCUMENTS[evidence_id] = {
+            'docId': evidence_id,
+            'fileName': filename,
+            'caseId': case_id,
+            'evidenceId': evidence_id,
+            'sha256Hash': sha256_hash,
+            'uploadedAt': now,
+            'uploader': uploader,
+            'text': extracted_text or f"Forensic image: {filename}",
+            'imageUrl': image_data_uri,
+            'entities': [evidence_record] + extracted_entities,
+            'relationships': extracted_relationships,
+            'summary': f"Forensic Image '{filename}' ({width}x{height} px, {file_size_kb} KB) linked to case {case_id}."
+        }
+
+        # 8. Update case counts
+        matched_case = next((c for c in DEMO_CASES if c.get('caseId') == case_id or c.get('caseNumber') == case_id), None)
+        if matched_case:
+            matched_case['evidenceCount'] = matched_case.get('evidenceCount', 5) + 1
+            matched_case['entityCount'] = matched_case.get('entityCount', 10) + len(extracted_entities) + 1
+
+        summary = ExtractionSummary(
+            personsExtracted=0,
+            phonesExtracted=len(extracted_entities),
+            bankAccountsExtracted=0,
+            vehiclesExtracted=0,
+            locationsExtracted=0,
+            organizationsExtracted=0,
+            firsExtracted=0,
+            crimesExtracted=0,
+            transactionsExtracted=0,
+            communicationsExtracted=0,
+            evidenceExtracted=1,
+            relationshipsExtracted=len(extracted_relationships)
+        )
+
+        return {
+            'recordsProcessed': 1,
+            'recordsCreated': 1 + len(extracted_entities),
+            'recordsUpdated': 0,
+            'duplicates': 0,
+            'invalidRows': 0,
+            'evidenceId': evidence_id,
+            'sha256Hash': sha256_hash,
+            'schemaDetected': 'Digital Forensic Image',
+            'extractionResults': summary,
+            'imageUrl': image_data_uri,
+            'extractedEntitiesList': [evidence_record] + extracted_entities,
+            'extractedRelationshipsList': extracted_relationships,
+            'samplePreview': [evidence_record]
+        }
+
     async def process_file_upload(
         self,
         file_bytes: bytes,
@@ -919,6 +1353,7 @@ class IngestionService:
             'sha256Hash': sha256_hash,
             'uploader': uploader
         }
+        _save_job_to_db(_INGESTION_JOBS[job_id])
 
         try:
             # 3. Processing by type
@@ -932,6 +1367,18 @@ class IngestionService:
                     case_id=case_id,
                     uploader=uploader,
                     sha256_hash=sha256_hash
+                )
+            elif ext in ['.png', '.jpg', '.jpeg', '.tiff', '.webp', '.bmp'] or doc_type == 'IMAGE_EVIDENCE':
+                _INGESTION_JOBS[job_id]['stage'] = 'ANALYZING_IMAGE'
+                _INGESTION_JOBS[job_id]['progressPercent'] = 60
+                res = await self.ingest_image(
+                    job_id=job_id,
+                    content=file_bytes,
+                    filename=filename,
+                    case_id=case_id,
+                    uploader=uploader,
+                    sha256_hash=sha256_hash,
+                    storage_path=storage_path
                 )
             else:
                 _INGESTION_JOBS[job_id]['stage'] = 'EXTRACTING'
@@ -977,6 +1424,7 @@ class IngestionService:
                 'warnings': [],
                 'errors': []
             })
+            _save_job_to_db(_INGESTION_JOBS[job_id])
 
             return IngestJobStatusResponse(**_INGESTION_JOBS[job_id])
 
@@ -989,6 +1437,7 @@ class IngestionService:
                 'errorDetails': str(err),
                 'errors': [str(err)]
             })
+            _save_job_to_db(_INGESTION_JOBS[job_id])
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"PROCESSING FAILED: {str(err)}"

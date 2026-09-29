@@ -14,13 +14,16 @@ from app.services.m6_security_evidence import get_m6_client, M6SecurityClient
 router = APIRouter(prefix='', tags=['Evidence & Verification'])
 
 def _evidence_model_to_dict(e: EvidenceModel) -> Dict[str, Any]:
+    meta = e.metadata_json or {}
     return {
         'id': e.evidence_id,
         'evidenceId': e.evidence_id,
         'entityType': e.entity_type,
         'canonicalName': e.canonical_name,
+        'title': e.canonical_name,
         'evidenceNumber': e.evidence_number,
         'evidenceType': e.evidence_type,
+        'category': meta.get('category') or e.evidence_type,
         'description': e.description,
         'collectedDate': e.collected_date,
         'collectedBy': e.collected_by,
@@ -31,7 +34,10 @@ def _evidence_model_to_dict(e: EvidenceModel) -> Dict[str, Any]:
         'bsaSection65BCertificateId': e.bsa_certificate_id,
         'caseId': e.case_id,
         'confidence': float(e.confidence) if e.confidence else 1.0,
-        'metadata': e.metadata_json or {}
+        'imageUrl': meta.get('imageUrl') or meta.get('previewUrl'),
+        'previewUrl': meta.get('previewUrl') or meta.get('imageUrl'),
+        'fileSizeBytes': meta.get('fileSizeBytes') or meta.get('fileSize') or 1048576,
+        'metadata': meta
     }
 
 @router.get('/evidence', response_model=PaginatedResponse[Dict[str, Any]], summary='List Evidence for a Case')
@@ -122,6 +128,38 @@ async def upload_evidence(
         'sha256': sha256_hash,
         'officer': current_user.fullName
     })
+
+    try:
+        from app.services.demo_data import DEMO_ENTITIES, DEMO_EDGES, DEMO_TIMELINE
+        ev_entity = {
+            'id': evidence_id,
+            'canonicalName': ev_row.canonical_name,
+            'name': ev_row.canonical_name,
+            'entityType': 'Evidence',
+            'type': 'Evidence',
+            'evidenceNumber': evidence_id,
+            'evidenceType': ev_row.evidence_type,
+            'sha256Hash': sha256_hash,
+            'caseId': target_case_id,
+            'confidence': 1.0,
+            'source': 'Manual Evidence Upload'
+        }
+        if not any(e.get('id') == evidence_id for e in DEMO_ENTITIES):
+            DEMO_ENTITIES.append(ev_entity)
+        DEMO_TIMELINE.append({
+            'id': f"TL-{evidence_id}",
+            'date': now[:10],
+            'timestamp': now,
+            'time': now[11:16],
+            'event': f"Evidence Secured: {file.filename}",
+            'description': f"Seized and stored with SHA-256 {sha256_hash[:12]}... by {current_user.fullName}",
+            'category': 'SEIZURE',
+            'caseId': target_case_id,
+            'evidenceId': evidence_id,
+            'source': file.filename
+        })
+    except Exception as e:
+        print(f"[Evidence Upload] Propagation notice: {e}")
     
     return ResponseEnvelope(data=_evidence_model_to_dict(ev_row))
 
@@ -136,6 +174,31 @@ async def get_evidence(
         raise HTTPException(status_code=404, detail="Evidence not found.")
     assert_case_access(db, current_user, ev_row.case_id)
     return ResponseEnvelope(data=_evidence_model_to_dict(ev_row))
+
+@router.get('/evidence/{evidence_id}/file', summary='Stream Evidence File / Image')
+async def get_evidence_file(
+    evidence_id: str = Path(...),
+    db = Depends(get_db)
+):
+    from fastapi.responses import FileResponse, Response
+    import os
+    import base64
+    ev_row = db.query(EvidenceModel).filter(EvidenceModel.evidence_id == evidence_id).first()
+    if not ev_row:
+        raise HTTPException(status_code=404, detail="Evidence item not found.")
+    
+    meta = ev_row.metadata_json or {}
+    storage_path = meta.get('storagePath')
+    if storage_path and os.path.exists(storage_path):
+        return FileResponse(storage_path)
+        
+    b64_url = meta.get('imageUrl') or meta.get('previewUrl')
+    if b64_url and b64_url.startswith('data:'):
+        header, encoded = b64_url.split(',', 1)
+        media_type = header.split(';')[0].replace('data:', '')
+        return Response(content=base64.b64decode(encoded), media_type=media_type)
+        
+    raise HTTPException(status_code=404, detail="Evidence binary stream not located on storage vault.")
 
 @router.post('/evidence/{evidence_id}/verify-hash', response_model=ResponseEnvelope[Dict[str, Any]], summary='Verify File against Hash')
 async def verify_evidence_hash(

@@ -33,6 +33,9 @@ export interface EvidenceRecord {
     label: string;
   }[];
   description: string;
+  imageUrl?: string;
+  previewUrl?: string;
+  metadata?: Record<string, any>;
 }
 
 export interface CrossVerificationDiscrepancy {

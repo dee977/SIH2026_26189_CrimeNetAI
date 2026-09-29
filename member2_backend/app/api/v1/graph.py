@@ -15,16 +15,17 @@ from app.services.m5_graph_analytics import M5GraphAnalyticsClient, get_m5_clien
 router = APIRouter(prefix='/graph', tags=['Graph Intelligence Orchestration'])
 
 @router.get('', summary='Get Central Network Graph')
+@router.get('/case/{case_id}', summary='Get Central Network Graph by Case')
 async def get_graph_view(
-    case_id: str = Query(..., description="Case ID"),
+    case_id: Optional[str] = None,
     limit: int = Query(60, ge=10, le=500),
     m3_client: M3GraphDataClient = Depends(get_m3_client),
     current_user: UserProfile = Depends(require_permission('graph:read')),
     db = Depends(get_db)
 ):
-    assert_case_access(db, current_user, case_id)
-    cid = case_id
-    res = await m3_client.get_case_graph(case_id=cid, limit=limit)
+    target_case = case_id or 'CASE-2025-M3-DATASET'
+    assert_case_access(db, current_user, target_case)
+    res = await m3_client.get_case_graph(case_id=target_case, limit=limit)
     return ResponseEnvelope(data={
         'nodes': res.nodes if hasattr(res, 'nodes') else [],
         'edges': res.edges if hasattr(res, 'edges') else [],

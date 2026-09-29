@@ -18,9 +18,32 @@ async def lifespan(app: FastAPI):
     print(f'Starting {settings.PROJECT_NAME} v{settings.VERSION} [{settings.ENVIRONMENT}]')
     # Development SQLite installations may not run Alembic; creating declared
     # tables is idempotent and keeps the ACL available after a restart.
-    from app.database import Base, engine
+    from app.database import Base, engine, SessionLocal
     import app.models  # register models before metadata creation
     Base.metadata.create_all(bind=engine)
+
+    # Rehydrate persisted ingestion jobs and extracted entities from database
+    try:
+        from app.models import IngestJobModel
+        from app.services.demo_data import DEMO_ENTITIES, DEMO_EDGES
+        from app.services.ingestion_service import _INGESTION_JOBS, _job_model_to_dict
+        with SessionLocal() as db:
+            past_jobs = db.query(IngestJobModel).filter(IngestJobModel.status == 'Completed').all()
+            for j in past_jobs:
+                job_dict = _job_model_to_dict(j)
+                _INGESTION_JOBS[j.job_id] = job_dict
+                existing_ids = {e.get('id') for e in DEMO_ENTITIES}
+                for ent in j.extracted_entities_list or []:
+                    if ent.get('id') and ent['id'] not in existing_ids:
+                        DEMO_ENTITIES.append(ent)
+                        existing_ids.add(ent['id'])
+                for rel in j.extracted_relationships_list or []:
+                    DEMO_EDGES.append(rel)
+            if past_jobs:
+                print(f"[Startup] Rehydrated {len(past_jobs)} completed ingestion jobs into active memory and graph.")
+    except Exception as rehydrate_err:
+        print(f"[Startup Notice] Ingestion rehydration note: {rehydrate_err}")
+
     yield
     # Shutdown: Clean up connections
     print(f'Shutting down {settings.PROJECT_NAME}')

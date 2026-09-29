@@ -399,11 +399,53 @@ def _fetch_neo4j_timeline(case_id: str, entity_id: str = None, event_type: str =
     except Exception:
         pass
 
-    if not events:
-        from app.services.demo_data import DEMO_TIMELINE
-        for d_evt in DEMO_TIMELINE:
-            if not case_id or d_evt.get('caseId') == case_id:
-                events.append(TimelineEvent(**d_evt))
+    seen_ids = {e.eventId for e in events}
+
+    # 1. Merge predefined case timeline events
+    case_predefined = CASE_TIMELINES.get(case_id, [])
+    for p_evt in case_predefined:
+        eid = p_evt.get('eventId')
+        if eid and eid not in seen_ids:
+            seen_ids.add(eid)
+            try:
+                events.append(TimelineEvent(**p_evt))
+            except Exception:
+                pass
+
+    # 2. Normalize and include dynamic DEMO_TIMELINE events
+    from app.services.demo_data import DEMO_TIMELINE
+    for idx, d_evt in enumerate(DEMO_TIMELINE):
+        evt_case = d_evt.get('caseId')
+        if not case_id or evt_case == case_id or (case_id == 'CASE-2025-M3-DATASET' and not evt_case):
+            eid = d_evt.get('eventId') or d_evt.get('id') or f"EVT-DEMO-{idx+1}"
+            if eid not in seen_ids:
+                seen_ids.add(eid)
+                ts = d_evt.get('timestamp') or (f"{d_evt['date']}T12:00:00Z" if d_evt.get('date') else "2025-01-15T12:00:00Z")
+                title = d_evt.get('title') or d_evt.get('event') or f"Event {eid}"
+                desc = d_evt.get('description') or title
+                etype = d_evt.get('eventType') or d_evt.get('category', 'INVESTIGATION')
+                pid = d_evt.get('primaryEntityId') or d_evt.get('entityId') or 'ENT-001'
+                pname = d_evt.get('primaryEntityName') or d_evt.get('entityName') or f"Entity {pid}"
+                doc = d_evt.get('sourceDocument') or d_evt.get('source') or 'Evidence Document'
+                try:
+                    events.append(TimelineEvent(
+                        eventId=eid,
+                        caseId=case_id or evt_case or 'CASE-2025-M3-DATASET',
+                        timestamp=ts,
+                        eventType=etype,
+                        title=title,
+                        description=desc,
+                        primaryEntityId=pid,
+                        primaryEntityName=pname,
+                        secondaryEntityId=d_evt.get('secondaryEntityId'),
+                        secondaryEntityName=d_evt.get('secondaryEntityName'),
+                        location=d_evt.get('location'),
+                        sourceDocument=doc,
+                        evidenceId=d_evt.get('evidenceId'),
+                        metadata=d_evt.get('metadata', {})
+                    ))
+                except Exception:
+                    pass
 
     events.sort(key=lambda x: x.timestamp, reverse=True)
     return events

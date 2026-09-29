@@ -1,15 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import L from 'leaflet';
 import { useNavigationStore } from '../../store/navigationStore';
 import { MapMarkerLocation } from '../../types/gis';
+import { apiRequest } from '../../services/apiClient';
 import { 
-  MapPin, 
   Radio, 
-  Layers, 
-  Share2, 
   Compass, 
   Crosshair, 
-  Filter, 
-  Info, 
   ExternalLink, 
   ShieldAlert, 
   Building, 
@@ -17,10 +14,45 @@ import {
   Activity,
   Maximize2,
   Route,
-  CheckCircle2,
-  AlertTriangle,
-  RefreshCw
+  RefreshCw,
+  Layers,
+  MapPin,
+  Database
 } from 'lucide-react';
+
+const CITY_COORDINATES: Record<string, [number, number]> = {
+  'mumbai': [18.9220, 72.8347],
+  'nhava sheva': [18.9498, 72.9512],
+  'jnpt': [18.9498, 72.9512],
+  'surat': [21.1702, 72.8311],
+  'pune': [18.5204, 73.8567],
+  'ahmedabad': [23.0225, 72.5714],
+  'hyderabad': [17.3850, 78.4867],
+  'delhi': [28.6139, 77.2090],
+  'kolkata': [22.5726, 88.3639],
+  'bengaluru': [12.9716, 77.5946],
+  'bangalore': [12.9716, 77.5946],
+  'goa': [15.2993, 74.1240],
+  'alibaug': [18.6414, 72.8722],
+  'raxaul': [26.9787, 84.8510],
+  'bkc': [19.0660, 72.8680],
+  'fort': [18.9300, 72.8330],
+  'kalbadevi': [18.9480, 72.8270],
+  'nariman point': [18.9260, 72.8230],
+  'navi mumbai': [19.0330, 73.0297],
+  'dubai': [25.2048, 55.2708]
+};
+
+function getDeterministicOffset(id: string): [number, number] {
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) {
+    hash = (hash << 5) - hash + id.charCodeAt(i);
+    hash |= 0;
+  }
+  const latOffset = (((hash % 100) / 100) - 0.5) * 0.04;
+  const lngOffset = (((((hash >> 8) % 100) / 100) - 0.5) * 0.04);
+  return [latOffset, lngOffset];
+}
 
 const CASE_LOCI: Record<string, { corridor: string; centerLat: string; centerLng: string; gridRef: string; markers: MapMarkerLocation[] }> = {
   'CASE-2025-M3-DATASET': {
@@ -148,71 +180,63 @@ const CASE_LOCI: Record<string, { corridor: string; centerLat: string; centerLng
       },
       {
         id: 'LOC-V1-03',
-        name: 'Foreign Exchange Telegraphic Clearing Desk',
-        category: 'Financial Branch',
-        address: 'Nariman Point Overseas Remittance Bureau',
-        latitude: 18.9260,
-        longitude: 72.8210,
-        accuracyRadiusMeters: 15,
-        timestamp: '2026-01-05 15:30',
-        notes: 'Filing site for unbacked outward wire transfer under FIU STR scrutiny.',
+        name: 'Jio Tower BKC Sector 2 (Cell 44102)',
+        category: 'Cell Tower',
+        address: 'BKC Bandra East Exchange Mast',
+        latitude: 19.0680,
+        longitude: 72.8710,
+        accuracyRadiusMeters: 300,
+        timestamp: '2026-01-05 09:00 - 12:30',
+        notes: 'Dual burn-phone IMSI switch logged within 4 minutes of RTGS settlement.',
+        cellTowerDetails: {
+          towerId: 'JIO-BKC-44102',
+          lac: '404-MH-12',
+          azimuthDegrees: 90,
+          cdrCount: 22
+        },
         associatedEntities: [
-          { id: 'ACC-HDFC-9921', label: 'ACC-9921', type: 'BankAccount' }
+          { id: 'P00101', label: 'Person_00101', type: 'Person' }
         ]
       }
     ]
   },
 
-  'CASE-VIDEO-002': {
-    corridor: 'Coastal Narcotics Corridor: Arabian Sea - Alibaug - Saswane Landing',
-    centerLat: '18.9100° N',
-    centerLng: '72.8200° E',
-    gridRef: 'MH-SEA-CORR-03',
+  'CASE-2025-M3-SYNTHETIC': {
+    corridor: 'Cross-Border Narcotics Axis: Mumbai Sea Basin - Surat Coastal Belt',
+    centerLat: '19.8500° N',
+    centerLng: '72.8000° E',
+    gridRef: 'WEST-COAST-SEA-09',
     markers: [
       {
-        id: 'LOC-V2-01',
-        name: 'Alibaug Offshore Drop Coordinates (18.91°N, 72.82°E)',
+        id: 'LOC-SYN-01',
+        name: 'Surat Hazira Port Terminal Berth 2',
         category: 'Port / Terminal',
-        address: 'Offshore Maritime Sector 12, 8 nautical miles west of Alibaug',
-        latitude: 18.9100,
-        longitude: 72.8200,
-        accuracyRadiusMeters: 100,
-        timestamp: '2026-01-07 01:18',
-        notes: 'Coast Guard radar recorded vessel rendezvous with unflagged high-speed craft during AIS blackout.',
+        address: 'Hazira Industrial Port Belt, Surat',
+        latitude: 21.0967,
+        longitude: 72.6375,
+        accuracyRadiusMeters: 20,
+        timestamp: '2026-01-04 03:20',
+        notes: 'Unmanifested dhow offloaded chemical pre-cursor containers into coastal bonded warehouse.',
         associatedEntities: [
-          { id: 'P00201', label: 'Person_00201 (Receiver)', type: 'Person' }
+          { id: 'P00201', label: 'Person_00201 (Consignee)', type: 'Person' }
         ]
       },
       {
-        id: 'LOC-V2-02',
-        name: 'Coastal Satellite Radio Tracking Station #03',
+        id: 'LOC-SYN-02',
+        name: 'Vodafone Cell Tower Hazira Coastal',
         category: 'Cell Tower',
-        address: 'Revdanda Coastal Signal Monitoring Post',
-        latitude: 18.5500,
-        longitude: 72.9300,
-        accuracyRadiusMeters: 800,
-        timestamp: '2026-01-07 01:15',
-        notes: 'Intercepted encrypted voice packets from satellite terminal SAT-THURAYA-881.',
+        address: 'Coastal Highway Tower 104, Hazira',
+        latitude: 21.1120,
+        longitude: 72.6500,
+        accuracyRadiusMeters: 500,
+        timestamp: '2026-01-04 02:45 - 04:10',
+        notes: 'Satellite VoIP handset relayed GPS coordinates to deep-sea fishing vessel.',
         cellTowerDetails: {
-          towerId: 'ICG-SAT-SIG-03',
-          lac: '404-MH-REV',
-          azimuthDegrees: 270,
-          cdrCount: 9
+          towerId: 'VI-GUJ-HAZ-104',
+          lac: '404-GJ-88',
+          azimuthDegrees: 220,
+          cdrCount: 18
         },
-        associatedEntities: [
-          { id: 'SAT-THURAYA-881', label: 'Thuraya Unit #881', type: 'Phone' }
-        ]
-      },
-      {
-        id: 'LOC-V2-03',
-        name: 'Saswane Beach Concealment Staging Area',
-        category: 'Suspect Location',
-        address: 'Isolated Mangrove Creek, Saswane Coastal Belt',
-        latitude: 18.8200,
-        longitude: 72.8500,
-        accuracyRadiusMeters: 50,
-        timestamp: '2026-01-07 04:45',
-        notes: 'Tactical interdiction locus where landing crew was detained under NDPS Act §29.',
         associatedEntities: [
           { id: 'P00201', label: 'Person_00201', type: 'Person' }
         ]
@@ -220,84 +244,33 @@ const CASE_LOCI: Record<string, { corridor: string; centerLat: string; centerLng
     ]
   },
 
-  'CASE-VIDEO-003': {
-    corridor: 'Cyber Infrastructure Corridor: Noida Hub - Bengaluru DC - NCR ATM Grid',
-    centerLat: '28.5355° N',
-    centerLng: '77.3910° E',
-    gridRef: 'DL-NCR-CYBER-09',
-    markers: [
-      {
-        id: 'LOC-V3-01',
-        name: 'Noida Fake Call Center Operations Base',
-        category: 'Suspect Location',
-        address: 'Sector 62 IT Tech Complex, Noida, UP',
-        latitude: 28.6280,
-        longitude: 77.3649,
-        accuracyRadiusMeters: 20,
-        timestamp: '2026-01-08 02:00',
-        notes: 'Physical hub operating VoIP spoofing dialers and harvesting victim credentials.',
-        associatedEntities: [
-          { id: 'P00301', label: 'Person_00301 (Mule Recruiter)', type: 'Person' }
-        ]
-      },
-      {
-        id: 'LOC-V3-02',
-        name: 'C2 Phishing Domain Proxy Server Node',
-        category: 'Suspect Location',
-        address: 'Electronic City Cloud Hosting Center, Bengaluru',
-        latitude: 12.8450,
-        longitude: 77.6600,
-        accuracyRadiusMeters: 50,
-        timestamp: '2026-01-08 03:12',
-        notes: 'Reverse proxy IP 198.51.100.42 used to tunnel exfiltrated net-banking session tokens.',
-        associatedEntities: [
-          { id: '198.51.100.42', label: 'C2 Phish Proxy Node', type: 'Alias' }
-        ]
-      },
-      {
-        id: 'LOC-V3-03',
-        name: 'Metropolitan ATM Mule Cash-Out Cluster',
-        category: 'Financial Branch',
-        address: 'Connaught Place Commercial Banking Cluster, New Delhi',
-        latitude: 28.6304,
-        longitude: 77.2177,
-        accuracyRadiusMeters: 30,
-        timestamp: '2026-01-08 06:45',
-        notes: 'Coordinated withdrawals of INR 8,50,000 from mule current accounts within 15 minutes.',
-        associatedEntities: [
-          { id: 'P00301', label: 'Person_00301', type: 'Person' }
-        ]
-      }
-    ]
-  },
-
-  'CASE-VIDEO-004': {
-    corridor: 'Transit Smuggling Corridor: Raxaul Land Customs - Pune Safehouse #04',
-    centerLat: '26.5400° N',
-    centerLng: '85.3800° E',
-    gridRef: 'IND-BORDER-TR-04',
+  'CASE-2026-TERR-01': {
+    corridor: 'Cyber Infiltration & SIM Box Ring: Mumbai Suburban - Pune Safehouse',
+    centerLat: '18.7000° N',
+    centerLng: '73.3000° E',
+    gridRef: 'MH-EXPR-TECH-03',
     markers: [
       {
         id: 'LOC-V4-01',
-        name: 'Land Customs Station & Border Checkpost',
-        category: 'Port / Terminal',
-        address: 'Integrated Checkpost (ICP) Raxaul Gateway',
-        latitude: 26.5400,
-        longitude: 85.3800,
-        accuracyRadiusMeters: 25,
-        timestamp: '2026-01-09 14:00',
-        notes: 'Immigration barrier where counterfeit passport serial #PASSPORT-Z992144 was logged.',
+        name: 'Andheri East SIM Box Farm',
+        category: 'Suspect Location',
+        address: 'MIDC Cross Road 12, Andheri East, Mumbai',
+        latitude: 19.1197,
+        longitude: 72.8700,
+        accuracyRadiusMeters: 20,
+        timestamp: '2026-01-09 14:10',
+        notes: '32-port GSM gateway seized running illegal international VOIP bypass routing.',
         associatedEntities: [
-          { id: 'P00401', label: 'Person_00401 (Custodian)', type: 'Person' }
+          { id: 'P00401', label: 'Person_00401', type: 'Person' }
         ]
       },
       {
         id: 'LOC-V4-02',
-        name: 'Rural Logistics Safehouse Facility #04',
+        name: 'Kothrud Pune Safehouse',
         category: 'Suspect Location',
-        address: 'Sector 9 Industrial Outskirts Safehouse Compound',
-        latitude: 18.5204,
-        longitude: 73.8567,
+        address: 'Paud Road Sector 7, Kothrud, Pune',
+        latitude: 18.5074,
+        longitude: 73.8077,
         accuracyRadiusMeters: 15,
         timestamp: '2026-01-09 17:42',
         notes: 'Staging safehouse breached by AHTU team; 6 victims rescued and duplicate visas seized.',
@@ -325,23 +298,129 @@ const CASE_LOCI: Record<string, { corridor: string; centerLat: string; centerLng
 
 export const GISMapView: React.FC = () => {
   const { selectedCaseId, selectEntity, setView } = useNavigationStore();
-  
-  const activeCase = selectedCaseId || 'CASE-2025-M3-DATASET';
-  const caseData = CASE_LOCI[activeCase] || CASE_LOCI['CASE-2025-M3-DATASET'];
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<L.Map | null>(null);
+  const markersLayerRef = useRef<L.LayerGroup | null>(null);
+  const towersLayerRef = useRef<L.LayerGroup | null>(null);
+  const routeLayerRef = useRef<L.Polyline | null>(null);
 
-  const [markers, setMarkers] = useState<MapMarkerLocation[]>(caseData.markers);
-  const [selectedMarker, setSelectedMarker] = useState<MapMarkerLocation | null>(caseData.markers[0] || null);
+  const activeCase = selectedCaseId || 'CASE-2025-M3-DATASET';
+  const fallbackCaseData = CASE_LOCI[activeCase] || CASE_LOCI['CASE-2025-M3-DATASET'];
+
+  const [markers, setMarkers] = useState<MapMarkerLocation[]>(fallbackCaseData.markers);
+  const [selectedMarker, setSelectedMarker] = useState<MapMarkerLocation | null>(fallbackCaseData.markers[0] || null);
   const [activeCategory, setActiveCategory] = useState<string>('ALL');
   const [showCellTowers, setShowCellTowers] = useState<boolean>(true);
   const [showTransitRoute, setShowTransitRoute] = useState<boolean>(true);
-  const [isScanning, setIsScanning] = useState<boolean>(true);
+  const [dataSourceMode, setDataSourceMode] = useState<'LIVE' | 'CURATED'>('LIVE');
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+
+  // Load and merge live entities with curated loci
+  const loadCaseMarkers = async () => {
+    setIsLoading(true);
+    const curatedLoci = CASE_LOCI[activeCase]?.markers || CASE_LOCI['CASE-2025-M3-DATASET'].markers;
+
+    if (dataSourceMode === 'CURATED') {
+      setMarkers(curatedLoci);
+      setSelectedMarker(curatedLoci[0] || null);
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      const res = await apiRequest<any[]>(`/entities?case_id=${encodeURIComponent(activeCase)}&pageSize=100`);
+      if (res && res.success && Array.isArray(res.data) && res.data.length > 0) {
+        const liveMarkers: MapMarkerLocation[] = [];
+        const seenNames = new Set<string>();
+
+        // Include curated loci first
+        curatedLoci.forEach(m => {
+          seenNames.add(m.name.toLowerCase());
+          seenNames.add(m.id.toLowerCase());
+          liveMarkers.push(m);
+        });
+
+        // Convert backend entities to geo-tagged markers
+        res.data.forEach((ent: any) => {
+          const entId = String(ent.id || ent.entityId || '');
+          const entName = ent.canonicalName || ent.fullName || ent.locationName || ent.orgName || ent.name || entId;
+          const entType = ent.entityType || ent.type || 'Location';
+
+          if (seenNames.has(entName.toLowerCase()) || seenNames.has(entId.toLowerCase())) {
+            return;
+          }
+
+          let lat = typeof ent.latitude === 'number' ? ent.latitude : null;
+          let lng = typeof ent.longitude === 'number' ? ent.longitude : null;
+          let matchedCity = '';
+
+          const searchTarget = `${entName} ${ent.address || ''} ${ent.city || ''} ${ent.locationName || ''}`.toLowerCase();
+          for (const [cityName, coords] of Object.entries(CITY_COORDINATES)) {
+            if (searchTarget.includes(cityName)) {
+              matchedCity = cityName;
+              const [baseLat, baseLng] = coords;
+              const [offLat, offLng] = getDeterministicOffset(entId);
+              lat = baseLat + offLat;
+              lng = baseLng + offLng;
+              break;
+            }
+          }
+
+          // If no city match, anchor around Mumbai / JNPT corridor with deterministic jitter
+          if (lat === null || lng === null) {
+            const [offLat, offLng] = getDeterministicOffset(entId);
+            lat = 18.9498 + offLat;
+            lng = 72.9512 + offLng;
+          }
+
+          let category: MapMarkerLocation['category'] = 'Suspect Location';
+          if (entType === 'Port' || entName.toLowerCase().includes('port') || entName.toLowerCase().includes('terminal')) {
+            category = 'Port / Terminal';
+          } else if (entType === 'Phone' || entType === 'Communication' || entName.toLowerCase().includes('tower')) {
+            category = 'Cell Tower';
+          } else if (entType === 'BankAccount' || entType === 'Transaction' || entName.toLowerCase().includes('bank')) {
+            category = 'Financial Branch';
+          } else if (entType === 'Crime' || entType === 'FIR') {
+            category = 'Crime Scene';
+          }
+
+          seenNames.add(entName.toLowerCase());
+          liveMarkers.push({
+            id: entId,
+            name: entName,
+            category,
+            address: ent.address || (matchedCity ? `${matchedCity.toUpperCase()}, India` : 'Tactical Geo-Anchor Corridor'),
+            latitude: Number(lat.toFixed(5)),
+            longitude: Number(lng.toFixed(5)),
+            accuracyRadiusMeters: category === 'Cell Tower' ? 450 : 25,
+            timestamp: ent.timestamp || ent.filingDate || 'Live Telemetry',
+            notes: ent.notes || ent.description || `Synchronized live entity [${entType}] associated with ${activeCase}.`,
+            associatedEntities: [
+              { id: entId, label: entName, type: entType }
+            ]
+          });
+        });
+
+        setMarkers(liveMarkers);
+        setSelectedMarker(liveMarkers[0] || null);
+      } else {
+        setMarkers(curatedLoci);
+        setSelectedMarker(curatedLoci[0] || null);
+      }
+    } catch (err) {
+      console.warn('[GIS] Error loading entities from backend, using curated loci:', err);
+      setMarkers(curatedLoci);
+      setSelectedMarker(curatedLoci[0] || null);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const data = CASE_LOCI[activeCase] || CASE_LOCI['CASE-2025-M3-DATASET'];
-    setMarkers(data.markers);
-    setSelectedMarker(data.markers[0] || null);
-  }, [activeCase]);
+    loadCaseMarkers();
+  }, [activeCase, dataSourceMode]);
 
+  // Categories
   const categories = [
     { key: 'ALL', label: 'All Loci' },
     { key: 'Port / Terminal', label: 'Ports & Seizures' },
@@ -350,31 +429,197 @@ export const GISMapView: React.FC = () => {
     { key: 'Suspect Location', label: 'Transit Coordinates' }
   ];
 
-  const filteredMarkers = markers.filter(m => {
-    if (activeCategory !== 'ALL' && m.category !== activeCategory) return false;
-    if (!showCellTowers && m.category === 'Cell Tower') return false;
-    return true;
-  });
+  const filteredMarkers = useMemo(() => {
+    return markers.filter(m => {
+      if (activeCategory !== 'ALL' && m.category !== activeCategory) return false;
+      if (!showCellTowers && m.category === 'Cell Tower') return false;
+      return true;
+    });
+  }, [markers, activeCategory, showCellTowers]);
 
-  // Calculate percentage positions on tactical radar screen
-  const getMarkerPositions = (idx: number, total: number) => {
-    const positions = [
-      { top: '48%', left: '50%' }, // Center 1
-      { top: '32%', left: '60%' }, // Upper right 2
-      { top: '65%', left: '34%' }, // Lower left 3
-      { top: '22%', left: '78%' }, // Far top right 4
-      { top: '75%', left: '68%' }, // Far bottom right 5
-      { top: '25%', left: '25%' }  // Far top left 6
-    ];
-    return positions[idx % positions.length];
+  // Leaflet Marker Icon Generator
+  const createMarkerIcon = (category: string, isSelected: boolean) => {
+    let bg = '#06b6d4';
+    let border = '#67e8f9';
+    let glow = 'rgba(6, 182, 212, 0.45)';
+
+    if (category === 'Port / Terminal' || category === 'Crime Scene') {
+      bg = '#f43f5e';
+      border = '#fda4af';
+      glow = 'rgba(244, 63, 94, 0.45)';
+    } else if (category === 'Cell Tower') {
+      bg = '#10b981';
+      border = '#6ee7b7';
+      glow = 'rgba(16, 185, 129, 0.45)';
+    } else if (category === 'Financial Branch') {
+      bg = '#3b82f6';
+      border = '#93c5fd';
+      glow = 'rgba(59, 130, 246, 0.45)';
+    } else if (category === 'Suspect Location') {
+      bg = '#f59e0b';
+      border = '#fcd34d';
+      glow = 'rgba(245, 158, 11, 0.45)';
+    }
+
+    const ringSize = isSelected ? 34 : 26;
+    const dotSize = isSelected ? 14 : 10;
+
+    return L.divIcon({
+      className: 'tactical-custom-marker',
+      html: `
+        <div style="position: relative; width: ${ringSize}px; height: ${ringSize}px; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+          <div style="position: absolute; inset: 0; border-radius: 9999px; background: ${glow}; ${isSelected ? 'box-shadow: 0 0 16px ' + bg + ';' : ''}"></div>
+          <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: ${dotSize}px; height: ${dotSize}px; border-radius: 9999px; background: ${bg}; border: 2px solid ${border};"></div>
+        </div>
+      `,
+      iconSize: [ringSize, ringSize],
+      iconAnchor: [ringSize / 2, ringSize / 2],
+      popupAnchor: [0, -ringSize / 2]
+    });
   };
 
-  const getMarkerColor = (cat: string) => {
-    switch (cat) {
-      case 'Port / Terminal': return { bg: 'bg-red-500/20', border: 'border-red-500', text: 'text-red-400', shadow: 'shadow-red-500/30' };
-      case 'Cell Tower': return { bg: 'bg-emerald-500/20', border: 'border-emerald-400', text: 'text-emerald-300', shadow: 'shadow-emerald-500/30' };
-      case 'Financial Branch': return { bg: 'bg-blue-500/20', border: 'border-blue-400', text: 'text-blue-300', shadow: 'shadow-blue-500/30' };
-      default: return { bg: 'bg-amber-500/20', border: 'border-amber-400', text: 'text-amber-300', shadow: 'shadow-amber-500/30' };
+  // Initialize Leaflet Map
+  useEffect(() => {
+    if (!mapContainerRef.current || mapRef.current) return;
+
+    const initialLat = markers[0]?.latitude || 18.9498;
+    const initialLng = markers[0]?.longitude || 72.9512;
+
+    const map = L.map(mapContainerRef.current, {
+      zoomControl: false,
+      attributionControl: false
+    }).setView([initialLat, initialLng], 10);
+
+    // CartoDB Dark Matter tile layer
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+      maxZoom: 19,
+      subdomains: 'abcd'
+    }).addTo(map);
+
+    // Top-right zoom control
+    L.control.zoom({ position: 'topright' }).addTo(map);
+
+    const markersGroup = L.layerGroup().addTo(map);
+    const towersGroup = L.layerGroup().addTo(map);
+
+    markersLayerRef.current = markersGroup;
+    towersLayerRef.current = towersGroup;
+    mapRef.current = map;
+
+    setTimeout(() => {
+      map.invalidateSize();
+    }, 200);
+
+    return () => {
+      map.remove();
+      mapRef.current = null;
+    };
+  }, []);
+
+  // Update Markers, Popups, and Overlays on Map
+  useEffect(() => {
+    const map = mapRef.current;
+    const markersGroup = markersLayerRef.current;
+    const towersGroup = towersLayerRef.current;
+    if (!map || !markersGroup || !towersGroup) return;
+
+    markersGroup.clearLayers();
+    towersGroup.clearLayers();
+
+    if (routeLayerRef.current) {
+      map.removeLayer(routeLayerRef.current);
+      routeLayerRef.current = null;
+    }
+
+    if (filteredMarkers.length === 0) return;
+
+    const bounds = L.latLngBounds([]);
+
+    filteredMarkers.forEach(m => {
+      const isSelected = selectedMarker?.id === m.id;
+      const marker = L.marker([m.latitude, m.longitude], {
+        icon: createMarkerIcon(m.category, isSelected)
+      });
+
+      // Interactive popup
+      const popupHtml = `
+        <div style="background: #0f172a; color: #f8fafc; border: 1px solid #1e293b; border-radius: 12px; padding: 12px; min-width: 210px; font-family: Inter, system-ui, sans-serif;">
+          <div style="font-size: 10px; font-family: monospace; font-weight: 700; color: #38bdf8; text-transform: uppercase;">${m.category}</div>
+          <div style="font-size: 13px; font-weight: 700; margin-top: 3px; color: #ffffff;">${m.name}</div>
+          <div style="font-size: 11px; color: #94a3b8; margin-top: 4px; line-height: 1.3;">${m.address}</div>
+          <div style="font-size: 10px; font-family: monospace; color: #f59e0b; margin-top: 6px;">${m.latitude.toFixed(4)}° N, ${m.longitude.toFixed(4)}° E</div>
+          <button id="popup-btn-${m.id}" style="margin-top: 10px; width: 100%; padding: 6px 10px; background: #0284c7; color: white; border: none; border-radius: 8px; font-size: 11px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px;">
+            Open Entity Dossier →
+          </button>
+        </div>
+      `;
+
+      marker.bindPopup(popupHtml, { className: 'custom-tactical-popup' });
+
+      marker.on('popupopen', () => {
+        const btn = document.getElementById(`popup-btn-${m.id}`);
+        if (btn) {
+          btn.onclick = () => {
+            const targetId = m.associatedEntities?.[0]?.id || m.id;
+            selectEntity(targetId);
+            setView('entity');
+          };
+        }
+      });
+
+      marker.on('click', () => {
+        setSelectedMarker(m);
+      });
+
+      markersGroup.addLayer(marker);
+      bounds.extend([m.latitude, m.longitude]);
+
+      // Cell tower radius beam circle
+      if (showCellTowers && (m.category === 'Cell Tower' || m.cellTowerDetails)) {
+        const towerCircle = L.circle([m.latitude, m.longitude], {
+          radius: m.accuracyRadiusMeters || 500,
+          color: '#10b981',
+          fillColor: '#10b981',
+          fillOpacity: 0.12,
+          weight: 1.5,
+          dashArray: '4, 4'
+        });
+        towersGroup.addLayer(towerCircle);
+      }
+    });
+
+    // Transit Corridors Route Polyline
+    if (showTransitRoute && filteredMarkers.length >= 2) {
+      const routeCoords = filteredMarkers.map(m => [m.latitude, m.longitude] as [number, number]);
+      const polyline = L.polyline(routeCoords, {
+        color: '#06b6d4',
+        weight: 2.5,
+        opacity: 0.6,
+        dashArray: '6, 8',
+        lineCap: 'round'
+      });
+      polyline.addTo(map);
+      routeLayerRef.current = polyline;
+    }
+
+    if (bounds.isValid()) {
+      map.fitBounds(bounds, { padding: [50, 50], maxZoom: 13 });
+    }
+  }, [filteredMarkers, selectedMarker?.id, showCellTowers, showTransitRoute]);
+
+  const handleFitBounds = () => {
+    const map = mapRef.current;
+    if (!map || filteredMarkers.length === 0) return;
+    const bounds = L.latLngBounds(filteredMarkers.map(m => [m.latitude, m.longitude]));
+    if (bounds.isValid()) {
+      map.fitBounds(bounds, { padding: [50, 50], maxZoom: 14 });
+    }
+  };
+
+  const handleSelectMarkerAndPan = (m: MapMarkerLocation) => {
+    setSelectedMarker(m);
+    if (mapRef.current) {
+      mapRef.current.setView([m.latitude, m.longitude], 13, { animate: true });
     }
   };
 
@@ -390,19 +635,46 @@ export const GISMapView: React.FC = () => {
               <span>Spatial Intelligence Engine</span>
             </span>
             <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-950 text-[var(--primary)] border border-cyan-800">
-              Corridor: {caseData.corridor.split(':')[0]}
+              Corridor: {fallbackCaseData.corridor.split(':')[0]}
             </span>
           </div>
           <h1 className="text-lg font-bold text-[var(--text-primary)] mt-0.5">
-            GIS Tactical Map & Tower Sector Telemetry
+            GIS Tactical Map & Real-Time Geospatial Telemetry
           </h1>
           <p className="text-xs text-[var(--text-secondary)] font-mono">
-            {caseData.corridor}
+            {fallbackCaseData.corridor}
           </p>
         </div>
 
         {/* Tactical Map Layer Toggles */}
         <div className="flex flex-wrap items-center gap-2">
+          
+          {/* Data Source Mode Toggle */}
+          <div className="flex items-center rounded-xl bg-slate-900/60 p-1 border border-slate-700/60 text-xs font-medium">
+            <button
+              onClick={() => setDataSourceMode('LIVE')}
+              className={`px-2.5 py-1 rounded-lg transition-colors flex items-center gap-1.5 ${
+                dataSourceMode === 'LIVE'
+                  ? 'bg-blue-600 text-white font-semibold'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Database className="w-3 h-3" />
+              <span>Live Case Telemetry</span>
+            </button>
+            <button
+              onClick={() => setDataSourceMode('CURATED')}
+              className={`px-2.5 py-1 rounded-lg transition-colors flex items-center gap-1.5 ${
+                dataSourceMode === 'CURATED'
+                  ? 'bg-blue-600 text-white font-semibold'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Layers className="w-3 h-3" />
+              <span>Curated Ground Truth</span>
+            </button>
+          </div>
+
           <button
             onClick={() => setShowTransitRoute(!showTransitRoute)}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium border transition-colors ${
@@ -428,16 +700,23 @@ export const GISMapView: React.FC = () => {
           </button>
 
           <button
-            onClick={() => setIsScanning(!isScanning)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium border transition-colors ${
-              isScanning 
-                ? 'bg-purple-500/20 text-purple-300 border-purple-500/40 shadow-sm' 
-                : 'bg-[var(--bg-card)] text-[var(--text-secondary)] border-[var(--border)]'
-            }`}
+            onClick={handleFitBounds}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium border bg-[var(--bg-card)] text-[var(--text-secondary)] border-[var(--border)] hover:bg-slate-800 transition-colors"
+            title="Fit Map to All Markers"
           >
-            <Crosshair className="w-3.5 h-3.5" />
-            <span>Radar Sweep</span>
+            <Maximize2 className="w-3.5 h-3.5" />
+            <span>Fit Bounds</span>
           </button>
+
+          <button
+            onClick={loadCaseMarkers}
+            disabled={isLoading}
+            className="p-1.5 rounded-xl border bg-[var(--bg-card)] text-[var(--text-secondary)] border-[var(--border)] hover:bg-slate-800 transition-colors"
+            title="Refresh Geo Markers"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin text-cyan-400' : ''}`} />
+          </button>
+
         </div>
       </div>
 
@@ -462,119 +741,41 @@ export const GISMapView: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         
         {/* Tactical Map Canvas (2 Cols) */}
-        <div className="lg:col-span-2 relative h-[560px] rounded-2xl overflow-hidden border border-cyan-900/60 bg-[#060a12] shadow-2xl flex flex-col justify-between p-4">
-          
-          {/* High-Tech Grid & Background Elements */}
-          <div className="absolute inset-0 bg-[radial-gradient(#0891b2_1px,transparent_1px)] [background-size:24px_24px] opacity-20 pointer-events-none" />
+        <div className="lg:col-span-2 relative h-[580px] rounded-2xl overflow-hidden border border-cyan-900/60 bg-[#060a12] shadow-2xl flex flex-col justify-between">
           
           {/* Top Map Coordinates Bar */}
-          <div className="z-10 flex items-center justify-between">
-            <div className="bg-[#0b1322]/90 backdrop-blur-md px-3 py-1.5 rounded-xl border border-cyan-800/40 text-[11px] font-mono text-[var(--text-secondary)] flex items-center gap-3">
+          <div className="z-10 flex items-center justify-between p-3 pointer-events-none">
+            <div className="bg-[#0b1322]/90 backdrop-blur-md px-3 py-1.5 rounded-xl border border-cyan-800/40 text-[11px] font-mono text-[var(--text-secondary)] flex items-center gap-3 pointer-events-auto">
               <Compass className="w-4 h-4 text-cyan-400" />
-              <span>LAT: {caseData.centerLat}</span>
-              <span>LNG: {caseData.centerLng}</span>
-              <span className="text-cyan-400 font-semibold font-mono">GRID: {caseData.gridRef}</span>
+              <span>LAT: {selectedMarker ? `${selectedMarker.latitude}° N` : fallbackCaseData.centerLat}</span>
+              <span>LNG: {selectedMarker ? `${selectedMarker.longitude}° E` : fallbackCaseData.centerLng}</span>
+              <span className="text-cyan-400 font-semibold font-mono">GRID: {fallbackCaseData.gridRef}</span>
             </div>
 
-            <div className="bg-[#0b1322]/90 backdrop-blur-md px-2.5 py-1 rounded-xl border border-emerald-500/40 text-[10px] font-mono text-emerald-400 flex items-center gap-1.5">
+            <div className="bg-[#0b1322]/90 backdrop-blur-md px-2.5 py-1 rounded-xl border border-emerald-500/40 text-[10px] font-mono text-emerald-400 flex items-center gap-1.5 pointer-events-auto">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span>RADAR SYNCHRONIZED</span>
+              <span>LEAFLET DARK SATELLITE ENGINE</span>
             </div>
           </div>
 
-          {/* Interactive Tactical Radar Visualization */}
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-auto">
-            <div className="relative w-full h-full max-w-2xl max-h-[500px]">
-              
-              {/* Concentric Sonar Rings */}
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 rounded-full border border-cyan-500/20 pointer-events-none" />
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 rounded-full border border-cyan-500/15 pointer-events-none" />
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[440px] h-[440px] rounded-full border border-cyan-500/10 pointer-events-none" />
-              
-              {/* Crosshair Axes */}
-              <div className="absolute top-1/2 left-0 right-0 h-[1px] bg-cyan-500/20 pointer-events-none" />
-              <div className="absolute left-1/2 top-0 bottom-0 w-[1px] bg-cyan-500/20 pointer-events-none" />
-
-              {/* Radar Sweep Effect */}
-              {isScanning && (
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[440px] h-[440px] rounded-full overflow-hidden pointer-events-none">
-                  <div className="w-full h-full animate-[spin_6s_linear_infinite] origin-center bg-[conic-gradient(from_0deg,rgba(6,182,212,0.18)_0deg,transparent_60deg)]" />
-                </div>
-              )}
-
-              {/* Transit Route Polylines */}
-              {showTransitRoute && (
-                <svg className="absolute inset-0 w-full h-full pointer-events-none">
-                  <polyline
-                    points="320,240 384,160 217,325 499,110 435,375"
-                    fill="none"
-                    stroke="#0891b2"
-                    strokeWidth="1.5"
-                    strokeDasharray="4 4"
-                    className="opacity-40 animate-[dash_20s_linear_infinite]"
-                  />
-                </svg>
-              )}
-
-              {/* Rendered Geospatial Loci Markers */}
-              {filteredMarkers.map((marker, idx) => {
-                const pos = getMarkerPositions(idx, filteredMarkers.length);
-                const color = getMarkerColor(marker.category);
-                const isSelected = selectedMarker?.id === marker.id;
-
-                return (
-                  <div
-                    key={marker.id}
-                    onClick={() => setSelectedMarker(marker)}
-                    style={{ top: pos.top, left: pos.left }}
-                    className="absolute -translate-x-1/2 -translate-y-1/2 cursor-pointer group z-20"
-                  >
-                    {/* Tower Beam Arc if Cell Tower */}
-                    {marker.cellTowerDetails && showCellTowers && (
-                      <div className="absolute -top-12 -left-12 w-28 h-28 rounded-full border border-emerald-500/30 bg-emerald-500/10 pointer-events-none" />
-                    )}
-
-                    {/* Outer Pulse Ring */}
-                    <div className={`w-9 h-9 rounded-full ${color.bg} border-2 ${color.border} flex items-center justify-center ${color.text} shadow-lg ${color.shadow} transition-all ${
-                      isSelected ? 'scale-125 ring-4 ring-cyan-400/40' : 'group-hover:scale-115'
-                    }`}>
-                      {marker.category === 'Port / Terminal' ? (
-                        <ShieldAlert className="w-4 h-4 animate-pulse" />
-                      ) : marker.category === 'Cell Tower' ? (
-                        <Radio className="w-4 h-4" />
-                      ) : marker.category === 'Financial Branch' ? (
-                        <Building className="w-4 h-4" />
-                      ) : (
-                        <Navigation className="w-4 h-4" />
-                      )}
-                    </div>
-
-                    {/* Marker Badge Tag */}
-                    <div className={`absolute left-1/2 -translate-x-1/2 top-10 whitespace-nowrap px-2 py-0.5 rounded text-[10px] font-mono font-bold border transition-colors ${
-                      isSelected 
-                        ? 'bg-cyan-950 text-cyan-200 border-cyan-400 shadow-md' 
-                        : 'bg-[#0f172a]/95 text-slate-300 border-slate-700/80 group-hover:border-cyan-500'
-                    }`}>
-                      {marker.name.length > 25 ? marker.name.slice(0, 23) + '...' : marker.name}
-                    </div>
-                  </div>
-                );
-              })}
-
-            </div>
-          </div>
+          {/* Leaflet DOM Map Container */}
+          <div 
+            ref={mapContainerRef} 
+            className="absolute inset-0 w-full h-full z-0" 
+            style={{ width: '100%', height: '100%', minHeight: '580px' }} 
+          />
 
           {/* Bottom Map Legend */}
-          <div className="z-10 bg-[#0b1322]/90 backdrop-blur-md p-2.5 rounded-xl border border-cyan-800/40 text-[10px] flex flex-wrap items-center justify-between gap-3">
+          <div className="z-10 bg-[#0b1322]/90 backdrop-blur-md p-2.5 m-3 rounded-xl border border-cyan-800/40 text-[10px] flex flex-wrap items-center justify-between gap-3 pointer-events-auto">
             <div className="flex items-center gap-4">
               <span className="font-mono text-cyan-400 uppercase font-semibold">Classification:</span>
-              <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-red-400" /> Crime / Seizure Locus</div>
+              <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-rose-500" /> Crime / Seizure Locus</div>
               <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-emerald-400" /> Cell Tower (CDR Intercept)</div>
               <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-blue-400" /> Banking / Hawala Node</div>
               <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-amber-400" /> Transit Route Checkpoint</div>
             </div>
             <div className="font-mono text-slate-400 text-[9px]">
-              GPS SATELLITE LOCK: 12 CONSTELLATIONS ACTIVE
+              {filteredMarkers.length} ACTIVE GEO-ANCHORED LOCI
             </div>
           </div>
 
@@ -673,9 +874,36 @@ export const GISMapView: React.FC = () => {
           ) : (
             <div className="bg-[var(--bg-card)] rounded-2xl p-8 border border-[var(--border)] text-center text-slate-400 text-xs">
               <Crosshair className="w-8 h-8 mx-auto text-slate-600 mb-2" />
-              <p>Select any tactical marker on the radar screen to inspect geospatial coordinates and CDR telemetry.</p>
+              <p>Select any tactical marker on the map to inspect geospatial coordinates and CDR telemetry.</p>
             </div>
           )}
+
+          {/* Quick Loci Picker List */}
+          <div className="bg-[var(--bg-card)] rounded-2xl p-3 border border-[var(--border)] space-y-2">
+            <span className="text-[10px] font-mono uppercase text-slate-400 font-semibold px-1">
+              Geospatial Manifest ({filteredMarkers.length})
+            </span>
+            <div className="max-h-48 overflow-y-auto space-y-1 pr-1">
+              {filteredMarkers.map(m => (
+                <button
+                  key={m.id}
+                  onClick={() => handleSelectMarkerAndPan(m)}
+                  className={`w-full text-left p-2 rounded-lg text-xs flex items-center justify-between border transition-colors ${
+                    selectedMarker?.id === m.id
+                      ? 'bg-cyan-950/60 border-cyan-500/60 text-cyan-200'
+                      : 'bg-[var(--bg-primary)] border-transparent text-slate-300 hover:border-slate-700'
+                  }`}
+                >
+                  <div className="truncate mr-2">
+                    <div className="font-medium truncate">{m.name}</div>
+                    <div className="text-[10px] text-slate-500 font-mono">{m.category}</div>
+                  </div>
+                  <MapPin className={`w-3.5 h-3.5 flex-shrink-0 ${selectedMarker?.id === m.id ? 'text-cyan-400' : 'text-slate-500'}`} />
+                </button>
+              ))}
+            </div>
+          </div>
+
         </div>
 
       </div>
