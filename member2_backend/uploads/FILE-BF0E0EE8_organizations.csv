@@ -1,0 +1,3 @@
+id,name,type,city,confidence
+ORG-001,BlueSea Logistics,Shipping,Mumbai,0.95
+ORG-002,Apex Clearing Co,Hawala Conduit,Surat,0.92

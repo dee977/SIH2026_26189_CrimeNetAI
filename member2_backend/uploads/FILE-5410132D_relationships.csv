@@ -1,0 +1,2 @@
+source_id,target_id,relationship_type,confidence
+P-TEST-901,P-TEST-902,CO_ACCUSED,0.95
