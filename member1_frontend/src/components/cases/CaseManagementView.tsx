@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigationStore } from '../../store/navigationStore';
 import { useNotificationStore } from '../../store/notificationStore';
+import { useAuthStore } from '../../store/authStore';
+import { hasPermission } from '../../utils/rbac';
 import { SYNTHETIC_CASES } from '../../data/syntheticData';
 import { CaseDossier } from '../../types/cases';
 import { apiRequest } from '../../services/apiClient';
@@ -160,6 +162,8 @@ const DEMO_5_CASES: CaseDossier[] = [
 export const CaseManagementView: React.FC = () => {
   const { selectCase, setView } = useNavigationStore();
   const { addToast } = useNotificationStore();
+  const { user } = useAuthStore();
+  const canCreateCase = hasPermission(user?.grantedRole, 'case:write');
 
   const [cases, setCases] = useState<CaseDossier[]>(DEMO_5_CASES);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -324,13 +328,20 @@ export const CaseManagementView: React.FC = () => {
           </p>
         </div>
 
-        <button
-          onClick={() => setIsCreateModalOpen(true)}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[var(--primary)] text-white hover:bg-cyan-400 text-slate-950 font-bold text-xs uppercase tracking-wider transition-colors shadow-lg shadow-cyan-500/20 self-start sm:self-auto"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Initialize New Case</span>
-        </button>
+        {canCreateCase ? (
+          <button
+            onClick={() => setIsCreateModalOpen(true)}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[var(--primary)] text-white hover:bg-cyan-400 text-slate-950 font-bold text-xs uppercase tracking-wider transition-colors shadow-lg shadow-cyan-500/20 self-start sm:self-auto"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Initialize New Case</span>
+          </button>
+        ) : (
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-mono">
+            <Shield className="w-3.5 h-3.5" />
+            <span>Read-Only Dossier Access ({user?.grantedRole || 'ANALYST'})</span>
+          </div>
+        )}
       </div>
 
       {/* Case Dossiers Grid */}

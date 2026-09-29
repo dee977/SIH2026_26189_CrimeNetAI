@@ -15,12 +15,14 @@ from app.api.v1.dashboard import router as dashboard_router
 from app.api.v1.audit import router as audit_router
 from app.api.v1.websockets import router as ws_router
 from app.api.v1.evidence import router as evidence_router
+from app.api.v1.access_requests import router as access_requests_router
 
 assistant_router = APIRouter(prefix='/assistant', tags=['AI Assistant'])
 assistant_router.add_api_route('/query', query_ai_assistant, methods=['POST'])
 
 api_v1_router = APIRouter()
 api_v1_router.include_router(auth_router)
+api_v1_router.include_router(access_requests_router)
 api_v1_router.include_router(cases_router)
 api_v1_router.include_router(entities_router)
 api_v1_router.include_router(graph_router)

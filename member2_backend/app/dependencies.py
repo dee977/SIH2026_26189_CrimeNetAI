@@ -48,27 +48,29 @@ async def get_current_user(
     user.grantedRole = (db_profile.role.upper() if db_profile else 'INVESTIGATOR')
 
         
-    # Map strict permissions based on the DB role
-    # Admin -> Full, Investigator -> Investigation workflow, Analyst -> Analytics, Auditor -> Read-only
+    # Map strict statutory permissions based on the DB role
+    # Admin -> Full, Investigator -> Investigation workflow, Analyst -> Analytics, Auditor -> Read-only / Audit
     role_perms = {
         'ADMIN': [
-            'dashboard:read', 'case:read', 'case:write', 'graph:read', 'analytics:read', 'timeline:read',
-            'evidence:read', 'evidence:write', 'ingest:upload', 'report:generate', 'alert:read', 'alert:manage',
-            'watchlist:read', 'watchlist:manage', 'gis:read', 'ai:read', 'admin:read', 'admin:write', 'audit:read',
-            'verification:read'
+            'dashboard:read', 'case:write', 'graph:read', 'analytics:read', 'timeline:read',
+            'evidence:write', 'verification:read', 'report:generate', 'audit:read', 'admin:write',
+            'case:read', 'evidence:read', 'gis:read', 'alert:read', 'alert:manage', 'watchlist:read',
+            'watchlist:manage', 'ingest:upload', 'admin:read', 'ai:read'
         ],
         'INVESTIGATOR': [
-            'dashboard:read', 'case:read', 'case:write', 'graph:read', 'analytics:read', 'timeline:read',
-            'evidence:read', 'evidence:write', 'ingest:upload', 'report:generate', 'alert:read', 'alert:manage',
-            'watchlist:read', 'watchlist:manage', 'gis:read', 'ai:read', 'verification:read'
+            'dashboard:read', 'case:write', 'graph:read', 'analytics:read', 'timeline:read',
+            'evidence:write', 'verification:read', 'report:generate',
+            'case:read', 'evidence:read', 'gis:read', 'alert:read', 'alert:manage', 'watchlist:read',
+            'watchlist:manage', 'ingest:upload', 'ai:read'
         ],
         'ANALYST': [
-            'dashboard:read', 'case:read', 'graph:read', 'analytics:read', 'timeline:read', 'evidence:read',
-            'report:generate', 'watchlist:read', 'gis:read', 'ai:read'
+            'dashboard:read', 'graph:read', 'analytics:read', 'timeline:read',
+            'verification:read', 'report:generate',
+            'case:read', 'evidence:read', 'gis:read', 'alert:read', 'watchlist:read', 'ai:read'
         ],
         'AUDITOR': [
-            'dashboard:read', 'case:read', 'graph:read', 'analytics:read', 'timeline:read', 'evidence:read',
-            'report:generate', 'alert:read', 'audit:read', 'verification:read'
+            'dashboard:read', 'timeline:read', 'verification:read', 'report:generate', 'audit:read',
+            'case:read', 'evidence:read'
         ]
     }
     
@@ -78,11 +80,11 @@ async def get_current_user(
 
 def require_permission(permission: str) -> Callable:
     async def permission_dependency(current_user: UserProfile = Depends(get_current_user)) -> UserProfile:
-        # ADMIN inherits all permissions dynamically or we explicitly check
+        # ADMIN inherits all permissions dynamically
         if current_user.grantedRole == 'ADMIN':
             return current_user
         if permission not in current_user.permissions:
-            raise AuthorizationError(f'Action requires permission: \'{permission}\'')
+            raise AuthorizationError('Insufficient clearance for this operation')
         return current_user
     return permission_dependency
 

@@ -1,6 +1,8 @@
 import React, { useState, useRef } from 'react';
 import { useNavigationStore } from '../../store/navigationStore';
 import { useNotificationStore } from '../../store/notificationStore';
+import { useAuthStore } from '../../store/authStore';
+import { hasPermission } from '../../utils/rbac';
 import { fetchEvidenceList, verifyEvidenceSHA256 } from '../../services/evidenceService';
 import { useEffect } from 'react';
 import { EvidenceRecord } from '../../types/evidence';
@@ -91,6 +93,8 @@ const normalizeEvidenceRecord = (e: any): EvidenceRecord => {
 export const EvidenceView: React.FC = () => {
   const { selectedEvidenceId, selectEvidence, setView, selectEntity, selectedCaseId } = useNavigationStore();
   const { addToast } = useNotificationStore();
+  const { user } = useAuthStore();
+  const canWriteEvidence = hasPermission(user?.grantedRole, 'evidence:write');
 
   const [evidenceList, setEvidenceList] = useState<EvidenceRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -294,12 +298,18 @@ export const EvidenceView: React.FC = () => {
         <p className="text-xs text-[var(--text-secondary)] max-w-md mx-auto">
           Upload physical seizure memos, digital forensic images, or telecom dumps to compute cryptographic genesis SHA-256 hashes.
         </p>
-        <button
-          onClick={() => setIsUploadModalOpen(true)}
-          className="px-4 py-2 rounded-xl bg-[var(--primary)] text-white hover:bg-cyan-400 text-slate-950 font-bold text-xs uppercase"
-        >
-          Upload Evidence
-        </button>
+        {canWriteEvidence ? (
+          <button
+            onClick={() => setIsUploadModalOpen(true)}
+            className="px-4 py-2 rounded-xl bg-[var(--primary)] text-white hover:bg-cyan-400 text-slate-950 font-bold text-xs uppercase"
+          >
+            Upload Evidence
+          </button>
+        ) : (
+          <div className="text-xs text-amber-400 font-mono">
+            Read-only Evidence Access ({user?.grantedRole || 'ANALYST'})
+          </div>
+        )}
       </div>
     );
   }
@@ -327,13 +337,20 @@ export const EvidenceView: React.FC = () => {
           </p>
         </div>
 
-        <button
-          onClick={() => setIsUploadModalOpen(true)}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[var(--primary)] text-white hover:bg-cyan-400 text-slate-950 font-bold text-xs uppercase tracking-wider transition-colors shadow-lg shadow-cyan-500/20 self-start sm:self-auto"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Upload Evidence</span>
-        </button>
+        {canWriteEvidence ? (
+          <button
+            onClick={() => setIsUploadModalOpen(true)}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[var(--primary)] text-white hover:bg-cyan-400 text-slate-950 font-bold text-xs uppercase tracking-wider transition-colors shadow-lg shadow-cyan-500/20 self-start sm:self-auto"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Upload Evidence</span>
+          </button>
+        ) : (
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-mono">
+            <Lock className="w-3.5 h-3.5" />
+            <span>Read-Only Evidence Vault ({user?.grantedRole || 'ANALYST'})</span>
+          </div>
+        )}
       </div>
 
       {/* Main Grid: Left Evidence List, Right Active Evidence Profile */}

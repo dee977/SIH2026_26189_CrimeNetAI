@@ -9,7 +9,9 @@ import { Sidebar } from './components/layout/Sidebar';
 import { TopNav } from './components/layout/TopNav';
 import { ToastContainer } from './components/common/ToastContainer';
 import { SessionExpiredModal } from './components/common/UIStates';
+import { AccessDeniedView } from './components/common/AccessDeniedView';
 import { DemoWalkthroughBar } from './components/demo/DemoWalkthroughBar';
+import { canAccessView, VIEW_REQUIRED_PERMISSIONS, normalizeRole } from './utils/rbac';
 
 // Public Pages
 import { LandingPage } from './components/public/LandingPage';
@@ -44,7 +46,8 @@ import { ImportCenterView } from './components/ingestion/ImportCenterView';
 async function syncUserWithBackend(session: any, setSession: any) {
   if (!session) return;
   
-  const defaultRole = (session.user.user_metadata?.role || 'INVESTIGATOR').toUpperCase();
+  const localActiveRole = typeof localStorage !== 'undefined' ? localStorage.getItem('crimenet_active_role') : null;
+  const defaultRole = (localActiveRole || session.user.user_metadata?.role || 'INVESTIGATOR').toUpperCase();
   const defaultPerms = getPermissionsForRole(defaultRole as any);
 
   // Set active session immediately so that views and auth guards do not bounce to login
@@ -90,9 +93,12 @@ async function syncUserWithBackend(session: any, setSession: any) {
 
 export const App: React.FC = () => {
   const { currentView, setView } = useNavigationStore();
-  const { isAuthenticated, isSessionExpired, setSession } = useAuthStore();
+  const { user, isAuthenticated, isSessionExpired, setSession } = useAuthStore();
   const currentViewRef = React.useRef(currentView);
   currentViewRef.current = currentView;
+
+  const userRole = normalizeRole(user?.grantedRole);
+  const isViewAllowed = canAccessView(userRole, currentView);
 
   React.useEffect(() => {
     // Check initial session
@@ -155,29 +161,40 @@ export const App: React.FC = () => {
         {/* Top Header Navigation */}
         <TopNav />
 
-        {/* Dynamic Main View */}
+        {/* Dynamic Main View with Route Guard */}
         <main className="flex-1 overflow-y-auto p-6 relative">
           <div className="max-w-7xl mx-auto pb-20">
-            {currentView === 'dashboard' && <InvestigatorDashboard />}
-            {currentView === 'search' && <UnifiedEntitySearchView />}
-            {currentView === 'cases' && <CaseManagementView />}
-            {currentView === 'case-workspace' && <InvestigationWorkspace />}
-            {currentView === 'entity' && <UnifiedEntitySearchView />}
-            {currentView === 'graph' && <NetworkGraphView />}
-            {currentView === 'hidden-discovery' && <HiddenRelationshipDiscovery />}
-            {currentView === 'analytics' && <GraphAnalyticsView />}
-            {currentView === 'community' && <CommunityView />}
-            {currentView === 'timeline' && <TimelineView />}
-            {currentView === 'gis' && <GISMapView />}
-            {currentView === 'verification' && <CrossVerificationView />}
-            {currentView === 'evidence' && <EvidenceView />}
-            {currentView === 'watchlist' && <WatchlistView />}
-            {currentView === 'alerts' && <AlertsView />}
-            {currentView === 'assistant' && <AIAssistantView />}
-            {currentView === 'authority' && <AuthorityDashboardView />}
-            {currentView === 'admin' && <AdminDashboardView />}
-            {currentView === 'ingestion' && <ImportCenterView />}
-            {currentView === 'reports' && <ReportView />}
+            {!isViewAllowed ? (
+              <AccessDeniedView 
+                view={currentView}
+                requiredPermission={VIEW_REQUIRED_PERMISSIONS[currentView]}
+                currentRole={userRole}
+                onBackToDashboard={() => setView('dashboard')}
+              />
+            ) : (
+              <>
+                {currentView === 'dashboard' && <InvestigatorDashboard />}
+                {currentView === 'search' && <UnifiedEntitySearchView />}
+                {currentView === 'cases' && <CaseManagementView />}
+                {currentView === 'case-workspace' && <InvestigationWorkspace />}
+                {currentView === 'entity' && <UnifiedEntitySearchView />}
+                {currentView === 'graph' && <NetworkGraphView />}
+                {currentView === 'hidden-discovery' && <HiddenRelationshipDiscovery />}
+                {currentView === 'analytics' && <GraphAnalyticsView />}
+                {currentView === 'community' && <CommunityView />}
+                {currentView === 'timeline' && <TimelineView />}
+                {currentView === 'gis' && <GISMapView />}
+                {currentView === 'verification' && <CrossVerificationView />}
+                {currentView === 'evidence' && <EvidenceView />}
+                {currentView === 'watchlist' && <WatchlistView />}
+                {currentView === 'alerts' && <AlertsView />}
+                {currentView === 'assistant' && <AIAssistantView />}
+                {currentView === 'authority' && <AuthorityDashboardView />}
+                {currentView === 'admin' && <AdminDashboardView />}
+                {currentView === 'ingestion' && <ImportCenterView />}
+                {currentView === 'reports' && <ReportView />}
+              </>
+            )}
           </div>
         </main>
 

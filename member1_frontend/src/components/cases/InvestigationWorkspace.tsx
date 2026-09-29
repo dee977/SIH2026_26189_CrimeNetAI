@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigationStore } from '../../store/navigationStore';
 import { useNotificationStore } from '../../store/notificationStore';
+import { useAuthStore } from '../../store/authStore';
+import { hasPermission } from '../../utils/rbac';
 import { SYNTHETIC_CASES, ALL_ENTITIES, SYNTHETIC_EVIDENCE_RECORDS, SYNTHETIC_ALERTS } from '../../data/syntheticData';
 import { apiRequest } from '../../services/apiClient';
 import { NetworkGraphView } from '../graph/NetworkGraphView';
@@ -38,6 +40,8 @@ const API_BASE = import.meta.env.VITE_API_BASE_URL || (import.meta.env.PROD ? '/
 export const InvestigationWorkspace: React.FC = () => {
   const { selectedCaseId, setView } = useNavigationStore();
   const { addToast } = useNotificationStore();
+  const { user } = useAuthStore();
+  const canWriteEvidence = hasPermission(user?.grantedRole, 'evidence:write');
   const [activeTab, setActiveTab] = useState<'overview' | 'documents' | 'graph' | 'timeline' | 'map' | 'entities' | 'evidence' | 'alerts' | 'assistant' | 'reports' | 'audit'>('overview');
   const [liveCase, setLiveCase] = useState<any>(null);
 
@@ -255,25 +259,33 @@ export const InvestigationWorkspace: React.FC = () => {
                     Attached Case Documents & Evidence Files ({caseDocuments.length})
                   </h4>
                 </div>
-                <button
-                  onClick={() => setActiveTab('documents')}
-                  className="text-xs font-mono text-[var(--primary)] hover:underline flex items-center gap-1 font-semibold"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span>Attach New Document</span>
-                </button>
+                {canWriteEvidence && (
+                  <button
+                    onClick={() => setActiveTab('documents')}
+                    className="text-xs font-mono text-[var(--primary)] hover:underline flex items-center gap-1 font-semibold"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Attach New Document</span>
+                  </button>
+                )}
               </div>
 
               {caseDocuments.length === 0 ? (
                 <div className="p-4 rounded-xl bg-[var(--bg-card)] border border-dashed border-[var(--border)] text-center">
                   <p className="text-xs text-[var(--text-secondary)]">No documents or evidence files attached yet.</p>
-                  <button
-                    onClick={() => setActiveTab('documents')}
-                    className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--surface-cyan)] text-cyan-300 border border-[var(--primary)] text-xs font-semibold hover:bg-cyan-950 transition-colors"
-                  >
-                    <Upload className="w-3.5 h-3.5" />
-                    <span>Upload First Document</span>
-                  </button>
+                  {canWriteEvidence ? (
+                    <button
+                      onClick={() => setActiveTab('documents')}
+                      className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--surface-cyan)] text-cyan-300 border border-[var(--primary)] text-xs font-semibold hover:bg-cyan-950 transition-colors"
+                    >
+                      <Upload className="w-3.5 h-3.5" />
+                      <span>Upload First Document</span>
+                    </button>
+                  ) : (
+                    <span className="mt-2 inline-block text-[11px] font-mono text-amber-400">
+                      Read-Only Evidence Access ({user?.grantedRole || 'ANALYST'})
+                    </span>
+                  )}
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
@@ -319,6 +331,17 @@ export const InvestigationWorkspace: React.FC = () => {
           <div className="space-y-6">
             
             {/* Upload New Document Form */}
+            {!canWriteEvidence ? (
+              <div className="bg-[var(--bg-card)] shadow-sm border border-amber-500/30 rounded-2xl p-5 flex items-center gap-3">
+                <Lock className="w-5 h-5 text-amber-400 shrink-0" />
+                <div>
+                  <h4 className="text-xs font-bold text-amber-300">Read-Only Evidence Dossier ({user?.grantedRole || 'ANALYST'})</h4>
+                  <p className="text-[11px] text-[var(--text-secondary)] mt-0.5">
+                    Your current clearance does not permit attaching new evidence items or modifying case files. Elevated clearance (INVESTIGATOR or ADMIN) is required.
+                  </p>
+                </div>
+              </div>
+            ) : (
             <div className="bg-[var(--bg-card)] shadow-sm border border-[var(--border)] rounded-2xl p-6">
               <div className="flex items-center gap-2 mb-2">
                 <Upload className="w-5 h-5 text-[var(--primary)]" />
@@ -401,6 +424,7 @@ export const InvestigationWorkspace: React.FC = () => {
                 </div>
               </form>
             </div>
+            )}
 
             {/* Document Registry Table */}
             <div className="bg-[var(--bg-card)] shadow-sm border border-[var(--border)] rounded-2xl p-6">

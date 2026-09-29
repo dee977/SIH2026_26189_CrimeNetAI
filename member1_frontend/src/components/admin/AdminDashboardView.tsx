@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '../../store/authStore';
 import { useNavigationStore } from '../../store/navigationStore';
 import { PermissionDeniedState } from '../common/UIStates';
+import { apiRequest } from '../../services/apiClient';
 import { 
   Settings, 
   Users, 
@@ -53,22 +54,25 @@ interface OfficerUser {
 
 export interface AccessRequest {
   id: string;
-  officerName: string;
-  badgeNumber: string;
-  email: string;
-  phone: string;
-  department: string;
-  requestedRole: 'INVESTIGATOR' | 'ANALYST' | 'AUDITOR';
-  clearanceLevel: 'LEVEL 1 (RESTRICTED)' | 'LEVEL 2 (CONFIDENTIAL)' | 'LEVEL 3 (TOP SECRET)';
-  assignedCaseId: string;
-  assignedCaseTitle: string;
-  justification: string;
-  warrantRef: string;
-  submittedAt: string;
-  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  officerName?: string;
+  badgeNumber?: string;
+  email?: string;
+  userEmail?: string;
+  phone?: string;
+  department?: string;
+  requestedRole: 'ADMIN' | 'INVESTIGATOR' | 'ANALYST' | 'AUDITOR' | string;
+  clearanceLevel?: string;
+  assignedCaseId?: string;
+  assignedCaseTitle?: string;
+  justification?: string;
+  reason?: string;
+  warrantRef?: string;
+  submittedAt?: string;
+  createdAt?: string;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED' | string;
   reviewedBy?: string;
   reviewedAt?: string;
-  requestedPermissions: string[];
+  requestedPermissions?: string[];
 }
 
 const DEMO_OFFICERS: OfficerUser[] = [
@@ -315,26 +319,69 @@ const M6_LEDGER_BLOCKS = [
   }
 ];
 
-export const AdminDashboardView: React.FC = () => {
+const AdminDashboardContent: React.FC = () => {
   const { user } = useAuthStore();
   const { setView, selectCase } = useNavigationStore();
   
   const [activeTab, setActiveTab] = useState<'users' | 'requests' | 'datasets' | 'ledger' | 'overview' | 'settings'>('requests');
   const [searchUserQuery, setSearchUserQuery] = useState('');
   const [accessRequests, setAccessRequests] = useState<AccessRequest[]>(INITIAL_ACCESS_REQUESTS);
+  const [officers, setOfficers] = useState<OfficerUser[]>(DEMO_OFFICERS);
   const [requestFilter, setRequestFilter] = useState<'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED'>('ALL');
   const [actionNotice, setActionNotice] = useState<string | null>(null);
+  const [isLoadingRequests, setIsLoadingRequests] = useState(false);
+  const [requestError, setRequestError] = useState<string | null>(null);
 
-  // Permission check
+  // Strict Admin Clearance Check
   const isAdmin = 
     user?.grantedRole === 'ADMIN' || 
     user?.permissions?.includes('admin:read') ||
+    user?.permissions?.includes('admin:write') ||
     user?.email === 'admin123@gov.in';
+
+  // Load live access requests from backend
+  const loadRequests = async () => {
+    setIsLoadingRequests(true);
+    setRequestError(null);
+    try {
+      const res = await apiRequest<AccessRequest[]>('/access-requests');
+      if (res.success && Array.isArray(res.data)) {
+        setAccessRequests(res.data);
+      }
+    } catch (e: any) {
+      console.warn('Backend requests query notice:', e);
+      setRequestError(e.message || 'Failed to query access requests');
+    } finally {
+      setIsLoadingRequests(false);
+    }
+  };
+
+  // Load live user manifest from backend
+  const loadUsers = async () => {
+    try {
+      const res = await apiRequest<OfficerUser[]>('/access-requests/users/manifest');
+      if (res.success && Array.isArray(res.data) && res.data.length > 0) {
+        // Merge live profiles with demo officers
+        const liveEmails = new Set(res.data.map(u => (u.email || '').toLowerCase()));
+        const remainingDemos = DEMO_OFFICERS.filter(d => !liveEmails.has((d.email || '').toLowerCase()));
+        setOfficers([...res.data, ...remainingDemos]);
+      }
+    } catch (e) {
+      console.warn('Backend users manifest query notice:', e);
+    }
+  };
+
+  useEffect(() => {
+    if (isAdmin) {
+      loadRequests();
+      loadUsers();
+    }
+  }, [isAdmin]);
 
   if (!isAdmin) {
     return (
       <PermissionDeniedState 
-        requiredPermission="admin:read" 
+        requiredPermission="admin:write" 
         requiredRole="ADMIN" 
       />
     );
@@ -342,51 +389,84 @@ export const AdminDashboardView: React.FC = () => {
 
   const triggerAction = (msg: string) => {
     setActionNotice(msg);
-    setTimeout(() => setActionNotice(null), 3800);
+    setTimeout(() => setActionNotice(null), 4000);
   };
 
-  const handleApproveRequest = (reqId: string, isEmergency?: boolean) => {
-    setAccessRequests(prev => prev.map(r => {
-      if (r.id === reqId) {
-        return {
-          ...r,
-          status: 'APPROVED',
-          reviewedBy: user?.officerId ? `${user.officerId} (Current Admin)` : 'LEO-7729 (Insp. Sharma)',
-          reviewedAt: isEmergency ? 'Temporary 24h Clearance Issued' : 'Just now (Approved)'
-        };
-      }
-      return r;
-    }));
-    triggerAction(`Access Request ${reqId} Approved! Cryptographic JWT and Case Scope token provisioned.`);
+  const handleApproveRequest = async (reqId: string, isEmergency?: boolean) => {
+    try {
+      const res = await apiRequest<any>(`/access-requests/${encodeURIComponent(reqId)}/approve`, {
+        method: 'POST'
+      });
+      
+      const targetReq = (accessRequests || []).find(r => r.id === reqId);
+      const targetRole = targetReq?.requestedRole || 'INVESTIGATOR';
+
+      // Update state: move to Approved history
+      setAccessRequests(prev => (prev || []).map(r => {
+        if (r.id === reqId) {
+          return {
+            ...r,
+            status: 'APPROVED',
+            reviewedBy: user?.name ? `${user.name} (Administrator)` : 'Administrator (LEO-7729)',
+            reviewedAt: isEmergency ? 'Temporary 24h Clearance Issued' : 'Just now (Approved)'
+          };
+        }
+        return r;
+      }));
+
+      // Refresh live users manifest so new role is displayed
+      loadUsers();
+
+      // Show exact success notification requested
+      triggerAction(`Role granted: ${targetRole}`);
+    } catch (err: any) {
+      triggerAction(`Approval error: ${err.message}`);
+    }
   };
 
-  const handleRejectRequest = (reqId: string) => {
-    setAccessRequests(prev => prev.map(r => {
-      if (r.id === reqId) {
-        return {
-          ...r,
-          status: 'REJECTED',
-          reviewedBy: user?.officerId ? `${user.officerId} (Current Admin)` : 'LEO-7729 (Insp. Sharma)',
-          reviewedAt: 'Just now (Rejected)'
-        };
-      }
-      return r;
-    }));
-    triggerAction(`Access Request ${reqId} Rejected. Rejection advisory logged to audit ledger.`);
+  const handleRejectRequest = async (reqId: string) => {
+    try {
+      await apiRequest<any>(`/access-requests/${encodeURIComponent(reqId)}/reject`, {
+        method: 'POST',
+        body: JSON.stringify({ reason: 'Statutory clearance criteria not met' })
+      });
+
+      setAccessRequests(prev => (prev || []).map(r => {
+        if (r.id === reqId) {
+          return {
+            ...r,
+            status: 'REJECTED',
+            reviewedBy: user?.name ? `${user.name} (Administrator)` : 'Administrator (LEO-7729)',
+            reviewedAt: 'Just now (Rejected)'
+          };
+        }
+        return r;
+      }));
+
+      triggerAction(`Access Request ${reqId} Rejected. Rejection advisory logged to audit ledger.`);
+    } catch (err: any) {
+      triggerAction(`Rejection error: ${err.message}`);
+    }
   };
 
-  const pendingRequestsCount = accessRequests.filter(r => r.status === 'PENDING').length;
+  const pendingRequestsCount = (accessRequests || []).filter(r => (r?.status || '').toUpperCase() === 'PENDING').length;
 
-  const filteredOfficers = DEMO_OFFICERS.filter(o => 
-    o.name.toLowerCase().includes(searchUserQuery.toLowerCase()) ||
-    o.badgeNumber.toLowerCase().includes(searchUserQuery.toLowerCase()) ||
-    o.unit.toLowerCase().includes(searchUserQuery.toLowerCase()) ||
-    o.role.toLowerCase().includes(searchUserQuery.toLowerCase())
-  );
+  const filteredOfficers = (officers || []).filter(o => {
+    if (!o) return false;
+    const q = (searchUserQuery || '').toLowerCase();
+    return (
+      (o.name || '').toLowerCase().includes(q) ||
+      (o.badgeNumber || '').toLowerCase().includes(q) ||
+      (o.unit || '').toLowerCase().includes(q) ||
+      (o.role || '').toLowerCase().includes(q) ||
+      (o.email || '').toLowerCase().includes(q)
+    );
+  });
 
-  const filteredRequests = accessRequests.filter(r => {
+  const filteredRequests = (accessRequests || []).filter(r => {
+    if (!r) return false;
     if (requestFilter === 'ALL') return true;
-    return r.status === requestFilter;
+    return (r.status || '').toUpperCase() === requestFilter;
   });
 
   return (
@@ -559,16 +639,43 @@ export const AdminDashboardView: React.FC = () => {
 
           {/* Requests List Cards */}
           <div className="space-y-4">
-            {filteredRequests.length === 0 ? (
-              <div className="bg-white border border-slate-200 rounded-2xl p-10 text-center text-slate-500">
-                <FileCheck className="w-10 h-10 text-slate-300 mx-auto mb-2" />
-                <p className="text-sm font-semibold text-slate-700">No requests match this filter.</p>
+            {isLoadingRequests ? (
+              <div className="bg-white border border-slate-200 rounded-2xl p-12 text-center text-blue-600 flex items-center justify-center gap-3">
+                <span className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                <span className="text-xs font-mono font-semibold">Retrieving statutory access requests from master ledger...</span>
+              </div>
+            ) : requestError ? (
+              <div className="bg-white border border-red-200 rounded-2xl p-8 text-center text-red-600 space-y-3">
+                <AlertTriangle className="w-8 h-8 mx-auto text-red-500" />
+                <h4 className="text-sm font-bold text-slate-800">Unable to Fetch Access Requests</h4>
+                <p className="text-xs text-slate-500">{requestError}</p>
+                <button
+                  onClick={loadRequests}
+                  className="px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold"
+                >
+                  Retry Query
+                </button>
+              </div>
+            ) : filteredRequests.length === 0 ? (
+              <div className="bg-white border border-slate-200 rounded-2xl p-12 text-center text-slate-500 space-y-2">
+                <FileCheck className="w-12 h-12 text-slate-300 mx-auto" />
+                <h4 className="text-sm font-bold text-slate-800">No Pending Requests</h4>
+                <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                  {requestFilter === 'ALL' 
+                    ? 'There are currently no access clearance requests recorded in the system.' 
+                    : `No requests with status "${requestFilter}". All officer clearance requests have been reviewed.`}
+                </p>
               </div>
             ) : (
               filteredRequests.map(req => {
-                const isPending = req.status === 'PENDING';
-                const isApproved = req.status === 'APPROVED';
-                const isRejected = req.status === 'REJECTED';
+                const reqStatus = (req.status || 'PENDING').toUpperCase();
+                const isPending = reqStatus === 'PENDING';
+                const isApproved = reqStatus === 'APPROVED';
+                const isRejected = reqStatus === 'REJECTED';
+                const clearance = req.clearanceLevel || (
+                  (req.requestedRole || '') === 'INVESTIGATOR' ? 'LEVEL 3 (TOP SECRET)' : 'LEVEL 2 (CONFIDENTIAL)'
+                );
+                const reqPermissions = Array.isArray(req.requestedPermissions) ? req.requestedPermissions : [];
 
                 return (
                   <div 
@@ -589,16 +696,16 @@ export const AdminDashboardView: React.FC = () => {
                         </span>
 
                         <span className={`px-2.5 py-1 rounded-md text-[10px] font-mono font-bold border ${
-                          req.clearanceLevel.includes('TOP SECRET')
+                          clearance.includes('TOP SECRET')
                             ? 'bg-rose-50 text-rose-700 border-rose-200'
                             : 'bg-purple-50 text-purple-700 border-purple-200'
                         }`}>
-                          {req.clearanceLevel}
+                          {clearance}
                         </span>
 
                         <span className="text-xs text-slate-500 font-mono flex items-center gap-1">
                           <Clock className="w-3.5 h-3.5 text-slate-400" />
-                          Submitted {req.submittedAt}
+                          Submitted {req.submittedAt || 'Recent'}
                         </span>
                       </div>
 
@@ -631,25 +738,25 @@ export const AdminDashboardView: React.FC = () => {
                       {/* Left: Officer Information */}
                       <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2">
                         <div className="flex items-center justify-between">
-                          <span className="font-bold text-slate-900 text-sm">{req.officerName}</span>
+                          <span className="font-bold text-slate-900 text-sm">{req.officerName || req.email || 'Officer'}</span>
                           <span className="font-mono text-blue-700 font-bold px-2 py-0.5 rounded bg-blue-100/70 border border-blue-200 text-[11px]">
-                            {req.badgeNumber}
+                            {req.badgeNumber || 'LEO-PENDING'}
                           </span>
                         </div>
                         
                         <div className="text-slate-600 font-medium flex items-center gap-1.5">
                           <Building className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                          <span>{req.department}</span>
+                          <span>{req.department || 'CrimeNet State Bureau'}</span>
                         </div>
 
                         <div className="flex items-center gap-4 text-[11px] text-slate-500 pt-1">
                           <span className="flex items-center gap-1">
                             <Mail className="w-3 h-3 text-slate-400" />
-                            {req.email}
+                            {req.email || 'No email provided'}
                           </span>
                           <span className="flex items-center gap-1">
                             <Phone className="w-3 h-3 text-slate-400" />
-                            {req.phone}
+                            {req.phone || '+91 98000 00000'}
                           </span>
                         </div>
 
@@ -662,7 +769,7 @@ export const AdminDashboardView: React.FC = () => {
                               ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
                               : 'bg-amber-100 text-amber-800 border-amber-200'
                           }`}>
-                            {req.requestedRole}
+                            {req.requestedRole || 'INVESTIGATOR'}
                           </span>
                         </div>
                       </div>
@@ -675,12 +782,12 @@ export const AdminDashboardView: React.FC = () => {
                           </span>
                           <div className="flex items-center justify-between">
                             <span className="font-mono font-bold text-blue-700 bg-white px-2 py-0.5 rounded border border-slate-200 text-xs">
-                              {req.assignedCaseId}
+                              {req.assignedCaseId || 'CASE-2025-M3-DATASET'}
                             </span>
                             <button
                               onClick={() => {
-                                selectCase(req.assignedCaseId);
-                                triggerAction(`Navigated to active investigation scope for ${req.assignedCaseId}`);
+                                selectCase(req.assignedCaseId || 'CASE-2025-M3-DATASET');
+                                triggerAction(`Navigated to active investigation scope for ${req.assignedCaseId || 'CASE-2025-M3-DATASET'}`);
                               }}
                               className="text-blue-600 hover:underline text-[11px] font-semibold flex items-center gap-1"
                             >
@@ -689,7 +796,7 @@ export const AdminDashboardView: React.FC = () => {
                             </button>
                           </div>
                           <div className="text-slate-800 font-bold text-xs mt-1">
-                            {req.assignedCaseTitle}
+                            {req.assignedCaseTitle || 'Operation Falcon Web - Contraband Intercept'}
                           </div>
                         </div>
 
@@ -698,7 +805,7 @@ export const AdminDashboardView: React.FC = () => {
                             Statutory Warrant / Court Order Reference:
                           </span>
                           <div className="font-mono text-purple-700 font-bold text-xs bg-purple-50 px-2.5 py-1 rounded border border-purple-200">
-                            {req.warrantRef}
+                            {req.warrantRef || 'ENROLMENT-VERIFICATION-PENDING'}
                           </div>
                         </div>
                       </div>
@@ -711,14 +818,14 @@ export const AdminDashboardView: React.FC = () => {
                         Sworn Investigatory Justification:
                       </span>
                       <p className="italic text-slate-800 font-normal">
-                        "{req.justification}"
+                        "{req.justification || req.reason || 'Operational clearance requested'}"
                       </p>
                     </div>
 
                     {/* Requested Permissions Tags */}
                     <div className="flex items-center gap-2 flex-wrap text-xs">
                       <span className="text-[11px] font-mono text-slate-500 font-semibold">Requested Scopes:</span>
-                      {req.requestedPermissions.map(p => (
+                      {reqPermissions.map(p => (
                         <span key={p} className="font-mono text-[10px] px-2 py-0.5 rounded bg-white text-slate-700 border border-slate-200">
                           {p}
                         </span>
@@ -1342,5 +1449,62 @@ export const AdminDashboardView: React.FC = () => {
       )}
 
     </div>
+  );
+};
+
+interface ErrorBoundaryState {
+  hasError: boolean;
+  error: Error | null;
+}
+
+class AdminErrorBoundary extends React.Component<{ children: React.ReactNode }, ErrorBoundaryState> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error('Admin Console Boundary intercepted error:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="p-8 bg-white border border-red-200 rounded-2xl shadow-sm text-center max-w-xl mx-auto my-12 space-y-4">
+          <div className="w-12 h-12 rounded-full bg-red-100 text-red-600 flex items-center justify-center mx-auto">
+            <AlertTriangle className="w-6 h-6" />
+          </div>
+          <h2 className="text-lg font-bold text-slate-900">Admin Console Safe Recovery Active</h2>
+          <p className="text-xs text-slate-600 leading-relaxed">
+            A component rendering error was safely intercepted to prevent an application blank screen.
+          </p>
+          <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-left text-[11px] font-mono text-red-600 overflow-x-auto">
+            {this.state.error?.message || 'Unexpected application error'}
+          </div>
+          <button
+            onClick={() => {
+              this.setState({ hasError: false, error: null });
+              window.location.reload();
+            }}
+            className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs uppercase tracking-wider transition"
+          >
+            Reload Admin Console
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+export const AdminDashboardView: React.FC = () => {
+  return (
+    <AdminErrorBoundary>
+      <AdminDashboardContent />
+    </AdminErrorBoundary>
   );
 };
