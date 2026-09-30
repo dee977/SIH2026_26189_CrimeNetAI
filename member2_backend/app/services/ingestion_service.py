@@ -433,7 +433,8 @@ class IngestionService:
         filename: str,
         case_id: str,
         uploader: str,
-        sha256_hash: str
+        sha256_hash: str,
+        storage_path: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Executes complete M3 CSV ingestion:
@@ -466,7 +467,7 @@ class IngestionService:
             'description': f"Investigator uploaded CSV dataset '{filename}' linked to case {case_id}.",
             'collectedDate': now,
             'collectedBy': uploader,
-            'storageLocation': f"Secure Vault / {filename}",
+            'storageLocation': storage_path or f"Secure Vault / {filename}",
             'sha256Hash': sha256_hash,
             'bsaSection65BCertificateId': f"BSA-63-{datetime.now().year}-{evidence_id}",
             'caseId': case_id,
@@ -755,7 +756,8 @@ class IngestionService:
         filename: str,
         case_id: str,
         uploader: str,
-        sha256_hash: str
+        sha256_hash: str,
+        storage_path: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Executes complete M4 PDF ingestion:
@@ -821,7 +823,7 @@ class IngestionService:
             'description': f"Official investigation document '{filename}' ({page_count} pages) linked to case {case_id}.",
             'collectedDate': now,
             'collectedBy': uploader,
-            'storageLocation': f"Secure Vault / {filename}",
+            'storageLocation': storage_path or f"Secure Vault / {filename}",
             'sha256Hash': sha256_hash,
             'bsaSection65BCertificateId': f"BSA-63-{datetime.now().year}-{evidence_id}",
             'caseId': case_id,
@@ -1038,7 +1040,7 @@ class IngestionService:
         try:
             import os
             from neo4j import GraphDatabase
-            uri = os.getenv('NEO4J_URI', 'bolt://neo4j:7687')
+            uri = os.getenv('NEO4J_URI', 'bolt://localhost:7687')
             user = os.getenv('NEO4J_USERNAME', 'neo4j')
             pwd = os.getenv('NEO4J_PASSWORD', 'CrimeNetNeo4j123!')
             driver = GraphDatabase.driver(uri, auth=(user, pwd), connection_timeout=2)
@@ -1331,12 +1333,25 @@ class IngestionService:
         ext, doc_type = self.validate_file_metadata(filename, file_bytes, content_type)
         sha256_hash = self.calculate_sha256(file_bytes)
 
-        # 2. Secure Storage in UPLOAD_DIR
+        # 2. Secure Storage in UPLOAD_DIR or Supabase
         safe_filename = re.sub(r'[^a-zA-Z0-9_\-\.]', '_', filename)
         stored_filename = f"{file_id}_{safe_filename}"
-        storage_path = os.path.join(self.upload_dir, stored_filename)
-        with open(storage_path, 'wb') as f:
-            f.write(file_bytes)
+        
+        from app.services.supabase_service import get_supabase_storage_service
+        supabase_svc = get_supabase_storage_service()
+        supabase_path = supabase_svc.upload_file(
+            case_id=case_id,
+            file_name=stored_filename,
+            file_bytes=file_bytes,
+            content_type=content_type or "application/octet-stream"
+        )
+        
+        storage_path = supabase_path if supabase_path else os.path.join(self.upload_dir, stored_filename)
+        
+        # Fallback to local disk if Supabase failed or isn't configured
+        if not supabase_path:
+            with open(storage_path, 'wb') as f:
+                f.write(file_bytes)
 
         # Initialize job record
         _INGESTION_JOBS[job_id] = {
@@ -1366,7 +1381,8 @@ class IngestionService:
                     filename=filename,
                     case_id=case_id,
                     uploader=uploader,
-                    sha256_hash=sha256_hash
+                    sha256_hash=sha256_hash,
+                    storage_path=storage_path
                 )
             elif ext in ['.png', '.jpg', '.jpeg', '.tiff', '.webp', '.bmp'] or doc_type == 'IMAGE_EVIDENCE':
                 _INGESTION_JOBS[job_id]['stage'] = 'ANALYZING_IMAGE'
@@ -1389,7 +1405,8 @@ class IngestionService:
                     filename=filename,
                     case_id=case_id,
                     uploader=uploader,
-                    sha256_hash=sha256_hash
+                    sha256_hash=sha256_hash,
+                    storage_path=storage_path
                 )
 
             # 4. Finalize Job

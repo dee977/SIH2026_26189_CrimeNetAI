@@ -186,9 +186,9 @@ celery -A app.celery_app.worker.celery_app worker --loglevel=info
 pytest tests/test_api.py -v
 `
 
-### Run via Docker Compose:
+
 `ash
-docker-compose up --build
+
 `
 
 ---

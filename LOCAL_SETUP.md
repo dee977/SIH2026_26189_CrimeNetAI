@@ -135,3 +135,7 @@ npm run dev -- --host 127.0.0.1 --port 5173
 
 3. **Multi-Modal Evidence Ingestion:**
    - In the **Import Center** (`/ingest`), uploading a CSV, PDF, or image automatically parses text, extracts persons/phones/accounts/organizations, registers an immutable SHA-256 evidence record in PostgreSQL, and creates new nodes and relationships in the live network graph.
+
+
+## NO DOCKER REQUIRED
+Docker is NOT required for normal CrimeNet AI development.

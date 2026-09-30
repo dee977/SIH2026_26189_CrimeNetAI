@@ -1,7 +1,7 @@
 # Member 6 - Security, Evidence Integrity & Deployment
 
 ## Overview
-This module handles all security operations for CrimeNet AI, focusing on authentication, hierarchical RBAC, Row Level Security (RLS) in Supabase, evidence integrity (SHA-256 validation), an append-only cryptographic ledger, and full chain of custody generation including BSA Evidence Certificates. It also provides the Docker and deployment configurations for the entire platform.
+This module handles all security operations for CrimeNet AI, focusing on authentication, hierarchical RBAC, Row Level Security (RLS) in Supabase, evidence integrity (SHA-256 validation), an append-only cryptographic ledger, and full chain of custody generation including BSA Evidence Certificates. 
 
 ## Authentication Architecture
 - **Provider:** Supabase Auth
@@ -79,8 +79,8 @@ The `audit_logs` table records every sensitive action:
 - Actions include: Login, View Evidence, Download Evidence, Role Change, Approval, Rejection, etc.
 
 ## Deployment Configurations
-- **Docker:** Multi-stage `Dockerfile` for the backend and stub for the frontend.
-- **Docker Compose:** Orchestrates FastAPI Backend, Frontend, Redis, Celery, and other supporting services.
+
+
 - **Environment Variables:** All secrets are passed via `.env` (see `.env.example`). No hardcoded secrets.
 
 ## Security Tests

@@ -2,15 +2,12 @@
 
 ## 1. Environment checked
 **Status:** PASS
-**Details:** All core environments (Frontend, Backend, Graph ML, AI NLP, Data Graph) were checked. A `PYTHONPATH` issue was preventing the backend from resolving downstream modules like `member5_graph_ml` when running tests. This was resolved by explicitly adding the project root to `PYTHONPATH` in both the Dockerfile and local environment. `Dockerfile.backend` was updated to properly copy and install requirements from M2, M3, and M4.
 
 ## 2. Services checked
 **Status:** PASS
-**Details:** Audited the `docker-compose.yml` configuration and the backend dependencies. M2 (Backend) is successfully configured to act as an orchestrator for the downstream models.
 
 ## 3. Startup results
 **Status:** PASS
-**Details:** Docker configuration has been validated. 
 
 ## 4. API test results
 **Status:** PASS
@@ -81,8 +78,6 @@
 - **Pydantic Validation Error:** `m5_graph_analytics.py` mapped variables directly via `**kwargs` instead of translating M2 JSON structure (`entityType`) to M5 Pydantic structure (`entity_type`, `name`).
 
 ## 21. Fixes applied
-- `Dockerfile.backend`: Added `ENV PYTHONPATH /app` and merged all module `requirements.txt` installs into a single `pip install` command to ensure `networkx` and all other downstream dependencies are available.
-- `Dockerfile.backend`: Modified CMD to `uvicorn member2_backend.app.main:app` matching the correct python package path.
 - `member2_backend/app/services/m5_graph_analytics.py`: Wrote a proper translation map for `DEMO_ENTITIES` -> `GraphNode` and `DEMO_EDGES` -> `GraphEdge`.
 
 ## 22. Remaining blockers
@@ -90,9 +85,8 @@
 **Details:** None remaining for backend testing.
 
 ## 23. Exact manual steps required before demo
-To start the entire environment manually (assuming Docker is installed):
 1. `cd member6_security_evidence_deployment/deployment`
-2. `docker-compose up --build -d`
+2. `uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload`
 3. Wait 30 seconds for databases and services to initialize.
 4. Verify backend status: `curl http://localhost:8000/api/v1/health`
 5. Visit frontend at `http://localhost:5173` or `http://localhost:3000` (depending on vite/next configuration).

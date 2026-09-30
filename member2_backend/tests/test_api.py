@@ -37,7 +37,8 @@ app.dependency_overrides[get_current_user] = mock_get_current_user
 def test_root_and_health():
     resp = client.get('/')
     assert resp.status_code == 200
-    assert resp.json()['status'] == 'OPERATIONAL'
+    assert 'text/html' in resp.headers['content-type']
+    assert b'<html' in resp.content.lower() or '<html' in resp.text.lower()
 
     health_resp = client.get('/health')
     assert health_resp.status_code == 200

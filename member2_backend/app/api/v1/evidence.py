@@ -94,6 +94,18 @@ async def upload_evidence(
     evidence_id = f"EVD-{datetime.now().year}-{uuid.uuid4().hex[:6].upper()}"
     cert_id = f"BSA-63-{datetime.now().year}-{evidence_id}"
     
+    # Upload to Supabase Storage
+    from app.services.supabase_service import get_supabase_storage_service
+    supabase_svc = get_supabase_storage_service()
+    supabase_path = supabase_svc.upload_file(
+        case_id=target_case_id,
+        file_name=file.filename,
+        file_bytes=content,
+        content_type=file.content_type or 'application/octet-stream'
+    )
+    
+    storage_loc = supabase_path if supabase_path else f"Secure Vault / {file.filename}"
+    
     ev_row = EvidenceModel(
         evidence_id=evidence_id,
         case_id=target_case_id,
@@ -104,7 +116,7 @@ async def upload_evidence(
         description=description or f"Investigator uploaded file '{file.filename}' linked to case {target_case_id}.",
         collected_date=now,
         collected_by=current_user.fullName,
-        storage_location=f"Secure Vault / {file.filename}",
+        storage_location=storage_loc,
         sha256_hash=sha256_hash,
         bsa_certificate_id=cert_id,
         confidence='1.0',
@@ -113,7 +125,8 @@ async def upload_evidence(
             'sourceType': 'Manual Upload',
             'uploader': current_user.fullName,
             'chainOfCustodyVerified': True,
-            'fileSize': len(content)
+            'fileSize': len(content),
+            'storagePath': supabase_path
         }
     )
     db.add(ev_row)
@@ -180,15 +193,25 @@ async def get_evidence_file(
     evidence_id: str = Path(...),
     db = Depends(get_db)
 ):
-    from fastapi.responses import FileResponse, Response
+    from fastapi.responses import FileResponse, Response, RedirectResponse
     import os
     import base64
+    from app.services.supabase_service import get_supabase_storage_service
+    
     ev_row = db.query(EvidenceModel).filter(EvidenceModel.evidence_id == evidence_id).first()
     if not ev_row:
         raise HTTPException(status_code=404, detail="Evidence item not found.")
     
     meta = ev_row.metadata_json or {}
     storage_path = meta.get('storagePath')
+    
+    if storage_path:
+        supabase_svc = get_supabase_storage_service()
+        download_url = supabase_svc.get_download_url(storage_path)
+        if download_url:
+            return RedirectResponse(url=download_url)
+            
+    # Fallback to local disk if path exists locally
     if storage_path and os.path.exists(storage_path):
         return FileResponse(storage_path)
         
