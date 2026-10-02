@@ -23,6 +23,7 @@ import {
   Info,
   Image as ImageIcon
 } from 'lucide-react';
+import { CaseSelector } from '../common/CaseSelector';
 
 interface IngestionJob {
   jobId: string;
@@ -352,58 +353,33 @@ export const ImportCenterView: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Top Banner */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-[var(--bg-card)] p-6 rounded-2xl border border-[var(--border)] shadow-xl backdrop-blur-sm">
-        <div>
-          <div className="flex items-center gap-3 mb-1">
-            <div className="p-2.5 rounded-xl bg-[var(--surface-cyan)] border border-[var(--primary)] text-[var(--primary)]">
-              <UploadCloud className="w-6 h-6" />
-            </div>
-            <h1 className="text-2xl font-bold text-[var(--text-primary)] tracking-tight">
-              Data Ingestion &amp; Evidence Import Center
-            </h1>
-          </div>
-          <p className="text-[var(--text-secondary)] text-sm max-w-3xl">
-            Upload forensic documents, structured CSV datasets, scanned statements, and evidentiary records into the CrimeNet AI knowledge graph. Automatically extracts entities, generates SHA-256 integrity hashes, and indexes data for the AI Assistant and Investigation Reports.
-          </p>
-        </div>
-
-        {/* Case Selector */}
-        <div className="flex flex-col gap-1.5 min-w-[280px]">
-          <label className="text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wider">
-            Active Case Association
-          </label>
-          <select
-            value={activeCase}
-            onChange={(e) => {
-              setActiveCase(e.target.value);
-              selectCase(e.target.value);
-            }}
-            className="bg-[var(--bg-card)] border border-[var(--border)] rounded-xl px-3.5 py-2 text-sm text-cyan-300 font-medium focus:outline-none focus:ring-2 focus:ring-cyan-500/40 focus:border-[var(--primary)]"
-          >
-            <option value="CASE-2025-M3-DATASET">CASE-2025-M3-DATASET — Operation Falcon Web (National Dataset)</option>
-            <option value="CASE-VIDEO-001">CASE-VIDEO-001 — Operation Golden Fleece (Financial Syndicate)</option>
-            <option value="CASE-VIDEO-002">CASE-VIDEO-002 — Operation White Dust (Narcotics Ring)</option>
-            <option value="CASE-VIDEO-003">CASE-VIDEO-003 — Operation Phishnet (Cyber Fraud)</option>
-            <option value="CASE-VIDEO-004">CASE-VIDEO-004 — Operation Iron Shield (Human Trafficking)</option>
-          </select>
-        </div>
-      </div>
-
-      {/* Main Upload Area & File Card */}
+      {/* Upload Workspace */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         
-        {/* Drop Zone */}
-        <div className="lg:col-span-7 flex flex-col">
+        <div className="lg:col-span-8 flex flex-col gap-6">
+          <div>
+          <div className="flex items-center gap-3 mb-2">
+            <div className="p-2.5 rounded-lg bg-blue-50 border border-blue-100 text-[var(--primary)]">
+              <UploadCloud className="w-6 h-6" />
+            </div>
+            <h1 className="text-2xl font-bold text-[var(--text-primary)]">
+              Import Center
+            </h1>
+          </div>
+          <p className="text-[var(--text-secondary)] text-sm max-w-2xl">
+            Upload forensic documents, structured CSV datasets, scanned statements, and evidentiary records into the CrimeNet AI knowledge graph. Automatically extracts entities, generates SHA-256 integrity hashes, and indexes data for the AI Assistant.
+          </p>
+        </div>
+          {/* Drop Zone */}
           <div
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
             onClick={() => fileInputRef.current?.click()}
-            className={`flex-1 min-h-[260px] border-2 border-dashed rounded-2xl flex flex-col items-center justify-center p-8 text-center cursor-pointer transition-all duration-200 ${
+            className={`flex-1 min-h-[300px] border-2 border-dashed rounded-xl flex flex-col items-center justify-center p-8 text-center cursor-pointer transition-all duration-200 ${
               isDragging
-                ? 'border-cyan-400 bg-cyan-950/20 shadow-lg shadow-cyan-500/10'
-                : 'border-[var(--border)] hover:border-[var(--primary)] hover:bg-[var(--bg-card)] bg-[var(--bg-card)]'
+                ? 'border-[var(--primary)] bg-blue-50/50 shadow-sm'
+                : 'border-slate-300 hover:border-[var(--primary)] hover:bg-slate-50 bg-white'
             }`}
           >
             <input
@@ -413,29 +389,37 @@ export const ImportCenterView: React.FC = () => {
               accept=".csv,.pdf,.png,.jpg,.jpeg,.tiff"
               className="hidden"
             />
-            <div className="w-14 h-14 rounded-2xl bg-[var(--surface-cyan)] border border-[var(--primary)] flex items-center justify-center text-[var(--primary)] mb-4 shadow-sm shadow-cyan-500/10">
-              <UploadCloud className="w-7 h-7" />
+            <div className="w-16 h-16 rounded-full bg-blue-50 flex items-center justify-center text-[var(--primary)] mb-4">
+              <UploadCloud className="w-8 h-8" />
             </div>
-            <h3 className="text-base font-semibold text-[var(--text-primary)] mb-1">
+            <h3 className="text-lg font-bold text-[var(--text-primary)] mb-2">
               Select or Drop Evidence File Here
             </h3>
-            <p className="text-xs text-[var(--text-secondary)] mb-4 max-w-md">
-              Supports <span className="text-cyan-300 font-medium">CSV</span> (persons, phone numbers, bank accounts, relationships), <span className="text-cyan-300 font-medium">PDF</span> (selectable &amp; scanned OCR), and <span className="text-cyan-300 font-medium">Images</span>.
+            <p className="text-sm text-[var(--text-secondary)] mb-6 max-w-md">
+              Supports <span className="font-semibold text-slate-700">CSV</span>, <span className="font-semibold text-slate-700">PDF</span>, and <span className="font-semibold text-slate-700">Images</span> (PNG, JPG, TIFF).
             </p>
-            <div className="flex items-center gap-3 text-xs text-[var(--text-secondary)] bg-[var(--bg-card)] px-3 py-1.5 rounded-lg border border-[var(--border)]">
-              <ShieldCheck className="w-4 h-4 text-emerald-400" />
+            <div className="flex items-center gap-2 text-xs font-medium text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-full border border-emerald-200">
+              <ShieldCheck className="w-4 h-4" />
               <span>Max size: 50 MB &bull; SHA-256 Verified &bull; BSA &sect;63 Certified</span>
             </div>
           </div>
         </div>
 
-        {/* Selected File Stage & Preview Panel */}
-        <div className="lg:col-span-5 flex flex-col">
-          <div className="flex-1 bg-[var(--bg-card)] border border-[var(--border)] rounded-2xl p-5 flex flex-col justify-between">
+        <div className="lg:col-span-4 flex flex-col gap-6">
+          {/* Case Context */}
+        <div className="flex flex-col gap-2 bg-white p-5 rounded-xl border border-[var(--border)]">
+          <label className="text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wider flex items-center gap-2">
+            <Database className="w-4 h-4 text-[var(--primary)]" />
+            Active Case Association
+          </label>
+          <CaseSelector onChange={(caseId) => setActiveCase(caseId)} />
+        </div>
+          {/* Selected File Stage & Preview Panel */}
+          <div className="bg-white rounded-xl border border-[var(--border)] shadow-sm flex-1 p-5 flex flex-col justify-between">
             <div>
               <div className="flex items-center justify-between border-b border-[var(--border)] pb-3 mb-4">
-                <span className="text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wider flex items-center gap-2">
-                  <Database className="w-4 h-4 text-[var(--primary)]" /> Staged File Information
+                <span className="text-sm font-bold text-[var(--text-primary)] flex items-center gap-2">
+                  <FileCheck className="w-4 h-4 text-[var(--primary)]" /> Staged File
                 </span>
                 {selectedFile && (
                   <button
@@ -443,17 +427,17 @@ export const ImportCenterView: React.FC = () => {
                       setSelectedFile(null);
                       setCsvValidation(null);
                     }}
-                    className="text-slate-500 hover:text-[var(--text-secondary)] text-xs flex items-center gap-1"
+                    className="text-[var(--text-secondary)] hover:text-slate-700 text-xs flex items-center gap-1"
                   >
-                    <X className="w-3.5 h-3.5" /> Clear
+                    <X className="w-4 h-4" /> Clear
                   </button>
                 )}
               </div>
 
               {selectedFile ? (
                 <div className="space-y-4">
-                  <div className="flex items-start gap-3 p-3.5 bg-[var(--bg-card)] border border-[var(--border)] rounded-xl">
-                    <div className="p-2.5 rounded-lg bg-[var(--surface-cyan)] border border-[var(--primary)] text-[var(--primary)] shrink-0">
+                  <div className="flex items-start gap-3 p-4 bg-slate-50 border border-[var(--border)] rounded-lg">
+                    <div className="p-2 rounded bg-white shadow-sm border border-slate-200 text-[var(--primary)] shrink-0">
                       {selectedFile.name.endsWith('.csv') ? (
                         <FileSpreadsheet className="w-6 h-6" />
                       ) : selectedFile.name.match(/\.(png|jpg|jpeg|tiff|webp)$/i) ? (
@@ -466,10 +450,10 @@ export const ImportCenterView: React.FC = () => {
                       <div className="font-semibold text-sm text-[var(--text-primary)] truncate" title={selectedFile.name}>
                         {selectedFile.name}
                       </div>
-                      <div className="text-xs text-[var(--text-secondary)] mt-0.5 flex items-center gap-2">
+                      <div className="text-xs text-[var(--text-secondary)] mt-1 flex items-center gap-2">
                         <span>{(selectedFile.size / 1024).toFixed(1)} KB</span>
                         <span>&bull;</span>
-                        <span className="uppercase text-[var(--primary)] font-semibold">
+                        <span className="uppercase text-[var(--primary)] font-semibold bg-blue-50 px-1.5 py-0.5 rounded">
                           {selectedFile.name.substring(selectedFile.name.lastIndexOf('.') + 1)}
                         </span>
                       </div>
@@ -478,14 +462,14 @@ export const ImportCenterView: React.FC = () => {
 
                   {/* Image Staged Preview */}
                   {selectedFile.name.match(/\.(png|jpg|jpeg|tiff|webp)$/i) && (
-                    <div className="rounded-xl overflow-hidden border border-[var(--border)] bg-black/40 p-2.5 flex flex-col items-center">
+                    <div className="rounded-lg overflow-hidden border border-[var(--border)] bg-slate-100 p-2 flex flex-col items-center">
                       <img 
                         src={URL.createObjectURL(selectedFile)} 
                         alt="Evidence Preview"
-                        className="max-h-44 w-auto rounded object-contain shadow-md"
+                        className="max-h-40 w-auto rounded object-contain shadow-sm"
                       />
-                      <span className="text-[10px] font-mono text-cyan-400 mt-2 flex items-center gap-1">
-                        <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                      <span className="text-[10px] font-mono text-[var(--text-muted)] mt-2 flex items-center gap-1">
+                        <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
                         Forensic image staged for BSA §63 SHA-256 ingestion
                       </span>
                     </div>
@@ -493,54 +477,54 @@ export const ImportCenterView: React.FC = () => {
 
                   {/* CSV Quick Stats / Preview button */}
                   {csvValidation && (
-                    <div className="bg-[var(--bg-card)] p-3.5 rounded-xl border border-[var(--border)] text-xs space-y-2">
+                    <div className="bg-slate-50 p-4 rounded-lg border border-[var(--border)] text-xs space-y-2.5">
                       <div className="flex items-center justify-between">
-                        <span className="text-[var(--text-secondary)]">Detected Schema:</span>
-                        <span className="font-semibold text-cyan-300 px-2 py-0.5 rounded bg-[var(--surface-cyan)] border border-[var(--primary)]">
+                        <span className="text-[var(--text-secondary)] font-medium">Detected Schema:</span>
+                        <span className="font-semibold text-[var(--primary)] px-2 py-0.5 rounded bg-blue-50 border border-blue-100">
                           {csvValidation.detectedSchema}
                         </span>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-[var(--text-secondary)]">Total Rows:</span>
-                        <span className="text-[var(--text-primary)] font-medium">{csvValidation.totalRows}</span>
+                        <span className="text-[var(--text-secondary)] font-medium">Total Rows:</span>
+                        <span className="text-[var(--text-primary)] font-bold">{csvValidation.totalRows}</span>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-[var(--text-secondary)]">Columns Identified:</span>
-                        <span className="text-[var(--text-primary)] font-medium">{csvValidation.columnNames.length}</span>
+                        <span className="text-[var(--text-secondary)] font-medium">Columns Identified:</span>
+                        <span className="text-[var(--text-primary)] font-bold">{csvValidation.columnNames.length}</span>
                       </div>
 
                       {csvValidation.warnings.length > 0 && (
-                        <div className="p-2 bg-amber-500/10 border border-amber-500/20 rounded text-amber-300 text-[11px] flex items-center gap-1.5 mt-2">
-                          <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                        <div className="p-2 bg-amber-50 border border-amber-200 rounded text-amber-800 text-[11px] flex items-start gap-1.5 mt-2">
+                          <AlertTriangle className="w-4 h-4 shrink-0 text-amber-600" />
                           <span>{csvValidation.warnings[0]}</span>
                         </div>
                       )}
 
                       <button
                         onClick={() => setIsPreviewModalOpen(true)}
-                        className="w-full mt-2 py-1.5 bg-slate-50 hover:bg-slate-200 text-[var(--text-primary)] rounded-lg text-xs font-medium flex items-center justify-center gap-1.5 transition-colors border border-[var(--border)]"
+                        className="w-full mt-3 py-2 bg-white hover:bg-slate-100 text-[var(--text-primary)] rounded shadow-sm text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors border border-[var(--border)]"
                       >
-                        <Eye className="w-3.5 h-3.5 text-[var(--primary)]" /> Preview Dataset Rows &amp; Schema
+                        <Eye className="w-4 h-4 text-[var(--primary)]" /> Preview Dataset Rows &amp; Schema
                       </button>
                     </div>
                   )}
 
                   {!selectedFile.name.endsWith('.csv') && (
-                    <div className="p-3 bg-cyan-950/20 border border-[var(--primary)] rounded-xl text-xs text-[var(--text-secondary)] space-y-1.5">
+                    <div className="p-3 bg-blue-50 border border-blue-100 rounded-lg text-xs space-y-1.5">
                       <div className="font-semibold text-[var(--primary)] flex items-center gap-1.5">
                         <Info className="w-4 h-4" /> Multi-Engine Document Processing
                       </div>
-                      <p className="text-[11px] text-[var(--text-secondary)] leading-relaxed">
+                      <p className="text-[11px] text-slate-700 leading-relaxed">
                         CrimeNet AI extracts selectable text or automatically executes high-resolution OCR, extracts named entities (Persons, Organizations, Accounts), detects relationships, and creates a BSA Section 63 chain of custody evidence record.
                       </p>
                     </div>
                   )}
                 </div>
               ) : (
-                <div className="h-40 flex flex-col items-center justify-center text-center text-slate-500">
-                  <Database className="w-8 h-8 stroke-1 mb-2 text-slate-600" />
-                  <p className="text-xs">No file currently staged.</p>
-                  <p className="text-[11px] text-slate-600 mt-1">Select or drop a file to view schema and preview details.</p>
+                <div className="h-48 flex flex-col items-center justify-center text-center text-[var(--text-secondary)] bg-slate-50 rounded-lg border border-dashed border-slate-200">
+                  <FileText className="w-10 h-10 stroke-1 mb-2 text-[var(--text-secondary)]" />
+                  <p className="text-sm font-medium text-[var(--text-muted)]">No file staged</p>
+                  <p className="text-xs mt-1">Select or drop a file to begin.</p>
                 </div>
               )}
             </div>
@@ -549,19 +533,19 @@ export const ImportCenterView: React.FC = () => {
               <button
                 disabled={!selectedFile || isUploading}
                 onClick={handleUpload}
-                className={`w-full py-2.5 px-4 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all ${
+                className={`w-full py-2.5 px-4 rounded-lg font-bold text-sm flex items-center justify-center gap-2 transition-all ${
                   !selectedFile || isUploading
-                    ? 'bg-slate-50 text-slate-500 cursor-not-allowed border border-[var(--border)]'
-                    : 'bg-[var(--primary)] text-white hover:bg-cyan-400 text-slate-950 shadow-lg shadow-cyan-500/20'
+                    ? 'bg-slate-100 text-[var(--text-secondary)] cursor-not-allowed border border-[var(--border)]'
+                    : 'bg-[var(--primary)] text-[var(--text-primary)] hover:bg-blue-700 shadow-sm'
                 }`}
               >
                 {isUploading ? (
                   <>
-                    <RefreshCw className="w-4 h-4 animate-spin" /> Ingesting &amp; Extracting...
+                    <RefreshCw className="w-4 h-4 animate-spin" /> Ingesting...
                   </>
                 ) : (
                   <>
-                    <UploadCloud className="w-4 h-4" /> Start Ingestion Pipeline
+                    <UploadCloud className="w-4 h-4" /> Start Ingestion
                   </>
                 )}
               </button>
@@ -572,114 +556,117 @@ export const ImportCenterView: React.FC = () => {
 
       {/* Live Ingestion Job Status Tracker (When Active) */}
       {currentJob && (
-        <div className="bg-[var(--bg-card)] border border-[var(--primary)] rounded-2xl p-6 shadow-xl shadow-cyan-500/5 backdrop-blur-md space-y-4">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+        <div className="bg-white rounded-xl border border-[var(--border)] shadow-sm p-6 border-l-4 border-l-[var(--primary)] space-y-5">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-              <div className="flex items-center gap-2.5">
-                <div className="w-3 h-3 rounded-full bg-cyan-400 animate-ping" />
-                <h3 className="text-base font-bold text-[var(--text-primary)]">
-                  Ingestion Job: {currentJob.jobId}
+              <div className="flex items-center gap-3">
+                <div className="relative flex h-3 w-3">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-[var(--primary)]"></span>
+                </div>
+                <h3 className="text-lg font-bold text-[var(--text-primary)]">
+                  Job Status: {currentJob.jobId}
                 </h3>
-                <span className="px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider bg-[var(--surface-cyan)] border border-[var(--primary)] text-cyan-300">
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-blue-50 text-[var(--primary)] border border-blue-200">
                   {currentJob.status}
                 </span>
               </div>
-              <p className="text-xs text-[var(--text-secondary)] mt-1">
-                File: <span className="text-[var(--text-primary)] font-medium">{currentJob.fileName}</span> &bull; Case: <span className="text-[var(--primary)]">{currentJob.caseId}</span>
+              <p className="text-sm text-[var(--text-secondary)] mt-1.5">
+                Processing <span className="font-semibold text-[var(--text-primary)]">{currentJob.fileName}</span> for case <span className="font-semibold text-[var(--primary)]">{currentJob.caseId}</span>
               </p>
             </div>
 
             {currentJob.sha256Hash && (
-              <div className="flex items-center gap-2 bg-[var(--bg-card)] px-3 py-1.5 rounded-xl border border-[var(--border)] text-xs">
-                <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
-                <span className="font-mono text-[var(--text-secondary)] truncate max-w-[200px]" title={currentJob.sha256Hash}>
+              <div className="flex items-center gap-2 bg-slate-50 px-3 py-2 rounded-lg border border-[var(--border)] text-xs">
+                <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span className="font-mono text-slate-600 truncate max-w-[200px]" title={currentJob.sha256Hash}>
                   SHA-256: {currentJob.sha256Hash.slice(0, 16)}...
                 </span>
                 <button
                   onClick={() => copyToClipboard(currentJob.sha256Hash!, 'SHA-256 Hash')}
                   className="text-[var(--text-secondary)] hover:text-[var(--primary)]"
                 >
-                  <Copy className="w-3.5 h-3.5" />
+                  <Copy className="w-4 h-4" />
                 </button>
               </div>
             )}
           </div>
 
           {/* Progress Bar & Stage Tracker */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between text-xs text-[var(--text-secondary)]">
-              <span className="font-medium text-[var(--primary)]">Pipeline Stage: {currentJob.stage}</span>
-              <span>{currentJob.progressPercent}%</span>
+          <div className="space-y-2 bg-slate-50 p-4 rounded-lg border border-[var(--border)]">
+            <div className="flex items-center justify-between text-sm font-semibold">
+              <span className="text-[var(--primary)]">Stage: {currentJob.stage}</span>
+              <span className="text-slate-700">{currentJob.progressPercent}%</span>
             </div>
-            <div className="w-full h-2.5 bg-[var(--bg-card)] rounded-full overflow-hidden border border-[var(--border)]">
+            <div className="w-full h-2.5 bg-slate-200 rounded-full overflow-hidden">
               <div
-                className="h-full bg-gradient-to-r from-cyan-500 via-blue-500 to-indigo-500 transition-all duration-300"
+                className="h-full bg-[var(--primary)] transition-all duration-300"
                 style={{ width: `${currentJob.progressPercent}%` }}
               />
             </div>
           </div>
 
           {/* Extracted Stats Pills */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3 pt-2">
-            <div className="bg-[var(--bg-card)] p-3 rounded-xl border border-[var(--border)] text-center">
-              <div className="text-[11px] font-semibold text-[var(--text-secondary)] uppercase">Records Read</div>
-              <div className="text-lg font-bold text-[var(--text-primary)] mt-0.5">{currentJob.recordsProcessed}</div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-4">
+            <div className="bg-white p-3 rounded-lg border border-[var(--border)] shadow-sm text-center">
+              <div className="text-[11px] font-bold text-[var(--text-secondary)] uppercase tracking-wide">Records Read</div>
+              <div className="text-xl font-black text-[var(--text-primary)] mt-1">{currentJob.recordsProcessed}</div>
             </div>
-            <div className="bg-[var(--bg-card)] p-3 rounded-xl border border-[var(--border)] text-center">
-              <div className="text-[11px] font-semibold text-emerald-400 uppercase">Entities Created</div>
-              <div className="text-lg font-bold text-emerald-400 mt-0.5">{currentJob.recordsCreated || currentJob.entitiesExtracted}</div>
+            <div className="bg-white p-3 rounded-lg border border-emerald-200 shadow-sm text-center bg-emerald-50/30">
+              <div className="text-[11px] font-bold text-emerald-700 uppercase tracking-wide">Entities Created</div>
+              <div className="text-xl font-black text-emerald-700 mt-1">{currentJob.recordsCreated || currentJob.entitiesExtracted}</div>
             </div>
-            <div className="bg-[var(--bg-card)] p-3 rounded-xl border border-[var(--border)] text-center">
-              <div className="text-[11px] font-semibold text-[var(--primary)] uppercase">Persons</div>
-              <div className="text-lg font-bold text-cyan-300 mt-0.5">
+            <div className="bg-white p-3 rounded-lg border border-[var(--border)] shadow-sm text-center">
+              <div className="text-[11px] font-bold text-[var(--text-secondary)] uppercase tracking-wide">Persons</div>
+              <div className="text-xl font-black text-[var(--primary)] mt-1">
                 {currentJob.extractionResults?.personsExtracted || 0}
               </div>
             </div>
-            <div className="bg-[var(--bg-card)] p-3 rounded-xl border border-[var(--border)] text-center">
-              <div className="text-[11px] font-semibold text-indigo-400 uppercase">Phones</div>
-              <div className="text-lg font-bold text-indigo-300 mt-0.5">
+            <div className="bg-white p-3 rounded-lg border border-[var(--border)] shadow-sm text-center">
+              <div className="text-[11px] font-bold text-[var(--text-secondary)] uppercase tracking-wide">Phones</div>
+              <div className="text-xl font-black text-[var(--primary)] mt-1">
                 {currentJob.extractionResults?.phonesExtracted || 0}
               </div>
             </div>
-            <div className="bg-[var(--bg-card)] p-3 rounded-xl border border-[var(--border)] text-center">
-              <div className="text-[11px] font-semibold text-amber-400 uppercase">Accounts</div>
-              <div className="text-lg font-bold text-amber-300 mt-0.5">
+            <div className="bg-white p-3 rounded-lg border border-[var(--border)] shadow-sm text-center">
+              <div className="text-[11px] font-bold text-[var(--text-secondary)] uppercase tracking-wide">Accounts</div>
+              <div className="text-xl font-black text-[var(--primary)] mt-1">
                 {currentJob.extractionResults?.bankAccountsExtracted || 0}
               </div>
             </div>
-            <div className="bg-[var(--bg-card)] p-3 rounded-xl border border-[var(--border)] text-center">
-              <div className="text-[11px] font-semibold text-purple-400 uppercase">Relationships</div>
-              <div className="text-lg font-bold text-purple-300 mt-0.5">
+            <div className="bg-white p-3 rounded-lg border border-[var(--border)] shadow-sm text-center">
+              <div className="text-[11px] font-bold text-[var(--text-secondary)] uppercase tracking-wide">Relationships</div>
+              <div className="text-xl font-black text-purple-600 mt-1">
                 {currentJob.relationshipsExtracted || 0}
               </div>
             </div>
           </div>
 
           {currentJob.status === 'COMPLETED' && (
-            <div className="flex flex-wrap items-center gap-3 pt-2">
+            <div className="flex flex-wrap items-center gap-3 pt-3 border-t border-[var(--border)]">
               <button
                 onClick={() => setView('graph')}
-                className="px-3.5 py-1.5 rounded-lg bg-[var(--surface-cyan)] hover:bg-[var(--surface-cyan)] border border-[var(--primary)] text-cyan-300 text-xs font-semibold flex items-center gap-1.5 transition-colors"
+                className="btn-primary text-xs flex items-center gap-2"
               >
-                <Share2 className="w-3.5 h-3.5" /> View in Network Graph
+                <Share2 className="w-4 h-4" /> View in Network Graph
               </button>
               <button
                 onClick={() => setView('search')}
-                className="px-3.5 py-1.5 rounded-lg bg-slate-50 hover:bg-slate-200 border border-[var(--border)] text-[var(--text-primary)] text-xs font-semibold flex items-center gap-1.5 transition-colors"
+                className="btn-secondary text-xs flex items-center gap-2"
               >
-                <Search className="w-3.5 h-3.5 text-[var(--primary)]" /> Search Ingested Entities
+                <Search className="w-4 h-4 text-[var(--primary)]" /> Search Entities
               </button>
               <button
                 onClick={() => setView('assistant')}
-                className="px-3.5 py-1.5 rounded-lg bg-slate-50 hover:bg-slate-200 border border-[var(--border)] text-[var(--text-primary)] text-xs font-semibold flex items-center gap-1.5 transition-colors"
+                className="btn-secondary text-xs flex items-center gap-2"
               >
-                <Bot className="w-3.5 h-3.5 text-indigo-400" /> Query Grounded AI Assistant
+                <Bot className="w-4 h-4 text-indigo-600" /> Query AI Assistant
               </button>
               <button
                 onClick={() => setSelectedJobDetails(currentJob)}
-                className="px-3.5 py-1.5 rounded-lg bg-slate-50 hover:bg-slate-200 border border-[var(--border)] text-[var(--text-primary)] text-xs font-semibold flex items-center gap-1.5 transition-colors ml-auto"
+                className="btn-secondary text-xs flex items-center gap-2 ml-auto"
               >
-                <Eye className="w-3.5 h-3.5 text-emerald-400" /> Full Audit Dossier
+                <Eye className="w-4 h-4 text-emerald-600" /> Full Audit Dossier
               </button>
             </div>
           )}
@@ -687,20 +674,20 @@ export const ImportCenterView: React.FC = () => {
       )}
 
       {/* Recent Ingestions Table */}
-      <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-2xl overflow-hidden shadow-xl">
-        <div className="p-5 border-b border-[var(--border)] flex items-center justify-between">
+      <div className="bg-white rounded-xl border border-[var(--border)] shadow-sm overflow-hidden">
+        <div className="p-5 border-b border-[var(--border)] flex items-center justify-between bg-slate-50/50">
           <div>
-            <h3 className="text-base font-bold text-[var(--text-primary)] flex items-center gap-2">
-              <Clock className="w-4 h-4 text-[var(--primary)]" /> Case Evidence &amp; Ingestion History
+            <h3 className="text-lg font-bold text-[var(--text-primary)] flex items-center gap-2">
+              <Clock className="w-5 h-5 text-[var(--primary)]" /> Ingestion History
             </h3>
-            <p className="text-xs text-[var(--text-secondary)] mt-0.5">
-              Verified files ingested into case {activeCase} with cryptographic hash records.
+            <p className="text-sm text-[var(--text-secondary)] mt-1">
+              Verified files ingested into case <span className="font-semibold text-[var(--text-primary)]">{activeCase}</span>
             </p>
           </div>
           <button
             onClick={fetchRecentJobs}
             disabled={isLoadingJobs}
-            className="p-2 rounded-xl bg-slate-50 hover:bg-slate-200 text-[var(--text-secondary)] transition-colors border border-[var(--border)]"
+            className="p-2 rounded bg-white hover:bg-slate-100 text-slate-600 transition-colors border border-[var(--border)] shadow-sm"
             title="Refresh history"
           >
             <RefreshCw className={`w-4 h-4 ${isLoadingJobs ? 'animate-spin' : ''}`} />
@@ -709,52 +696,52 @@ export const ImportCenterView: React.FC = () => {
 
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
-            <thead className="bg-[var(--bg-card)] text-[11px] font-bold uppercase tracking-wider text-[var(--text-secondary)] border-b border-[var(--border)]">
+            <thead className="bg-slate-50 text-[11px] font-bold uppercase tracking-wider text-[var(--text-secondary)] border-b border-[var(--border)]">
               <tr>
-                <th className="py-3 px-4">Job ID</th>
-                <th className="py-3 px-4">File Name</th>
-                <th className="py-3 px-4">Doc Type / Schema</th>
-                <th className="py-3 px-4">Entities Extracted</th>
-                <th className="py-3 px-4">SHA-256 Hash</th>
-                <th className="py-3 px-4">Status</th>
-                <th className="py-3 px-4">Timestamp</th>
-                <th className="py-3 px-4 text-right">Actions</th>
+                <th className="py-3 px-5">Job ID</th>
+                <th className="py-3 px-5">File Name</th>
+                <th className="py-3 px-5">Type</th>
+                <th className="py-3 px-5">Entities</th>
+                <th className="py-3 px-5">SHA-256 Hash</th>
+                <th className="py-3 px-5">Status</th>
+                <th className="py-3 px-5">Timestamp</th>
+                <th className="py-3 px-5 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/80">
+            <tbody className="divide-y divide-[var(--border)] bg-white">
               {recentJobs.length > 0 ? (
                 recentJobs.map((job) => (
                   <tr key={job.jobId} className="hover:bg-slate-50 transition-colors">
-                    <td className="py-3 px-4 font-mono text-xs text-[var(--text-secondary)]">
+                    <td className="py-3 px-5 font-mono text-xs text-[var(--text-muted)]">
                       {job.jobId}
                     </td>
-                    <td className="py-3 px-4">
+                    <td className="py-3 px-5">
                       <div className="flex items-center gap-2">
                         {job.docType === 'CSV' ? (
                           <FileSpreadsheet className="w-4 h-4 text-[var(--primary)] shrink-0" />
                         ) : (
-                          <FileText className="w-4 h-4 text-blue-400 shrink-0" />
+                          <FileText className="w-4 h-4 text-[var(--secondary)] shrink-0" />
                         )}
-                        <span className="font-medium text-[var(--text-primary)] truncate max-w-[180px]">
+                        <span className="font-semibold text-[var(--text-primary)] truncate max-w-[180px]">
                           {job.fileName}
                         </span>
                       </div>
                     </td>
-                    <td className="py-3 px-4 text-xs">
-                      <span className="px-2 py-0.5 rounded bg-slate-50 text-[var(--text-secondary)] border border-[var(--border)] font-mono">
+                    <td className="py-3 px-5 text-xs">
+                      <span className="px-2 py-1 rounded bg-slate-100 text-slate-700 border border-slate-200 font-semibold">
                         {job.schemaDetected || job.docType}
                       </span>
                     </td>
-                    <td className="py-3 px-4 text-xs font-semibold text-emerald-400">
-                      {job.entitiesExtracted || job.recordsCreated || 0} entities
+                    <td className="py-3 px-5 text-xs font-bold text-emerald-600">
+                      {job.entitiesExtracted || job.recordsCreated || 0}
                     </td>
-                    <td className="py-3 px-4 text-xs font-mono text-[var(--text-secondary)]">
+                    <td className="py-3 px-5 text-xs font-mono text-[var(--text-muted)]">
                       {job.sha256Hash ? (
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex items-center gap-2">
                           <span title={job.sha256Hash}>{job.sha256Hash.slice(0, 12)}...</span>
                           <button
                             onClick={() => copyToClipboard(job.sha256Hash!, 'SHA-256 Hash')}
-                            className="text-slate-500 hover:text-[var(--primary)]"
+                            className="text-[var(--text-secondary)] hover:text-[var(--primary)]"
                           >
                             <Copy className="w-3 h-3" />
                           </button>
@@ -763,28 +750,28 @@ export const ImportCenterView: React.FC = () => {
                         '—'
                       )}
                     </td>
-                    <td className="py-3 px-4">
+                    <td className="py-3 px-5">
                       <span
-                        className={`px-2 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider inline-flex items-center gap-1 ${
+                        className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider inline-flex items-center gap-1.5 ${
                           (job.status || '').toUpperCase() === 'COMPLETED'
-                            ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                             : (job.status || '').toUpperCase() === 'FAILED'
-                            ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
-                            : 'bg-amber-500/10 text-amber-400 border border-amber-500/20 animate-pulse'
+                            ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                            : 'bg-amber-50 text-amber-700 border border-amber-200'
                         }`}
                       >
-                        {(job.status || '').toUpperCase() === 'COMPLETED' && <CheckCircle2 className="w-3 h-3" />}
-                        {(job.status || '').toUpperCase() === 'FAILED' && <AlertTriangle className="w-3 h-3" />}
+                        {(job.status || '').toUpperCase() === 'COMPLETED' && <CheckCircle2 className="w-3.5 h-3.5" />}
+                        {(job.status || '').toUpperCase() === 'FAILED' && <AlertTriangle className="w-3.5 h-3.5" />}
                         {job.status}
                       </span>
                     </td>
-                    <td className="py-3 px-4 text-xs text-[var(--text-secondary)] whitespace-nowrap">
+                    <td className="py-3 px-5 text-xs text-[var(--text-secondary)] whitespace-nowrap">
                       {job.startedAt ? new Date(job.startedAt).toLocaleString() : '—'}
                     </td>
-                    <td className="py-3 px-4 text-right">
+                    <td className="py-3 px-5 text-right">
                       <button
                         onClick={() => setSelectedJobDetails(job)}
-                        className="px-2.5 py-1 rounded bg-slate-50 hover:bg-slate-200 text-xs text-[var(--text-primary)] border border-[var(--border)] transition-colors"
+                        className="btn-secondary px-3 py-1 text-xs"
                       >
                         Details
                       </button>
@@ -793,8 +780,11 @@ export const ImportCenterView: React.FC = () => {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={8} className="py-12 text-center text-slate-500 text-xs">
-                    No ingestion jobs recorded for case {activeCase}. Upload a file above to begin.
+                  <td colSpan={8} className="py-12 text-center text-[var(--text-muted)] text-sm">
+                    <div className="flex flex-col items-center justify-center">
+                      <Database className="w-8 h-8 text-[var(--text-secondary)] mb-2" />
+                      No ingestion jobs recorded for case {activeCase}.
+                    </div>
                   </td>
                 </tr>
               )}
@@ -805,67 +795,67 @@ export const ImportCenterView: React.FC = () => {
 
       {/* CSV Preview Modal */}
       {isPreviewModalOpen && csvValidation && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-          <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-2xl w-full max-w-4xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
-            <div className="p-5 border-b border-[var(--border)] flex items-center justify-between">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-navy-950/40 backdrop-blur-sm">
+          <div className="bg-white border border-[var(--border)] rounded-xl w-full max-w-4xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
+            <div className="p-5 border-b border-[var(--border)] flex items-center justify-between bg-slate-50">
               <div>
-                <h3 className="text-base font-bold text-[var(--text-primary)] flex items-center gap-2">
+                <h3 className="text-lg font-bold text-[var(--text-primary)] flex items-center gap-2">
                   <FileSpreadsheet className="w-5 h-5 text-[var(--primary)]" />
                   Dataset Preview: {csvValidation.fileName}
                 </h3>
-                <p className="text-xs text-[var(--text-secondary)] mt-0.5">
-                  Schema Classification: <span className="text-cyan-300 font-semibold">{csvValidation.detectedSchema}</span> &bull; {csvValidation.totalRows} Total Rows
+                <p className="text-sm text-[var(--text-secondary)] mt-1">
+                  Schema Classification: <span className="text-[var(--primary)] font-semibold">{csvValidation.detectedSchema}</span> &bull; {csvValidation.totalRows} Total Rows
                 </p>
               </div>
               <button
                 onClick={() => setIsPreviewModalOpen(false)}
-                className="p-1 rounded-lg text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-slate-50"
+                className="p-1.5 rounded-lg text-[var(--text-secondary)] hover:text-slate-700 hover:bg-slate-200"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="p-6 overflow-y-auto space-y-4">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <div className="bg-[var(--bg-card)] p-3 rounded-xl border border-[var(--border)]">
-                  <span className="text-[11px] text-[var(--text-secondary)] block font-semibold uppercase">Total Rows</span>
-                  <span className="text-lg font-bold text-[var(--text-primary)]">{csvValidation.totalRows}</span>
+            <div className="p-6 overflow-y-auto space-y-6">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="bg-slate-50 p-4 rounded-lg border border-[var(--border)]">
+                  <span className="text-xs text-[var(--text-secondary)] block font-bold uppercase tracking-wide">Total Rows</span>
+                  <span className="text-2xl font-black text-[var(--text-primary)]">{csvValidation.totalRows}</span>
                 </div>
-                <div className="bg-[var(--bg-card)] p-3 rounded-xl border border-[var(--border)]">
-                  <span className="text-[11px] text-[var(--text-secondary)] block font-semibold uppercase">Valid Rows</span>
-                  <span className="text-lg font-bold text-emerald-400">{csvValidation.validRows}</span>
+                <div className="bg-emerald-50/50 p-4 rounded-lg border border-emerald-200">
+                  <span className="text-xs text-emerald-700 block font-bold uppercase tracking-wide">Valid Rows</span>
+                  <span className="text-2xl font-black text-emerald-600">{csvValidation.validRows}</span>
                 </div>
-                <div className="bg-[var(--bg-card)] p-3 rounded-xl border border-[var(--border)]">
-                  <span className="text-[11px] text-[var(--text-secondary)] block font-semibold uppercase">Duplicate Rows</span>
-                  <span className="text-lg font-bold text-amber-400">{csvValidation.duplicateRows}</span>
+                <div className="bg-amber-50/50 p-4 rounded-lg border border-amber-200">
+                  <span className="text-xs text-amber-700 block font-bold uppercase tracking-wide">Duplicate Rows</span>
+                  <span className="text-2xl font-black text-amber-600">{csvValidation.duplicateRows}</span>
                 </div>
-                <div className="bg-[var(--bg-card)] p-3 rounded-xl border border-[var(--border)]">
-                  <span className="text-[11px] text-[var(--text-secondary)] block font-semibold uppercase">Columns Detected</span>
-                  <span className="text-lg font-bold text-[var(--primary)]">{csvValidation.columnNames.length}</span>
+                <div className="bg-blue-50/50 p-4 rounded-lg border border-blue-200">
+                  <span className="text-xs text-[var(--primary)] block font-bold uppercase tracking-wide">Columns Detected</span>
+                  <span className="text-2xl font-black text-[var(--primary)]">{csvValidation.columnNames.length}</span>
                 </div>
               </div>
 
               {/* Sample Rows Table */}
               <div>
-                <h4 className="text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wider mb-2">
+                <h4 className="text-sm font-bold text-[var(--text-primary)] mb-3">
                   Sample Data Rows (First {csvValidation.sampleRows.length})
                 </h4>
-                <div className="border border-[var(--border)] rounded-xl overflow-x-auto bg-[var(--bg-card)]">
-                  <table className="w-full text-left text-xs">
-                    <thead className="bg-[var(--bg-card)] text-[var(--text-secondary)] border-b border-[var(--border)] font-mono">
+                <div className="border border-[var(--border)] rounded-lg overflow-x-auto bg-white shadow-sm">
+                  <table className="w-full text-left text-sm">
+                    <thead className="bg-slate-50 text-[var(--text-secondary)] border-b border-[var(--border)] font-semibold">
                       <tr>
                         {csvValidation.columnNames.map((col, idx) => (
-                          <th key={idx} className="py-2.5 px-3 whitespace-nowrap">
+                          <th key={idx} className="py-3 px-4 whitespace-nowrap border-r last:border-r-0 border-[var(--border)]">
                             {col}
                           </th>
                         ))}
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-800/60 font-sans">
+                    <tbody className="divide-y divide-[var(--border)]">
                       {csvValidation.sampleRows.map((row, rIdx) => (
-                        <tr key={rIdx} className="hover:bg-[var(--bg-card)]">
+                        <tr key={rIdx} className="hover:bg-slate-50">
                           {csvValidation.columnNames.map((col, cIdx) => (
-                            <td key={cIdx} className="py-2 px-3 text-[var(--text-secondary)] whitespace-nowrap">
+                            <td key={cIdx} className="py-2.5 px-4 text-slate-700 whitespace-nowrap border-r last:border-r-0 border-[var(--border)]">
                               {String(row[col] ?? '—')}
                             </td>
                           ))}
@@ -877,10 +867,10 @@ export const ImportCenterView: React.FC = () => {
               </div>
             </div>
 
-            <div className="p-4 border-t border-[var(--border)] flex justify-end gap-3 bg-[var(--bg-card)]">
+            <div className="p-4 border-t border-[var(--border)] flex justify-end gap-3 bg-slate-50">
               <button
                 onClick={() => setIsPreviewModalOpen(false)}
-                className="px-4 py-2 bg-slate-50 hover:bg-slate-200 text-[var(--text-primary)] rounded-xl text-xs font-medium"
+                className="btn-secondary"
               >
                 Close Preview
               </button>
@@ -891,54 +881,54 @@ export const ImportCenterView: React.FC = () => {
 
       {/* Job Details Modal */}
       {selectedJobDetails && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-          <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-2xl w-full max-w-3xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
-            <div className="p-5 border-b border-[var(--border)] flex items-center justify-between">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-navy-950/40 backdrop-blur-sm">
+          <div className="bg-white border border-[var(--border)] rounded-xl w-full max-w-3xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
+            <div className="p-5 border-b border-[var(--border)] flex items-center justify-between bg-slate-50">
               <div>
-                <h3 className="text-base font-bold text-[var(--text-primary)] flex items-center gap-2">
-                  <ShieldCheck className="w-5 h-5 text-emerald-400" />
+                <h3 className="text-lg font-bold text-[var(--text-primary)] flex items-center gap-2">
+                  <ShieldCheck className="w-5 h-5 text-emerald-600" />
                   Evidence Ingestion Record: {selectedJobDetails.jobId}
                 </h3>
-                <p className="text-xs text-[var(--text-secondary)] mt-0.5">
-                  File: <span className="text-[var(--text-primary)]">{selectedJobDetails.fileName}</span> &bull; Status: <span className="text-[var(--primary)] font-semibold">{selectedJobDetails.status}</span>
+                <p className="text-sm text-[var(--text-secondary)] mt-1">
+                  File: <span className="font-semibold text-[var(--text-primary)]">{selectedJobDetails.fileName}</span> &bull; Status: <span className="text-[var(--primary)] font-bold">{selectedJobDetails.status}</span>
                 </p>
               </div>
               <button
                 onClick={() => setSelectedJobDetails(null)}
-                className="p-1 rounded-lg text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-slate-50"
+                className="p-1.5 rounded-lg text-[var(--text-secondary)] hover:text-slate-700 hover:bg-slate-200"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="p-6 overflow-y-auto space-y-5 text-xs">
+            <div className="p-6 overflow-y-auto space-y-6 text-sm">
               {/* Provenance & Crypto */}
-              <div className="p-4 bg-[var(--bg-card)] rounded-xl border border-[var(--border)] space-y-2.5">
-                <div className="font-bold text-[var(--text-primary)] uppercase tracking-wider text-[11px] flex items-center gap-2">
+              <div className="p-5 bg-slate-50 rounded-lg border border-[var(--border)] space-y-3">
+                <div className="font-bold text-[var(--text-primary)] uppercase tracking-wider text-xs flex items-center gap-2 pb-2 border-b border-[var(--border)]">
                   <FileCheck className="w-4 h-4 text-[var(--primary)]" /> Provenance &amp; Forensic Integrity (M6/BSA §63)
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-[var(--text-secondary)] pt-1">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-slate-600 pt-1">
                   <div>
-                    <span className="text-slate-500 block">SHA-256 Bitstream Hash:</span>
-                    <span className="font-mono text-cyan-300 break-all select-all">
+                    <span className="text-[var(--text-muted)] block text-xs font-semibold uppercase mb-1">SHA-256 Bitstream Hash:</span>
+                    <span className="font-mono text-slate-700 font-bold break-all bg-white px-2 py-1 border rounded inline-block">
                       {selectedJobDetails.sha256Hash || 'Calculated on ingestion'}
                     </span>
                   </div>
                   <div>
-                    <span className="text-slate-500 block">Evidence Locker ID:</span>
-                    <span className="font-mono text-emerald-300">
+                    <span className="text-[var(--text-muted)] block text-xs font-semibold uppercase mb-1">Evidence Locker ID:</span>
+                    <span className="font-mono text-emerald-600 font-bold bg-emerald-50 px-2 py-1 border border-emerald-100 rounded inline-block">
                       {selectedJobDetails.evidenceId || 'EVD-PENDING'}
                     </span>
                   </div>
                   <div>
-                    <span className="text-slate-500 block">Ingested By:</span>
-                    <span className="text-[var(--text-primary)]">
+                    <span className="text-[var(--text-muted)] block text-xs font-semibold uppercase mb-1">Ingested By:</span>
+                    <span className="text-[var(--text-primary)] font-medium">
                       {selectedJobDetails.sourceProvenance?.uploadedBy || 'Inspector Rajesh Kumar'}
                     </span>
                   </div>
                   <div>
-                    <span className="text-slate-500 block">Timestamp:</span>
-                    <span className="text-[var(--text-primary)]">
+                    <span className="text-[var(--text-muted)] block text-xs font-semibold uppercase mb-1">Timestamp:</span>
+                    <span className="text-[var(--text-primary)] font-medium">
                       {selectedJobDetails.startedAt ? new Date(selectedJobDetails.startedAt).toUTCString() : '—'}
                     </span>
                   </div>
@@ -947,20 +937,20 @@ export const ImportCenterView: React.FC = () => {
 
               {/* Photographic Asset Preview if Image Evidence */}
               {(selectedJobDetails.docType === 'IMAGE_EVIDENCE' || (selectedJobDetails.fileName && selectedJobDetails.fileName.match(/\.(png|jpg|jpeg|tiff|webp)$/i))) && (
-                <div className="p-4 bg-[var(--bg-card)] rounded-xl border border-[var(--border)] space-y-2.5">
-                  <div className="font-bold text-[var(--text-primary)] uppercase tracking-wider text-[11px] flex items-center justify-between">
+                <div className="p-5 bg-slate-50 rounded-lg border border-[var(--border)] space-y-3">
+                  <div className="font-bold text-[var(--text-primary)] uppercase tracking-wider text-xs flex items-center justify-between pb-2 border-b border-[var(--border)]">
                     <span className="flex items-center gap-2">
                       <ImageIcon className="w-4 h-4 text-[var(--primary)]" /> Forensic Photographic Asset
                     </span>
-                    <span className="text-emerald-400 font-mono text-[10px] px-2 py-0.5 rounded bg-emerald-950/60 border border-emerald-800">
+                    <span className="text-emerald-700 font-mono text-[10px] px-2 py-0.5 rounded bg-emerald-100 border border-emerald-200">
                       SHA-256 Validated
                     </span>
                   </div>
-                  <div className="rounded-xl overflow-hidden border border-[var(--border)] bg-black/50 p-2 flex items-center justify-center min-h-[160px]">
+                  <div className="rounded-lg overflow-hidden border border-slate-200 bg-slate-200 p-2 flex items-center justify-center min-h-[160px]">
                     <img 
                       src={`${API_BASE}/evidence/${selectedJobDetails.evidenceId}/file`}
                       alt={selectedJobDetails.fileName}
-                      className="max-h-64 w-auto max-w-full rounded object-contain shadow-lg"
+                      className="max-h-64 w-auto max-w-full rounded shadow-sm"
                       onError={(e) => {
                         (e.target as HTMLElement).style.display = 'none';
                       }}
@@ -971,31 +961,31 @@ export const ImportCenterView: React.FC = () => {
 
               {/* Extraction Breakdown */}
               <div>
-                <h4 className="font-bold text-[var(--text-secondary)] uppercase tracking-wider text-[11px] mb-2.5">
+                <h4 className="font-bold text-[var(--text-primary)] mb-3">
                   Extracted Entities Breakdown
                 </h4>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  <div className="bg-[var(--bg-card)] p-3 rounded-xl border border-[var(--border)]">
-                    <span className="text-slate-500 block">Persons</span>
-                    <span className="text-base font-bold text-[var(--primary)]">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                  <div className="bg-white p-4 rounded-lg border border-[var(--border)] shadow-sm text-center">
+                    <span className="text-xs text-[var(--text-secondary)] font-bold uppercase tracking-wide block mb-1">Persons</span>
+                    <span className="text-2xl font-black text-[var(--primary)]">
                       {selectedJobDetails.extractionResults?.personsExtracted || 0}
                     </span>
                   </div>
-                  <div className="bg-[var(--bg-card)] p-3 rounded-xl border border-[var(--border)]">
-                    <span className="text-slate-500 block">Phones</span>
-                    <span className="text-base font-bold text-indigo-400">
+                  <div className="bg-white p-4 rounded-lg border border-[var(--border)] shadow-sm text-center">
+                    <span className="text-xs text-[var(--text-secondary)] font-bold uppercase tracking-wide block mb-1">Phones</span>
+                    <span className="text-2xl font-black text-indigo-600">
                       {selectedJobDetails.extractionResults?.phonesExtracted || 0}
                     </span>
                   </div>
-                  <div className="bg-[var(--bg-card)] p-3 rounded-xl border border-[var(--border)]">
-                    <span className="text-slate-500 block">Bank Accounts</span>
-                    <span className="text-base font-bold text-amber-400">
+                  <div className="bg-white p-4 rounded-lg border border-[var(--border)] shadow-sm text-center">
+                    <span className="text-xs text-[var(--text-secondary)] font-bold uppercase tracking-wide block mb-1">Accounts</span>
+                    <span className="text-2xl font-black text-amber-600">
                       {selectedJobDetails.extractionResults?.bankAccountsExtracted || 0}
                     </span>
                   </div>
-                  <div className="bg-[var(--bg-card)] p-3 rounded-xl border border-[var(--border)]">
-                    <span className="text-slate-500 block">Organizations</span>
-                    <span className="text-base font-bold text-purple-400">
+                  <div className="bg-white p-4 rounded-lg border border-[var(--border)] shadow-sm text-center">
+                    <span className="text-xs text-[var(--text-secondary)] font-bold uppercase tracking-wide block mb-1">Organizations</span>
+                    <span className="text-2xl font-black text-purple-600">
                       {selectedJobDetails.extractionResults?.organizationsExtracted || 0}
                     </span>
                   </div>
@@ -1005,26 +995,26 @@ export const ImportCenterView: React.FC = () => {
               {/* Sample Extracted Entities */}
               {selectedJobDetails.extractedEntitiesList && selectedJobDetails.extractedEntitiesList.length > 0 && (
                 <div>
-                  <h4 className="font-bold text-[var(--text-secondary)] uppercase tracking-wider text-[11px] mb-2">
+                  <h4 className="font-bold text-[var(--text-primary)] mb-3">
                     Sample Ingested Entities
                   </h4>
-                  <div className="border border-[var(--border)] rounded-xl overflow-hidden bg-[var(--bg-card)]">
-                    <table className="w-full text-left text-xs">
-                      <thead className="bg-[var(--bg-card)] text-[var(--text-secondary)] border-b border-[var(--border)]">
+                  <div className="border border-[var(--border)] rounded-lg overflow-hidden bg-white shadow-sm">
+                    <table className="w-full text-left text-sm">
+                      <thead className="bg-slate-50 text-[var(--text-secondary)] border-b border-[var(--border)] font-semibold">
                         <tr>
-                          <th className="py-2 px-3">Entity ID</th>
-                          <th className="py-2 px-3">Type</th>
-                          <th className="py-2 px-3">Name / Value</th>
-                          <th className="py-2 px-3">Confidence</th>
+                          <th className="py-2.5 px-4">Entity ID</th>
+                          <th className="py-2.5 px-4">Type</th>
+                          <th className="py-2.5 px-4">Name / Value</th>
+                          <th className="py-2.5 px-4">Confidence</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-slate-800/60">
+                      <tbody className="divide-y divide-[var(--border)]">
                         {selectedJobDetails.extractedEntitiesList.slice(0, 5).map((e: any, idx: number) => (
-                          <tr key={idx}>
-                            <td className="py-2 px-3 font-mono text-cyan-300">{e.id}</td>
-                            <td className="py-2 px-3 text-[var(--text-secondary)]">{e.entityType || e.type}</td>
-                            <td className="py-2 px-3 text-[var(--text-primary)] font-medium">{e.canonicalName || e.name}</td>
-                            <td className="py-2 px-3 text-emerald-400 font-mono">
+                          <tr key={idx} className="hover:bg-slate-50">
+                            <td className="py-2.5 px-4 font-mono text-[var(--text-muted)] text-xs">{e.id}</td>
+                            <td className="py-2.5 px-4 text-[var(--text-secondary)] font-medium">{e.entityType || e.type}</td>
+                            <td className="py-2.5 px-4 text-[var(--text-primary)] font-bold">{e.canonicalName || e.name}</td>
+                            <td className="py-2.5 px-4 text-emerald-600 font-mono text-xs font-semibold">
                               {((e.confidence || 0.95) * 100).toFixed(0)}%
                             </td>
                           </tr>
@@ -1036,10 +1026,10 @@ export const ImportCenterView: React.FC = () => {
               )}
             </div>
 
-            <div className="p-4 border-t border-[var(--border)] flex justify-end gap-3 bg-[var(--bg-card)]">
+            <div className="p-4 border-t border-[var(--border)] flex justify-end gap-3 bg-slate-50">
               <button
                 onClick={() => setSelectedJobDetails(null)}
-                className="px-4 py-2 bg-slate-50 hover:bg-slate-200 text-[var(--text-primary)] rounded-xl text-xs font-medium"
+                className="btn-secondary"
               >
                 Close Dossier
               </button>

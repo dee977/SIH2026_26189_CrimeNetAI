@@ -7,30 +7,32 @@ from neo4j import GraphDatabase
 from sqlalchemy.orm import Session
 from app.database import SessionLocal
 from app.models import CaseModel, EvidenceModel
+from app.services.supabase_service import get_supabase_storage_service
 
 class CaseService:
     def __init__(self):
         self.driver = None
 
     def _get_case_counts(self, db: Session, case_id: str) -> Dict[str, int]:
-        from app.models import EvidenceModel, EntityModel, RelationshipModel
+        from app.models import EvidenceModel, EntityModel, RelationshipModel, AlertModel, CaseNoteModel, CaseMembershipModel, IngestJobModel
         ev_count = db.query(EvidenceModel).filter(EvidenceModel.case_id == case_id).count()
         ent_count = db.query(EntityModel).filter(EntityModel.case_id == case_id).count()
         rel_count = db.query(RelationshipModel).filter(RelationshipModel.case_id == case_id).count()
-        
-        # If this case has no distinct entities attached, provide global count or reasonable baseline
-        if ent_count == 0:
-            total_ents = db.query(EntityModel).count()
-            ent_count = total_ents if total_ents > 0 else 25
-        if rel_count == 0:
-            total_rels = db.query(RelationshipModel).count()
-            rel_count = total_rels if total_rels > 0 else 18
+        alert_count = db.query(AlertModel).filter(AlertModel.case_id == case_id).count()
+        note_count = db.query(CaseNoteModel).filter(CaseNoteModel.case_id == case_id).count()
+        team_count = db.query(CaseMembershipModel).filter(CaseMembershipModel.case_id == case_id).count()
+        import_count = db.query(IngestJobModel).filter(IngestJobModel.case_id == case_id).count()
         
         return {
-            'evidenceCount': max(ev_count, 1),
+            'evidenceCount': ev_count,
             'entityCount': ent_count,
             'relationshipCount': rel_count,
-            'reportCount': 3
+            'alertCount': alert_count,
+            'noteCount': note_count,
+            'teamCount': team_count,
+            'importCount': import_count,
+            'reportCount': 0, # dynamic if report model exists
+            'timelineEventCount': 0 # backend fallback
         }
 
     def _create_in_neo4j(self, data):
@@ -91,6 +93,10 @@ class CaseService:
                 'policeStation': case.police_station,
                 'createdAt': case.created_at.isoformat() if case.created_at else None,
                 'updatedAt': case.updated_at.isoformat() if case.updated_at else None,
+                'caseType': case.case_type,
+                'closedAt': case.closed_at.isoformat() if case.closed_at else None,
+                'archivedAt': case.archived_at.isoformat() if case.archived_at else None,
+                'closureReason': case.closure_reason,
                 'entityCount': counts['entityCount'],
                 'relationshipCount': counts['relationshipCount'],
                 'evidenceCount': counts['evidenceCount'],
@@ -119,9 +125,38 @@ class CaseService:
                 query = query.filter(CaseModel.priority == priority)
             
             cases = query.all()
+            case_ids = [c.case_id for c in cases]
+            
+            # Batch fetch counts to avoid N+1 problem
+            counts_map = {cid: {
+                'evidenceCount': 0, 'entityCount': 0, 'relationshipCount': 0,
+                'alertCount': 0, 'noteCount': 0, 'teamCount': 0,
+                'importCount': 0, 'reportCount': 0, 'timelineEventCount': 0
+            } for cid in case_ids}
+            
+            if case_ids:
+                from app.models import EvidenceModel, EntityModel, RelationshipModel, AlertModel, CaseNoteModel, CaseMembershipModel, IngestJobModel
+                from sqlalchemy import func
+                
+                def _fill_counts(model, key):
+                    res = db.query(model.case_id, func.count(model.id)).filter(model.case_id.in_(case_ids)).group_by(model.case_id).all()
+                    for r in res:
+                        counts_map[r[0]][key] = r[1]
+                        
+                _fill_counts(EvidenceModel, 'evidenceCount')
+                _fill_counts(EntityModel, 'entityCount')
+                _fill_counts(RelationshipModel, 'relationshipCount')
+                _fill_counts(AlertModel, 'alertCount')
+                _fill_counts(CaseNoteModel, 'noteCount')
+                # For CaseMembershipModel, id might not exist, wait let's just use func.count()
+                res = db.query(CaseMembershipModel.case_id, func.count()).filter(CaseMembershipModel.case_id.in_(case_ids)).group_by(CaseMembershipModel.case_id).all()
+                for r in res: counts_map[r[0]]['teamCount'] = r[1]
+                
+                _fill_counts(IngestJobModel, 'importCount')
+
             result = []
             for case in cases:
-                counts = self._get_case_counts(db, case.case_id)
+                counts = counts_map[case.case_id]
                 result.append({
                     'caseId': case.case_id,
                     'caseNumber': case.case_number,
@@ -135,6 +170,10 @@ class CaseService:
                     'policeStation': case.police_station,
                     'createdAt': case.created_at.isoformat() if case.created_at else None,
                     'updatedAt': case.updated_at.isoformat() if case.updated_at else None,
+                    'caseType': case.case_type,
+                    'closedAt': case.closed_at.isoformat() if case.closed_at else None,
+                    'archivedAt': case.archived_at.isoformat() if case.archived_at else None,
+                    'closureReason': case.closure_reason,
                     'entityCount': counts['entityCount'],
                     'relationshipCount': counts['relationshipCount'],
                     'evidenceCount': counts['evidenceCount'],
@@ -172,6 +211,7 @@ class CaseService:
                 'priority': data.get('priority', 'high'),
                 'jurisdiction': data.get('jurisdiction', 'State Police CID'),
                 'policeStation': data.get('policeStation', 'Central Police Station'),
+                'caseType': data.get('caseType', 'General Investigation'),
                 'createdAt': now,
                 'updatedAt': now
             }
@@ -186,7 +226,8 @@ class CaseService:
                 status=new_case_data['status'],
                 priority=new_case_data['priority'],
                 jurisdiction=new_case_data['jurisdiction'],
-                police_station=new_case_data['policeStation']
+                police_station=new_case_data['policeStation'],
+                case_type=new_case_data['caseType']
             )
             db.add(db_case)
             db.commit()
@@ -194,6 +235,10 @@ class CaseService:
 
             if self.driver:
                 self._create_in_neo4j(new_case_data)
+
+            # Initialize Case Storage Prefix
+            storage_service = get_supabase_storage_service()
+            storage_service.ensure_case_storage_prefix(db_case.case_id)
 
             return self.get_case(case_id)
         finally:
@@ -218,6 +263,10 @@ class CaseService:
                     case.assigned_team = v
                 elif k == 'policeStation':
                     case.police_station = v
+                elif k == 'caseType':
+                    case.case_type = v
+                elif k == 'closureReason':
+                    case.closure_reason = v
 
             db.commit()
             return self.get_case(case_id)

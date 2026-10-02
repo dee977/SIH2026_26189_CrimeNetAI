@@ -1,25 +1,29 @@
 export interface CaseDossier {
-  id: string;
-  caseNumber: string; // e.g. CASE-2024-MH-092
+  caseId: string;
+  caseNumber: string;
   title: string;
   description: string;
-  leadInvestigator: string;
-  assignedTeam: string[];
-  status: 'Active' | 'Under Review' | 'Charge Sheeted' | 'Archived';
-  priority: 'Critical' | 'High' | 'Medium' | 'Low';
-  openedDate: string;
-  lastUpdated: string;
-  policeStation: string;
+  assignedInvestigator: string;
+  assignedTeam: string;
+  status: string; // 'active', 'under_investigation', 'on_hold', 'closed', 'archived'
+  priority: string;
   jurisdiction: string;
+  policeStation: string;
+  caseType?: string;
+  closedAt?: string | null;
+  archivedAt?: string | null;
   entityCount: number;
+  relationshipCount?: number;
   evidenceCount: number;
-  alertCount: number;
-  associatedFIRs: string[];
-  accessClassification: 'RESTRICTED' | 'CONFIDENTIAL' | 'TOP SECRET';
-  auditHistory: {
-    timestamp: string;
-    officer: string;
-    action: string;
-    details: string;
-  }[];
+  reportCount?: number;
+  alertCount?: number;
+  noteCount?: number;
+  teamCount?: number;
+  importCount?: number;
+  timelineEventCount?: number;
+  auditHistory?: any[];
+  associatedFIRs?: string[];
+  accessClassification?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }

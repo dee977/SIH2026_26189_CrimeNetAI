@@ -68,11 +68,11 @@ export const AccessDeniedView: React.FC<AccessDeniedViewProps> = ({
         <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-amber-500 via-rose-500 to-red-500" />
         <div className="absolute -top-24 -left-24 w-48 h-48 bg-rose-500/10 rounded-full blur-3xl pointer-events-none" />
 
-        <div className="w-16 h-16 rounded-2xl bg-rose-500/10 border border-rose-500/30 flex items-center justify-center mx-auto mb-5 text-rose-400 shadow-lg shadow-rose-500/10">
+        <div className="w-16 h-16 rounded-2xl bg-rose-500/10 border border-rose-500/30 flex items-center justify-center mx-auto mb-5 text-[var(--danger)] shadow-lg shadow-rose-500/10">
           <ShieldAlert className="w-8 h-8" />
         </div>
 
-        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-500/10 text-rose-400 border border-rose-500/20 text-xs font-mono font-bold uppercase tracking-wider mb-3">
+        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-500/10 text-[var(--danger)] border border-rose-500/20 text-xs font-mono font-bold uppercase tracking-wider mb-3">
           <span>HTTP 403 • Statutory Access Denied</span>
         </div>
 
@@ -81,20 +81,20 @@ export const AccessDeniedView: React.FC<AccessDeniedViewProps> = ({
         </h2>
 
         <p className="text-sm text-[var(--text-secondary)] mt-2 max-w-md mx-auto leading-relaxed">
-          Your current active statutory role does not hold authorization to access the <span className="text-white font-mono font-bold uppercase">{view}</span> module.
+          Your current active statutory role does not hold authorization to access the <span className="text-[var(--text-primary)] font-mono font-bold uppercase">{view}</span> module.
         </p>
 
         {/* Diagnostic Metadata Grid */}
         <div className="mt-6 p-4 rounded-2xl bg-[var(--bg-primary)] border border-[var(--border)] text-left text-xs font-mono space-y-2">
-          <div className="flex justify-between items-center text-slate-400">
+          <div className="flex justify-between items-center text-[var(--text-secondary)]">
             <span>Your Active Role:</span>
-            <span className="font-bold text-amber-400 uppercase">{currentRole}</span>
+            <span className="font-bold text-[var(--warning)] uppercase">{currentRole}</span>
           </div>
-          <div className="flex justify-between items-center text-slate-400">
+          <div className="flex justify-between items-center text-[var(--text-secondary)]">
             <span>Required Clearance:</span>
-            <span className="font-bold text-rose-400">{requiredPermission}</span>
+            <span className="font-bold text-[var(--danger)]">{requiredPermission}</span>
           </div>
-          <div className="flex justify-between items-center text-slate-400">
+          <div className="flex justify-between items-center text-[var(--text-secondary)]">
             <span>Enforcement Framework:</span>
             <span className="text-cyan-400">Bharatiya Sakshya Adhiniyam §63 / BNSS</span>
           </div>
@@ -104,7 +104,7 @@ export const AccessDeniedView: React.FC<AccessDeniedViewProps> = ({
         <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
           <button
             onClick={onBackToDashboard || (() => setView('dashboard'))}
-            className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-600 font-semibold text-xs flex items-center justify-center gap-2 transition-colors"
+            className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-[var(--bg-card)] hover:bg-[var(--bg-card)] text-[var(--text-primary)] border border-slate-600 font-semibold text-xs flex items-center justify-center gap-2 transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
             <span>Return to Dashboard</span>
@@ -112,7 +112,7 @@ export const AccessDeniedView: React.FC<AccessDeniedViewProps> = ({
 
           <button
             onClick={() => setIsRequestModalOpen(true)}
-            className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs flex items-center justify-center gap-2 transition-colors shadow-lg shadow-blue-500/20"
+            className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-[var(--primary)] hover:bg-[var(--primary)] text-[var(--text-primary)] font-semibold text-xs flex items-center justify-center gap-2 transition-colors shadow-lg shadow-blue-500/20"
           >
             <KeyRound className="w-4 h-4" />
             <span>Request Elevated Clearance</span>
@@ -122,15 +122,15 @@ export const AccessDeniedView: React.FC<AccessDeniedViewProps> = ({
         {/* Request Modal */}
         {isRequestModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
-            <div className="bg-[var(--bg-card)] border border-slate-700 rounded-3xl p-6 max-w-lg w-full text-left shadow-2xl space-y-4">
+            <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-3xl p-6 max-w-lg w-full text-left shadow-2xl space-y-4">
               <div className="flex items-center justify-between pb-3 border-b border-[var(--border)]">
                 <div className="flex items-center gap-2">
-                  <KeyRound className="w-5 h-5 text-blue-400" />
-                  <h3 className="text-base font-bold text-white">Submit Role Clearance Request</h3>
+                  <KeyRound className="w-5 h-5 text-[var(--primary)]" />
+                  <h3 className="text-base font-bold text-[var(--text-primary)]">Submit Role Clearance Request</h3>
                 </div>
                 <button 
                   onClick={() => setIsRequestModalOpen(false)}
-                  className="text-slate-400 hover:text-white text-xs font-mono"
+                  className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] text-xs font-mono"
                 >
                   ✕ Close
                 </button>
@@ -138,19 +138,19 @@ export const AccessDeniedView: React.FC<AccessDeniedViewProps> = ({
 
               {submittedNotice ? (
                 <div className="p-4 rounded-xl bg-emerald-950/40 border border-emerald-500/40 text-emerald-300 text-xs flex items-center gap-3">
-                  <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+                  <CheckCircle2 className="w-5 h-5 text-[var(--success)] shrink-0" />
                   <span>{submittedNotice}</span>
                 </div>
               ) : (
                 <form onSubmit={handleSubmitRequest} className="space-y-4 text-xs">
                   <div>
-                    <label className="block text-slate-300 font-semibold mb-1">
+                    <label className="block text-[var(--text-secondary)] font-semibold mb-1">
                       Requested Role Upgrade
                     </label>
                     <select
                       value={requestedRole}
                       onChange={(e) => setRequestedRole(e.target.value as UserRole)}
-                      className="w-full bg-[var(--bg-primary)] border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-blue-500 font-mono text-xs"
+                      className="w-full bg-[var(--bg-primary)] border border-[var(--border)] rounded-xl px-3 py-2 text-[var(--text-primary)] focus:outline-none focus:border-blue-500 font-mono text-xs"
                     >
                       <option value="INVESTIGATOR">INVESTIGATOR (Case creation, Evidence write & Graph read)</option>
                       <option value="ANALYST">ANALYST (Graph read, Analytics & Community clusters)</option>
@@ -160,7 +160,7 @@ export const AccessDeniedView: React.FC<AccessDeniedViewProps> = ({
                   </div>
 
                   <div>
-                    <label className="block text-slate-300 font-semibold mb-1">
+                    <label className="block text-[var(--text-secondary)] font-semibold mb-1">
                       Operational Justification / Reason
                     </label>
                     <textarea
@@ -169,12 +169,12 @@ export const AccessDeniedView: React.FC<AccessDeniedViewProps> = ({
                       value={justification}
                       onChange={(e) => setJustification(e.target.value)}
                       placeholder="Specify investigation necessity, court order, or mandate..."
-                      className="w-full bg-[var(--bg-primary)] border border-slate-700 rounded-xl p-3 text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 text-xs"
+                      className="w-full bg-[var(--bg-primary)] border border-[var(--border)] rounded-xl p-3 text-[var(--text-primary)] placeholder-slate-500 focus:outline-none focus:border-blue-500 text-xs"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-slate-300 font-semibold mb-1">
+                    <label className="block text-[var(--text-secondary)] font-semibold mb-1">
                       Warrant Reference / Requisition ID
                     </label>
                     <input
@@ -182,7 +182,7 @@ export const AccessDeniedView: React.FC<AccessDeniedViewProps> = ({
                       value={warrantRef}
                       onChange={(e) => setWarrantRef(e.target.value)}
                       placeholder="e.g. Subpoena #CR-2026-WZ-901 or Panchnama #09"
-                      className="w-full bg-[var(--bg-primary)] border border-slate-700 rounded-xl px-3 py-2 text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 text-xs"
+                      className="w-full bg-[var(--bg-primary)] border border-[var(--border)] rounded-xl px-3 py-2 text-[var(--text-primary)] placeholder-slate-500 focus:outline-none focus:border-blue-500 text-xs"
                     />
                   </div>
 
@@ -190,14 +190,14 @@ export const AccessDeniedView: React.FC<AccessDeniedViewProps> = ({
                     <button
                       type="button"
                       onClick={() => setIsRequestModalOpen(false)}
-                      className="px-4 py-2 rounded-xl border border-slate-700 text-slate-400 hover:text-white"
+                      className="px-4 py-2 rounded-xl border border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
                     >
                       Cancel
                     </button>
                     <button
                       type="submit"
                       disabled={isSubmitting}
-                      className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold flex items-center gap-1.5 shadow-md shadow-blue-500/20"
+                      className="px-5 py-2 rounded-xl bg-[var(--primary)] hover:bg-[var(--primary)] text-[var(--text-primary)] font-semibold flex items-center gap-1.5 shadow-md shadow-blue-500/20"
                     >
                       <Send className="w-3.5 h-3.5" />
                       <span>{isSubmitting ? 'Submitting...' : 'Submit to Admin'}</span>

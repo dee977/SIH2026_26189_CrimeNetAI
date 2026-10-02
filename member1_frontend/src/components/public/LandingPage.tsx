@@ -1,5 +1,4 @@
 import React from 'react';
-import { useNavigationStore } from '../../store/navigationStore';
 import { useAuthStore } from '../../store/authStore';
 import { 
   Shield, 
@@ -16,9 +15,10 @@ import {
   Play
 } from 'lucide-react';
 import { useDemoStore } from '../../store/demoStore';
+import { useNavigate } from 'react-router-dom';
 
 export const LandingPage: React.FC = () => {
-  const { setView } = useNavigationStore();
+  const navigate = useNavigate();
   const { isAuthenticated } = useAuthStore();
   const { toggleDemoMode } = useDemoStore();
 
@@ -28,12 +28,10 @@ export const LandingPage: React.FC = () => {
       {/* Top Header */}
       <nav className="border-b border-[var(--border)] bg-[var(--bg-card)] backdrop-blur-md sticky top-0 z-30 px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-[var(--surface-cyan)] border border-[var(--primary)] flex items-center justify-center text-[var(--primary)]">
-            <Shield className="w-5 h-5" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="font-bold text-base text-[var(--text-primary)] tracking-tight">CrimeNet AI</span>
+          <img src="/logo.png" alt="CrimeNet AI" className="h-10 object-contain" />
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-base text-[var(--text-primary)] tracking-tight hidden">CrimeNet AI</span>
               <span className="text-[10px] px-2 py-0.5 rounded bg-[var(--surface-cyan)] text-cyan-300 font-mono font-bold">SIH26189</span>
             </div>
             <p className="text-[11px] text-[var(--text-secondary)]">AI-Powered Criminal Network Analysis System</p>
@@ -42,15 +40,15 @@ export const LandingPage: React.FC = () => {
 
         <div className="flex items-center gap-3">
           <button
-            onClick={() => setView('about')}
-            className="px-3.5 py-1.5 rounded-lg text-xs font-medium text-[var(--text-secondary)] hover:text-white hover:bg-[var(--bg-card)] transition-colors"
+            onClick={() => navigate('/about')}
+            className="px-3.5 py-1.5 rounded-lg text-xs font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card)] transition-colors"
           >
             About Project
           </button>
           {isAuthenticated ? (
             <button
-              onClick={() => setView('dashboard')}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--primary)] text-white hover:bg-cyan-400 text-slate-950 text-xs font-semibold uppercase tracking-wider transition-colors shadow-lg shadow-cyan-500/20"
+              onClick={() => navigate('/dashboard')}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--primary)] text-[var(--text-primary)] hover:bg-cyan-400 text-slate-950 text-xs font-semibold uppercase tracking-wider transition-colors shadow-lg shadow-cyan-500/20"
             >
               <span>Investigator Console</span>
               <ArrowRight className="w-4 h-4" />
@@ -58,14 +56,14 @@ export const LandingPage: React.FC = () => {
           ) : (
             <div className="flex items-center gap-2">
               <button
-                onClick={() => setView('login')}
+                onClick={() => navigate('/login')}
                 className="px-3.5 py-1.5 rounded-lg bg-[var(--bg-card)] hover:bg-slate-50 border border-[var(--border)] text-xs font-medium text-[var(--text-primary)] transition-colors"
               >
                 Sign In
               </button>
               <button
-                onClick={() => setView('register')}
-                className="px-4 py-1.5 rounded-lg bg-[var(--primary)] text-white hover:bg-cyan-400 text-slate-950 text-xs font-semibold uppercase tracking-wider transition-colors"
+                onClick={() => navigate('/register')}
+                className="px-4 py-1.5 rounded-lg bg-[var(--primary)] text-[var(--text-primary)] hover:bg-cyan-400 text-slate-950 text-xs font-semibold uppercase tracking-wider transition-colors"
               >
                 Register Officer
               </button>
@@ -96,25 +94,14 @@ export const LandingPage: React.FC = () => {
         </p>
 
         {/* Primary CTA Buttons */}
-        <div className="flex flex-wrap items-center justify-center gap-4 mt-10">
-          <button
-            onClick={() => {
-              toggleDemoMode(true);
-              setView('dashboard');
-            }}
-            className="flex items-center gap-2 px-6 py-3.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-bold text-sm shadow-xl shadow-cyan-500/25 transition-all hover:scale-105"
-          >
-            <Play className="w-4 h-4 fill-slate-950" />
-            <span>Launch Continuous Demo Story</span>
-          </button>
-
-          <button
-            onClick={() => setView('login')}
-            className="px-6 py-3.5 rounded-xl bg-[var(--bg-card)] hover:bg-slate-50 border border-[var(--border)] text-[var(--text-primary)] font-semibold text-sm transition-all"
-          >
-            Officer Sign In (RBAC)
-          </button>
-        </div>
+                  <div className="flex flex-wrap items-center justify-center gap-4 mt-10">
+            <button
+              onClick={() => navigate('/login')}
+              className="flex items-center gap-2 px-8 py-3.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold text-sm shadow-xl shadow-cyan-500/25 transition-all hover:scale-105"
+            >
+              Officer Sign In (RBAC)
+            </button>
+          </div>
 
         {/* Core Principles (Strict Investigator Support) */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-4xl mx-auto mt-16 text-left">
@@ -141,7 +128,7 @@ export const LandingPage: React.FC = () => {
 
           <div className="bg-[var(--bg-card)] shadow-sm border border-[var(--border)] rounded-2xl rounded-xl p-5 border-[var(--primary)]">
             <div className="w-8 h-8 rounded-lg bg-[var(--surface-cyan)] border border-[var(--primary)] flex items-center justify-center text-[var(--primary)] mb-3">
-              <AlertTriangle className="w-4 h-4 text-amber-400" />
+              <AlertTriangle className="w-4 h-4 text-[var(--warning)]" />
             </div>
             <h4 className="text-sm font-semibold text-[var(--text-primary)]">Strict Ethical AI Guardrails</h4>
             <p className="text-xs text-[var(--text-secondary)] mt-1 leading-relaxed">
@@ -154,7 +141,7 @@ export const LandingPage: React.FC = () => {
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-[var(--border)] bg-[var(--bg-card)] py-6 px-6 text-center text-xs text-slate-500">
+      <footer className="border-t border-[var(--border)] bg-[var(--bg-card)] py-6 px-6 text-center text-xs text-[var(--text-muted)]">
         <p>CrimeNet AI • Smart India Hackathon (SIH26189) • Synthetic Demo Data Only • Not for Production Legal Adjudication</p>
       </footer>
 

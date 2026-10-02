@@ -25,6 +25,8 @@ class WatchlistItemResponse(BaseModel):
     addedAt: str
     isActive: bool = True
     matchCount: int = 0
+    authorizedCaseCount: int = 0
+    authorizedCases: List[str] = Field(default_factory=list)
 
 class WatchlistHistoryItem(BaseModel):
     historyId: str

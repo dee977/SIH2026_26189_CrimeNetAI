@@ -177,7 +177,7 @@ export const InvestigatorDashboard: React.FC = () => {
           </button>
           <button
             onClick={() => setView('graph')}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold uppercase tracking-wider shadow-sm shadow-blue-500/20 transition-all"
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[var(--primary)] hover:bg-blue-700 text-[var(--text-primary)] text-xs font-bold uppercase tracking-wider shadow-sm shadow-blue-500/20 transition-all"
           >
             <Share2 className="w-4 h-4" />
             <span>Network Canvas</span>
@@ -203,12 +203,12 @@ export const InvestigatorDashboard: React.FC = () => {
             onClick={() => { selectEntity('ENT-PERS-001'); setView('entity'); }}
             className="bg-white shadow-sm border border-slate-200 rounded-xl p-3.5 hover:border-blue-400 hover:shadow-md transition-all cursor-pointer"
           >
-            <div className="flex items-center justify-between text-slate-500 mb-2">
+            <div className="flex items-center justify-between text-[var(--text-muted)] mb-2">
               <span className="text-[11px] font-medium">Persons</span>
               <Users className="w-4 h-4 text-blue-600" />
             </div>
             <div className="text-xl font-bold text-slate-900 font-mono">{counts.persons}</div>
-            <span className="text-[10px] text-slate-500">Target & Associates</span>
+            <span className="text-[10px] text-[var(--text-muted)]">Target & Associates</span>
           </div>
 
           {/* 2. Phones */}
@@ -216,12 +216,12 @@ export const InvestigatorDashboard: React.FC = () => {
             onClick={() => { selectEntity('ENT-PHON-001'); setView('entity'); }}
             className="bg-white shadow-sm border border-slate-200 rounded-xl p-3.5 hover:border-blue-400 hover:shadow-md transition-all cursor-pointer"
           >
-            <div className="flex items-center justify-between text-slate-500 mb-2">
+            <div className="flex items-center justify-between text-[var(--text-muted)] mb-2">
               <span className="text-[11px] font-medium">Phones</span>
               <Phone className="w-4 h-4 text-emerald-600" />
             </div>
             <div className="text-xl font-bold text-slate-900 font-mono">{counts.phones}</div>
-            <span className="text-[10px] text-slate-500">CDR Monitored</span>
+            <span className="text-[10px] text-[var(--text-muted)]">CDR Monitored</span>
           </div>
 
           {/* 3. Bank Accounts */}
@@ -229,12 +229,12 @@ export const InvestigatorDashboard: React.FC = () => {
             onClick={() => { selectEntity('ENT-BANK-001'); setView('entity'); }}
             className="bg-white shadow-sm border border-slate-200 rounded-xl p-3.5 hover:border-blue-400 hover:shadow-md transition-all cursor-pointer"
           >
-            <div className="flex items-center justify-between text-slate-500 mb-2">
+            <div className="flex items-center justify-between text-[var(--text-muted)] mb-2">
               <span className="text-[11px] font-medium">Accounts</span>
               <Landmark className="w-4 h-4 text-amber-600" />
             </div>
             <div className="text-xl font-bold text-slate-900 font-mono">{counts.bankAccounts}</div>
-            <span className="text-[10px] text-slate-500">Subpoenaed Ledgers</span>
+            <span className="text-[10px] text-[var(--text-muted)]">Subpoenaed Ledgers</span>
           </div>
 
           {/* 4. Vehicles */}
@@ -242,12 +242,12 @@ export const InvestigatorDashboard: React.FC = () => {
             onClick={() => { selectEntity('ENT-VEH-001'); setView('entity'); }}
             className="bg-white shadow-sm border border-slate-200 rounded-xl p-3.5 hover:border-blue-400 hover:shadow-md transition-all cursor-pointer"
           >
-            <div className="flex items-center justify-between text-slate-500 mb-2">
+            <div className="flex items-center justify-between text-[var(--text-muted)] mb-2">
               <span className="text-[11px] font-medium">Vehicles</span>
               <Truck className="w-4 h-4 text-indigo-600" />
             </div>
             <div className="text-xl font-bold text-slate-900 font-mono">{counts.vehicles}</div>
-            <span className="text-[10px] text-slate-500">FASTag Tracked</span>
+            <span className="text-[10px] text-[var(--text-muted)]">FASTag Tracked</span>
           </div>
 
           {/* 5. Locations */}
@@ -255,12 +255,12 @@ export const InvestigatorDashboard: React.FC = () => {
             onClick={() => setView('gis')}
             className="bg-white shadow-sm border border-slate-200 rounded-xl p-3.5 hover:border-blue-400 hover:shadow-md transition-all cursor-pointer"
           >
-            <div className="flex items-center justify-between text-slate-500 mb-2">
+            <div className="flex items-center justify-between text-[var(--text-muted)] mb-2">
               <span className="text-[11px] font-medium">Locations</span>
               <MapPin className="w-4 h-4 text-rose-600" />
             </div>
             <div className="text-xl font-bold text-slate-900 font-mono">{counts.locations}</div>
-            <span className="text-[10px] text-slate-500">Crime & Towers</span>
+            <span className="text-[10px] text-[var(--text-muted)]">Crime & Towers</span>
           </div>
 
           {/* 6. FIRs */}
@@ -268,12 +268,12 @@ export const InvestigatorDashboard: React.FC = () => {
             onClick={() => { selectEntity('ENT-FIR-001'); setView('entity'); }}
             className="bg-white shadow-sm border border-slate-200 rounded-xl p-3.5 hover:border-blue-400 hover:shadow-md transition-all cursor-pointer"
           >
-            <div className="flex items-center justify-between text-slate-500 mb-2">
+            <div className="flex items-center justify-between text-[var(--text-muted)] mb-2">
               <span className="text-[11px] font-medium">FIRs</span>
               <FileText className="w-4 h-4 text-blue-600" />
             </div>
             <div className="text-xl font-bold text-slate-900 font-mono">{counts.firs}</div>
-            <span className="text-[10px] text-slate-500">CCTNS Ingested</span>
+            <span className="text-[10px] text-[var(--text-muted)]">CCTNS Ingested</span>
           </div>
 
           {/* 7. Crimes */}
@@ -281,12 +281,12 @@ export const InvestigatorDashboard: React.FC = () => {
             onClick={() => { selectEntity('ENT-CRIM-001'); setView('entity'); }}
             className="bg-white shadow-sm border border-slate-200 rounded-xl p-3.5 hover:border-blue-400 hover:shadow-md transition-all cursor-pointer"
           >
-            <div className="flex items-center justify-between text-slate-500 mb-2">
+            <div className="flex items-center justify-between text-[var(--text-muted)] mb-2">
               <span className="text-[11px] font-medium">Crimes</span>
               <ShieldAlert className="w-4 h-4 text-rose-600" />
             </div>
             <div className="text-xl font-bold text-slate-900 font-mono">{counts.crimes}</div>
-            <span className="text-[10px] text-slate-500">Incidents Linked</span>
+            <span className="text-[10px] text-[var(--text-muted)]">Incidents Linked</span>
           </div>
 
           {/* 8. Organizations */}
@@ -294,12 +294,12 @@ export const InvestigatorDashboard: React.FC = () => {
             onClick={() => { selectEntity('ENT-ORG-001'); setView('entity'); }}
             className="bg-white shadow-sm border border-slate-200 rounded-xl p-3.5 hover:border-blue-400 hover:shadow-md transition-all cursor-pointer"
           >
-            <div className="flex items-center justify-between text-slate-500 mb-2">
+            <div className="flex items-center justify-between text-[var(--text-muted)] mb-2">
               <span className="text-[11px] font-medium">Shell Orgs</span>
               <Building2 className="w-4 h-4 text-purple-600" />
             </div>
             <div className="text-xl font-bold text-slate-900 font-mono">{counts.organizations}</div>
-            <span className="text-[10px] text-slate-500">Corporate Shells</span>
+            <span className="text-[10px] text-[var(--text-muted)]">Corporate Shells</span>
           </div>
 
           {/* 9. Communications */}
@@ -307,12 +307,12 @@ export const InvestigatorDashboard: React.FC = () => {
             onClick={() => setView('timeline')}
             className="bg-white shadow-sm border border-slate-200 rounded-xl p-3.5 hover:border-blue-400 hover:shadow-md transition-all cursor-pointer"
           >
-            <div className="flex items-center justify-between text-slate-500 mb-2">
+            <div className="flex items-center justify-between text-[var(--text-muted)] mb-2">
               <span className="text-[11px] font-medium">Calls / CDR</span>
               <PhoneCall className="w-4 h-4 text-teal-600" />
             </div>
             <div className="text-xl font-bold text-slate-900 font-mono">{counts.communications}</div>
-            <span className="text-[10px] text-slate-500">Intercept Logs</span>
+            <span className="text-[10px] text-[var(--text-muted)]">Intercept Logs</span>
           </div>
 
           {/* 10. Transactions */}
@@ -320,12 +320,12 @@ export const InvestigatorDashboard: React.FC = () => {
             onClick={() => { selectEntity('ENT-TXN-001'); setView('entity'); }}
             className="bg-white shadow-sm border border-slate-200 rounded-xl p-3.5 hover:border-blue-400 hover:shadow-md transition-all cursor-pointer"
           >
-            <div className="flex items-center justify-between text-slate-500 mb-2">
+            <div className="flex items-center justify-between text-[var(--text-muted)] mb-2">
               <span className="text-[11px] font-medium">Transactions</span>
               <ArrowLeftRight className="w-4 h-4 text-amber-600" />
             </div>
             <div className="text-xl font-bold text-slate-900 font-mono">{counts.transactions}</div>
-            <span className="text-[10px] text-slate-500">Wire & Hawala</span>
+            <span className="text-[10px] text-[var(--text-muted)]">Wire & Hawala</span>
           </div>
 
           {/* 11. Active Investigations */}
@@ -333,12 +333,12 @@ export const InvestigatorDashboard: React.FC = () => {
             onClick={() => setView('cases')}
             className="bg-white shadow-sm border border-slate-200 rounded-xl p-3.5 hover:border-blue-400 hover:shadow-md transition-all cursor-pointer"
           >
-            <div className="flex items-center justify-between text-slate-500 mb-2">
+            <div className="flex items-center justify-between text-[var(--text-muted)] mb-2">
               <span className="text-[11px] font-medium">Active Cases</span>
               <Activity className="w-4 h-4 text-blue-600" />
             </div>
             <div className="text-xl font-bold text-blue-600 font-mono">{counts.activeCases}</div>
-            <span className="text-[10px] text-slate-500">Multi-Agency</span>
+            <span className="text-[10px] text-[var(--text-muted)]">Multi-Agency</span>
           </div>
 
           {/* 12. Verified Evidence */}
@@ -346,12 +346,12 @@ export const InvestigatorDashboard: React.FC = () => {
             onClick={() => setView('evidence')}
             className="bg-white shadow-sm border border-slate-200 rounded-xl p-3.5 hover:border-blue-400 hover:shadow-md transition-all cursor-pointer"
           >
-            <div className="flex items-center justify-between text-slate-500 mb-2">
+            <div className="flex items-center justify-between text-[var(--text-muted)] mb-2">
               <span className="text-[11px] font-medium">Evidence</span>
               <FileCheck className="w-4 h-4 text-emerald-600" />
             </div>
             <div className="text-xl font-bold text-emerald-600 font-mono">{counts.evidenceItems}</div>
-            <span className="text-[10px] text-slate-500">SHA-256 Validated</span>
+            <span className="text-[10px] text-[var(--text-muted)]">SHA-256 Validated</span>
           </div>
 
         </div>
@@ -392,7 +392,7 @@ export const InvestigatorDashboard: React.FC = () => {
                         <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-blue-50 text-blue-700 border border-blue-200">
                           {c.priority} Priority
                         </span>
-                        <span className="text-[10px] text-slate-500 font-mono">Updated: {c.lastUpdated}</span>
+                        <span className="text-[10px] text-[var(--text-muted)] font-mono">Updated: {c.lastUpdated}</span>
                       </div>
                       <h4 className="text-sm font-bold text-slate-900 mt-1">{c.title}</h4>
                     </div>
@@ -403,7 +403,7 @@ export const InvestigatorDashboard: React.FC = () => {
 
                   <p className="text-xs text-slate-600 line-clamp-2 mb-3 leading-relaxed">{c.description}</p>
 
-                  <div className="flex flex-wrap items-center gap-4 text-[11px] text-slate-500 pt-2 border-t border-slate-200/60">
+                  <div className="flex flex-wrap items-center gap-4 text-[11px] text-[var(--text-muted)] pt-2 border-t border-slate-200/60">
                     <div>Lead: <span className="text-slate-800 font-medium">{c.leadInvestigator}</span></div>
                     <div>Entities: <span className="text-blue-600 font-mono font-semibold">{c.entityCount}</span></div>
                     <div>Evidence: <span className="text-emerald-600 font-mono font-semibold">{c.evidenceCount} items</span></div>
@@ -423,7 +423,7 @@ export const InvestigatorDashboard: React.FC = () => {
                   Critical Locus Activity Bursts (August 14 Operation Window)
                 </h3>
               </div>
-              <span className="text-[10px] font-mono text-slate-500">
+              <span className="text-[10px] font-mono text-[var(--text-muted)]">
                 Peak: 01:04 AM - 01:18 AM Intercepts
               </span>
             </div>
@@ -446,7 +446,7 @@ export const InvestigatorDashboard: React.FC = () => {
                 </AreaChart>
               </ResponsiveContainer>
             </div>
-            <p className="text-[11px] text-slate-500 mt-2 italic text-center">
+            <p className="text-[11px] text-[var(--text-muted)] mt-2 italic text-center">
               Spike corresponds directly to Vikram Malhotra CDR call (01:04 AM) followed by ₹15L NEFT transfer (01:18 AM).
             </p>
           </div>
@@ -460,7 +460,7 @@ export const InvestigatorDashboard: React.FC = () => {
           <div className="bg-white shadow-sm border border-slate-200 rounded-2xl p-5">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4 text-rose-500" />
+                <AlertTriangle className="w-4 h-4 text-[var(--danger)]" />
                 <h3 className="text-sm font-semibold text-slate-900">Active Investigative Alerts</h3>
               </div>
               <button
@@ -484,7 +484,7 @@ export const InvestigatorDashboard: React.FC = () => {
                     }`}>
                       {alert.category}
                     </span>
-                    <span className="text-slate-400">{alert.timestamp.slice(11, 16)}</span>
+                    <span className="text-[var(--text-secondary)]">{alert.timestamp.slice(11, 16)}</span>
                   </div>
                   <h5 className="text-xs font-semibold text-slate-900">{alert.title}</h5>
                   <p className="text-[11px] text-slate-600 mt-1 line-clamp-2 leading-relaxed">{alert.explanation}</p>
@@ -516,7 +516,7 @@ export const InvestigatorDashboard: React.FC = () => {
                 >
                   <div>
                     <div className="font-semibold text-slate-900">{entry.targetName || entry.value}</div>
-                    <div className="text-[10px] text-slate-500 font-mono">{entry.entryType}: {entry.value}</div>
+                    <div className="text-[10px] text-[var(--text-muted)] font-mono">{entry.entryType}: {entry.value}</div>
                   </div>
                   <span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 font-mono text-[10px] font-semibold border border-blue-200">
                     {entry.matchCount} Matches
@@ -558,7 +558,7 @@ export const InvestigatorDashboard: React.FC = () => {
                       {evd.integrityStatus}
                     </span>
                   </div>
-                  <div className="text-[10px] font-mono text-slate-500 truncate">
+                  <div className="text-[10px] font-mono text-[var(--text-muted)] truncate">
                     Hash: {evd.currentHashSHA256}
                   </div>
                 </div>

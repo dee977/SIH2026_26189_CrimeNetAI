@@ -212,7 +212,7 @@ from fastapi import APIRouter, Depends, Query, HTTPException, Path
 from app.dependencies import get_current_user, require_permission, assert_case_access
 from app.database import get_db
 from app.models import AlertModel
-from app.schemas.alerts import AlertResponse, AlertFilterRequest, AlertAcknowledgeRequest
+from app.schemas.alerts import AlertResponse, AlertFilterRequest, AlertAcknowledgeRequest, AlertMarkReadRequest
 from app.schemas.auth import UserProfile
 from app.schemas.common import ResponseEnvelope, PaginatedResponse, PaginationMeta
 
@@ -230,6 +230,7 @@ def _alert_model_to_dict(a: AlertModel) -> Dict[str, Any]:
         'caseId': a.case_id,
         'evidenceId': a.evidence_id,
         'status': a.status,
+        'isRead': getattr(a, 'is_read', False),
         'triggeredAt': a.triggered_at.isoformat() if a.triggered_at else datetime.now(timezone.utc).isoformat(),
         'metadata': a.metadata_json or {}
     }
@@ -299,3 +300,40 @@ async def acknowledge_alert(
 
     return ResponseEnvelope(data=AlertResponse(**_alert_model_to_dict(alert)))
 
+@router.get('/unread_count', summary='Count Unread Alerts')
+async def get_unread_count(
+    current_user: UserProfile = Depends(require_permission('alert:read')),
+    db = Depends(get_db)
+):
+    query = db.query(AlertModel).filter(AlertModel.is_read == False)
+    if current_user.grantedRole != 'ADMIN':
+        from app.models import CaseMembershipModel
+        memberships = db.query(CaseMembershipModel.case_id).filter(CaseMembershipModel.user_email.ilike(current_user.email)).all()
+        allowed = {row[0] for row in memberships}
+        query = query.filter(AlertModel.case_id.in_(allowed))
+
+    count = query.count()
+    return {"count": count}
+
+@router.post('/mark_read', summary='Mark Alerts as Read')
+async def mark_alerts_read(
+    req: Optional[AlertMarkReadRequest] = None,
+    current_user: UserProfile = Depends(require_permission('alert:manage')),
+    db = Depends(get_db)
+):
+    query = db.query(AlertModel).filter(AlertModel.is_read == False)
+    if current_user.grantedRole != 'ADMIN':
+        from app.models import CaseMembershipModel
+        memberships = db.query(CaseMembershipModel.case_id).filter(CaseMembershipModel.user_email.ilike(current_user.email)).all()
+        allowed = {row[0] for row in memberships}
+        query = query.filter(AlertModel.case_id.in_(allowed))
+
+    if req and req.alertIds:
+        query = query.filter(AlertModel.alert_id.in_(req.alertIds))
+
+    alerts_to_update = query.all()
+    for alert in alerts_to_update:
+        alert.is_read = True
+    
+    db.commit()
+    return {"success": True, "updated": len(alerts_to_update)}

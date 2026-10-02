@@ -24,22 +24,22 @@ import { CaseDossier } from '../types/cases';
 // ==========================================
 export const SYNTHETIC_CASES: CaseDossier[] = [
   {
-    id: 'CASE-2024-MH-092',
+    caseId: 'CASE-2024-MH-092',
     caseNumber: 'CASE-2024-MH-092',
     title: 'Operation Blue Tide: Nhava Sheva Illicit Logistics & Hawala Nexus',
     description: 'Investigation into organized contraband import through fictitious shipping manifests, shell clearing companies, and offshore hawala conduits along the Mumbai-Surat maritime corridor.',
-    leadInvestigator: 'Inspector Vikramaditya Rao (LEO-7729)',
-    assignedTeam: ['Insp. V. Rao', 'SI Priyanka Sen', 'Analyst K. Nair'],
+    assignedInvestigator: 'Inspector Vikramaditya Rao (LEO-7729)',
+    assignedTeam: 'Insp. V. Rao, SI Priyanka Sen, Analyst K. Nair',
     status: 'Active',
     priority: 'Critical',
-    openedDate: '2024-08-10',
-    lastUpdated: '2024-08-25',
+    createdAt: '2024-08-10',
+    updatedAt: '2024-08-25',
     policeStation: 'Special Crime Branch, CID Mumbai',
     jurisdiction: 'Maharashtra Maritime & Cyber Zone',
     entityCount: 11,
     evidenceCount: 5,
-    alertCount: 4,
-    associatedFIRs: ['FIR-2024-8841'],
+    
+    
     accessClassification: 'CONFIDENTIAL',
     auditHistory: [
       {
@@ -63,22 +63,22 @@ export const SYNTHETIC_CASES: CaseDossier[] = [
     ]
   },
   {
-    id: 'CASE-2024-GJ-041',
+    caseId: 'CASE-2024-GJ-041',
     caseNumber: 'CASE-2024-GJ-041',
     title: 'Surat Hawala Relay Network (Parallel Inquiry)',
     description: 'Cross-jurisdictional inquiry into unmapped remittance accounts funneling funds to overseas logistics operators.',
-    leadInvestigator: 'DySP Amitav Desai',
-    assignedTeam: ['DySP A. Desai', 'Insp. R. Joshi'],
+    assignedInvestigator: 'DySP Amitav Desai',
+    assignedTeam: 'DySP A. Desai, Insp. R. Joshi',
     status: 'Under Review',
     priority: 'High',
-    openedDate: '2024-07-28',
-    lastUpdated: '2024-08-19',
+    createdAt: '2024-07-28',
+    updatedAt: '2024-08-19',
     policeStation: 'Economic Offences Wing, Surat',
     jurisdiction: 'Gujarat Commercial Zone',
     entityCount: 6,
     evidenceCount: 3,
-    alertCount: 2,
-    associatedFIRs: ['FIR-2024-4112'],
+    
+    
     accessClassification: 'RESTRICTED',
     auditHistory: [
       {
@@ -110,7 +110,7 @@ export const PERSON_VIKRAM_MALHOTRA: PersonEntity = {
   vehicles: ['MH-04-AZ-9921', 'MH-01-CV-4412'],
   addresses: ['Flat 402, Sea Green Apts, Worli, Mumbai', 'Yard 4B Office, Nhava Sheva, Navi Mumbai'],
   organizations: ['BlueSea Logistics Shell Co.', 'Oceanic Freight Linkers'],
-  associatedFIRs: ['FIR-2024-8841'],
+  
   crimesReferenced: ['CR-2024-0912'],
   knownAssociates: [
     { personId: 'ENT-PERS-002', name: 'Rajesh K. Sharma', relationType: 'Frequent Co-Transactor & CDR Contact', confidence: '0.94' },
@@ -145,7 +145,7 @@ export const PERSON_RAJESH_SHARMA: PersonEntity = {
   vehicles: ['GJ-05-BX-1190'],
   addresses: ['Shop 12, Diamond Market, Ring Road, Surat', 'Vesu Heights, Surat'],
   organizations: ['BlueSea Logistics Shell Co.', 'Shree Ganesh Bullion'],
-  associatedFIRs: ['FIR-2024-8841', 'FIR-2024-4112'],
+  
   crimesReferenced: ['CR-2024-0912'],
   knownAssociates: [
     { personId: 'ENT-PERS-001', name: 'Vikram Malhotra', relationType: 'Financial Intermediary & Shell Shareholder', confidence: '0.96' }

@@ -4,72 +4,52 @@ export default {
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
-  darkMode: 'class',
   theme: {
     extend: {
       colors: {
-        border: "hsl(var(--border))",
-        input: "hsl(var(--input))",
-        ring: "hsl(var(--ring))",
-        background: "hsl(var(--background))",
-        foreground: "hsl(var(--foreground))",
+        background: "#F3F6FA",
+        surface: "#FFFFFF",
         primary: {
-          DEFAULT: "hsl(var(--primary))",
-          foreground: "hsl(var(--primary-foreground))",
+          DEFAULT: "#1F64D8",
+          600: "#1F64D8"
         },
-        secondary: {
-          DEFAULT: "hsl(var(--secondary))",
-          foreground: "hsl(var(--secondary-foreground))",
+        navy: {
+          950: "#0B162B"
         },
-        destructive: {
-          DEFAULT: "hsl(var(--destructive))",
-          foreground: "hsl(var(--destructive-foreground))",
+        ink: {
+          900: "#142833"
         },
-        muted: {
-          DEFAULT: "hsl(var(--muted))",
-          foreground: "hsl(var(--muted-foreground))",
+        cyan: {
+          500: "#0BA4C7"
         },
-        accent: {
-          DEFAULT: "hsl(var(--accent))",
-          foreground: "hsl(var(--accent-foreground))",
+        purple: {
+          500: "#7657D6"
         },
-        card: {
-          DEFAULT: "hsl(var(--card))",
-          foreground: "hsl(var(--card-foreground))",
+        success: {
+          DEFAULT: "#16A35B"
         },
-        // Specialized CrimeNet Investigative Palettes
-        investigation: {
-          bg: "#090d16",
-          panel: "#0f172a",
-          card: "#131d33",
-          border: "#1e293b",
-          highlight: "#38bdf8",
-          accent: "#0284c7",
-          warning: "#f59e0b",
-          danger: "#ef4444",
-          success: "#10b981",
-          purple: "#a855f7",
-          cyan: "#06b6d4"
+        warning: {
+          DEFAULT: "#D66A00"
+        },
+        critical: {
+          DEFAULT: "#D63D4A"
+        },
+        border: "#E2E8F0",
+        text: {
+          primary: "#142833",
+          secondary: "#64748B",
         }
-      },
-      borderRadius: {
-        lg: "var(--radius)",
-        md: "calc(var(--radius) - 2px)",
-        sm: "calc(var(--radius) - 4px)",
       },
       fontFamily: {
-        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
-        mono: ['JetBrains Mono', 'Fira Code', 'monospace'],
+        sans: ['Inter', 'system-ui', 'sans-serif'],
       },
-      animation: {
-        'pulse-subtle': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-        'radar-sweep': 'radarSweep 4s linear infinite',
-      },
-      keyframes: {
-        radarSweep: {
-          '0%': { transform: 'rotate(0deg)' },
-          '100%': { transform: 'rotate(360deg)' },
-        }
+      spacing: {
+        '2xs': '4px',
+        'sm': '8px',
+        'md': '12px',
+        'lg': '16px',
+        '2xl': '24px',
+        'section': '32px'
       }
     },
   },

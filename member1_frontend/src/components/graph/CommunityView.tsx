@@ -1,74 +1,119 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigationStore } from '../../store/navigationStore';
-import { SYNTHETIC_COMMUNITIES, GRAPH_NODES } from '../../data/syntheticData';
-import { fetchGraphData } from '../../services/graphService';
-import { GraphNode } from '../../types/graph';
+import { apiClient } from '../../services/apiClient';
 import { 
-  Layers, 
   Users, 
-  Share2, 
-  GitMerge, 
-  ArrowRight, 
-  CheckCircle2, 
-  Network,
-  Clock,
+  Share2,
   ExternalLink,
-  Loader2
+  Network,
+  Loader2,
+  AlertCircle
 } from 'lucide-react';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || (import.meta.env.PROD ? '/api/v1' : 'http://localhost:8000/api/v1');
+interface Cluster {
+  clusterId: string;
+  nodeIds: string[];
+  memberCount: number;
+  density: number;
+}
 
-const getAuthHeaders = (): Record<string, string> => {
-  const token = typeof localStorage !== 'undefined' ? localStorage.getItem('crimenet_auth_token') : null;
-  return token ? { Authorization: `Bearer ${token}` } : {};
-};
+interface EntityData {
+  id: string;
+  canonical_name?: string;
+  label?: string;
+  name?: string;
+  entity_type?: string;
+  type?: string;
+}
 
 export const CommunityView: React.FC = () => {
   const { selectEntity, setView, selectedCaseId } = useNavigationStore();
-  const [selectedCommunityId, setSelectedCommunityId] = useState<number>(1);
-  const [communities, setCommunities] = useState<any[]>(SYNTHETIC_COMMUNITIES);
-  const [caseNodes, setCaseNodes] = useState<GraphNode[]>(GRAPH_NODES);
+  
+  const [clusters, setClusters] = useState<Cluster[]>([]);
+  const [entities, setEntities] = useState<Record<string, EntityData>>({});
+  const [selectedClusterId, setSelectedClusterId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const targetCase = selectedCaseId || 'CASE-2025-M3-DATASET';
+    if (!selectedCaseId) {
+      setClusters([]);
+      setEntities({});
+      return;
+    }
+
+    let isMounted = true;
     setIsLoading(true);
+    setError(null);
 
     Promise.all([
-      fetch(`${API_BASE}/graph/communities?case_id=${encodeURIComponent(targetCase)}`, { headers: getAuthHeaders() })
-        .then(r => r.ok ? r.json() : null)
-        .catch(() => null),
-      fetchGraphData(targetCase)
-    ]).then(([commRes, graphRes]) => {
-      if (graphRes.success && graphRes.data && graphRes.data.nodes && graphRes.data.nodes.length > 0) {
-        setCaseNodes(graphRes.data.nodes);
+      apiClient.get(`/graph/communities?case_id=${encodeURIComponent(selectedCaseId)}`),
+      apiClient.get(`/entities?case_id=${encodeURIComponent(selectedCaseId)}`)
+    ]).then(([commRes, entRes]) => {
+      if (!isMounted) return;
+
+      if (!commRes.success || !commRes.data?.clusters) {
+        setClusters([]);
       } else {
-        setCaseNodes(GRAPH_NODES);
+        setClusters(commRes.data.clusters);
+        if (commRes.data.clusters.length > 0) {
+          setSelectedClusterId(commRes.data.clusters[0].clusterId);
+        }
       }
 
-      if (commRes && commRes.data && commRes.data.clusters && commRes.data.clusters.length > 0) {
-        const liveClusters = commRes.data.clusters.map((c: any, idx: number) => ({
-          communityId: idx + 1,
-          label: `Syndicate Cell #${idx + 1} (${c.memberCount} Members)`,
-          size: c.memberCount,
-          memberEntityIds: c.nodeIds,
-          interCommunityConnections: Math.max(1, Math.round(c.memberCount * 0.4)),
-          dominantEntityTypes: ['Person', 'Phone', 'Evidence'],
-          analyticalSummary: `Unsupervised Louvain cluster partition with computed intra-subgraph density of ${c.density || 0.42}.`
-        }));
-        setCommunities(liveClusters);
-        setSelectedCommunityId(1);
-      } else {
-        setCommunities(SYNTHETIC_COMMUNITIES);
+      const entityMap: Record<string, EntityData> = {};
+      if (entRes.success && Array.isArray(entRes.data)) {
+        entRes.data.forEach((ent: any) => {
+          entityMap[ent.id] = ent;
+        });
+      }
+      setEntities(entityMap);
+    }).catch(err => {
+      if (isMounted) {
+        console.error(err);
+        setError('Failed to fetch data.');
+        setClusters([]);
       }
     }).finally(() => {
-      setIsLoading(false);
+      if (isMounted) {
+        setIsLoading(false);
+      }
     });
+
+    return () => { isMounted = false; };
   }, [selectedCaseId]);
 
-  const activeCommunity = communities.find(c => c.communityId === selectedCommunityId) || communities[0] || SYNTHETIC_COMMUNITIES[0];
+  if (!selectedCaseId || (!isLoading && clusters.length === 0)) {
+    return (
+      <div className="flex flex-col items-center justify-center p-12 text-center border rounded-xl bg-slate-50 border-slate-200">
+        <Network className="w-12 h-12 text-[var(--text-secondary)] mb-4" />
+        <h3 className="text-lg font-bold text-slate-800">No communities detected for this case.</h3>
+        <p className="text-sm text-[var(--text-muted)] mt-2">
+          Ensure relationships exist in the graph.
+        </p>
+      </div>
+    );
+  }
 
-  const communityMembers = caseNodes.filter(n => (activeCommunity.memberEntityIds || []).includes(n.id));
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center p-12">
+        <Loader2 className="w-8 h-8 text-[#0a192f] animate-spin" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center p-12 text-red-600">
+        <AlertCircle className="w-6 h-6 mr-2" />
+        <span>{error}</span>
+      </div>
+    );
+  }
+
+  const activeCluster = clusters.find(c => c.clusterId === selectedClusterId) || clusters[0];
+  const activeMembers = activeCluster?.nodeIds.map(id => entities[id] || { id }) || [];
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
@@ -76,50 +121,47 @@ export const CommunityView: React.FC = () => {
       {/* Title */}
       <div>
         <div className="flex items-center gap-2">
-          <span className="text-xs font-mono uppercase tracking-wider text-[var(--primary)] font-semibold">
-            M5 Louvain Modularity Partition
+          <span className="text-xs font-mono uppercase tracking-wider text-[#0a192f] font-semibold">
+            Graph Analysis
           </span>
-          <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-950 text-[var(--primary)] border border-cyan-800">
-            Unsupervised Community Detection
+          <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-blue-50 text-[#0a192f] border border-blue-100">
+            Community Detection
           </span>
         </div>
-        <h1 className="text-xl font-bold text-[var(--text-primary)] mt-1">
-          Syndicate Sub-Community Clusters
+        <h1 className="text-xl font-bold text-[#0a192f] mt-1">
+          Community Clusters
         </h1>
-        <p className="text-xs text-[var(--text-secondary)] mt-1">
-          Algorithmic detection of densely connected modular sub-graphs separating port logistics operations from financial hawala conduits.
+        <p className="text-xs text-[var(--text-muted)] mt-1">
+          Identified dense subgraphs and coordinated networks within the selected case.
         </p>
       </div>
 
       {/* Community Selectors */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {communities.map(comm => {
-          const isSelected = comm.communityId === selectedCommunityId;
+        {clusters.map(cluster => {
+          const isSelected = cluster.clusterId === selectedClusterId;
           return (
             <div
-              key={comm.communityId}
-              onClick={() => setSelectedCommunityId(comm.communityId)}
-              className={`p-5 rounded-2xl border cursor-pointer transition-all ${
+              key={cluster.clusterId}
+              onClick={() => setSelectedClusterId(cluster.clusterId)}
+              className={`p-5 rounded-2xl cursor-pointer transition-all ${
                 isSelected
-                  ? 'bg-[var(--bg-card)] shadow-sm border border-[var(--border)] rounded-2xl bg-[var(--bg-card)] border-[var(--primary)] shadow-xl'
-                  : 'bg-[var(--bg-card)] shadow-sm border border-[var(--border)] rounded-xl bg-[var(--bg-card)] border-[var(--border)] hover:border-[var(--border)]'
+                  ? 'bg-white shadow-md border-2 border-[#0a192f]'
+                  : 'bg-white shadow-sm border-2 border-transparent hover:border-slate-300'
               }`}
             >
               <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-mono font-bold text-[var(--primary)] bg-cyan-950 px-2 py-0.5 rounded border border-cyan-800">
-                  Cluster #{comm.communityId}
+                <span className={`text-xs font-mono font-bold px-2 py-0.5 rounded border ${isSelected ? 'bg-[#0a192f] text-[var(--text-primary)] border-[#0a192f]' : 'bg-slate-100 text-slate-700 border-slate-200'}`}>
+                  {cluster.clusterId}
                 </span>
-                <span className="text-xs font-mono text-[var(--text-secondary)]">
-                  {comm.size} Member Nodes
+                <span className="text-xs font-mono text-[var(--text-muted)] flex items-center">
+                  <Users className="w-3.5 h-3.5 mr-1" />
+                  {cluster.memberCount} Members
                 </span>
               </div>
 
-              <h3 className="text-sm font-bold text-[var(--text-primary)]">{comm.label}</h3>
-              <p className="text-xs text-[var(--text-secondary)] mt-1.5 leading-relaxed">{comm.analyticalSummary}</p>
-
-              <div className="flex items-center gap-3 text-[11px] text-slate-500 mt-3 pt-2 border-t border-[var(--border)] font-mono">
-                <div>Inter-Cluster Links: <span className="text-[var(--text-secondary)] font-bold">{comm.interCommunityConnections}</span></div>
-                <div>Dominant Types: <span className="text-[var(--primary)]">{comm.dominantEntityTypes.join(', ')}</span></div>
+              <div className="flex items-center gap-3 text-[11px] text-[var(--text-muted)] mt-3 pt-2 border-t border-slate-100 font-mono">
+                <div>Density: <span className="text-[#0a192f] font-bold">{cluster.density ? cluster.density.toFixed(3) : '0.000'}</span></div>
               </div>
             </div>
           );
@@ -127,47 +169,57 @@ export const CommunityView: React.FC = () => {
       </div>
 
       {/* Active Community Members & Analysis */}
-      <div className="bg-[var(--bg-card)] shadow-sm border border-[var(--border)] rounded-2xl rounded-2xl p-6 border-[var(--border)] space-y-4">
-        <div className="flex items-center justify-between border-b border-[var(--border)] pb-3">
-          <div>
-            <h3 className="text-sm font-semibold text-[var(--text-primary)]">
-              Cluster #{activeCommunity.communityId} Member Entities
-            </h3>
-            <p className="text-xs text-[var(--text-secondary)] mt-0.5">{activeCommunity.analyticalSummary}</p>
-          </div>
-          <button
-            onClick={() => setView('graph')}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--primary)] text-white hover:bg-cyan-400 text-slate-950 font-bold text-xs transition-colors"
-          >
-            <Share2 className="w-3.5 h-3.5" />
-            <span>Isolate in Graph Canvas</span>
-          </button>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {communityMembers.map(member => (
-            <div
-              key={member.id}
-              onClick={() => {
-                selectEntity(member.id);
-                setView('entity');
-              }}
-              className="p-3.5 rounded-xl bg-[var(--bg-card)] border border-[var(--border)] hover:border-[var(--primary)] cursor-pointer transition-colors"
-            >
-              <div className="flex items-center justify-between text-[10px] font-mono mb-1">
-                <span className="text-[var(--primary)] font-semibold">{member.entityType}</span>
-                <span className="text-slate-500">{member.id}</span>
-              </div>
-              <h4 className="text-xs font-bold text-[var(--text-primary)] truncate">{member.label}</h4>
-              <div className="flex items-center justify-between text-[10px] font-mono text-[var(--text-secondary)] mt-2">
-                <span>Degree: {member.analytics?.degreeCentrality || 0.2}</span>
-                <span className="text-[var(--primary)]">View Dossier →</span>
-              </div>
+      {activeCluster && (
+        <div className="bg-white shadow-sm rounded-2xl p-6 border border-slate-200 space-y-4">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+            <div>
+              <h3 className="text-sm font-semibold text-[#0a192f]">
+                {activeCluster.clusterId} Member Entities
+              </h3>
             </div>
-          ))}
-        </div>
-      </div>
+            <button
+              onClick={() => setView('graph')}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#0a192f] text-[var(--text-primary)] hover:bg-[var(--bg-card)] font-bold text-xs transition-colors shadow-sm"
+            >
+              <Share2 className="w-3.5 h-3.5" />
+              <span>Isolate in Graph Canvas</span>
+            </button>
+          </div>
 
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {activeMembers.map(member => (
+              <div
+                key={member.id}
+                className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 hover:border-[#0a192f] hover:bg-white transition-colors group flex flex-col justify-between"
+              >
+                <div>
+                  <div className="flex items-center justify-between text-[10px] font-mono mb-1">
+                    <span className="text-[#0a192f] font-semibold px-1.5 py-0.5 bg-slate-200 rounded">
+                      {member.entity_type || member.type || 'Entity'}
+                    </span>
+                  </div>
+                  <h4 className="text-xs font-bold text-slate-900 truncate mt-2">
+                    {member.canonical_name || member.label || member.name || member.id}
+                  </h4>
+                  <p className="text-[10px] text-[var(--text-muted)] font-mono truncate mt-0.5">{member.id}</p>
+                </div>
+                
+                <div className="mt-3 pt-2 border-t border-slate-200 flex justify-end">
+                  <button
+                    onClick={() => {
+                      selectEntity(member.id);
+                      setView('case-workspace');
+                    }}
+                    className="flex items-center text-[10px] font-bold text-[#0a192f] hover:text-blue-600 transition-colors"
+                  >
+                    View Dossier <ExternalLink className="w-3 h-3 ml-1" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

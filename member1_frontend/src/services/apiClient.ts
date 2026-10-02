@@ -40,30 +40,7 @@ export async function apiRequest<T>(
 
     clearTimeout(timeoutId);
 
-    // If 401, attempt silent session refresh before reporting failure
-    if (response.status === 401) {
-      try {
-        const { data: refreshData, error: refreshErr } = await supabase.auth.refreshSession();
-        if (!refreshErr && refreshData.session?.access_token) {
-          const newToken = refreshData.session.access_token;
-          try { localStorage.setItem('crimenet_auth_token', newToken); } catch (_) {}
-          const currentUser = useAuthStore.getState().user;
-          if (currentUser) {
-            useAuthStore.getState().setSession(newToken, currentUser);
-          }
-          headers = {
-            ...headers,
-            Authorization: `Bearer ${newToken}`
-          };
-          response = await fetch(`${API_BASE_URL}${endpoint}`, {
-            ...options,
-            headers
-          });
-        }
-      } catch (refreshCatch) {
-        console.warn('Silent session refresh attempt failed:', refreshCatch);
-      }
-    }
+    // Automatic refresh disabled to prevent loops
 
     if (!response.ok) {
       if (response.status === 401) {

@@ -38,7 +38,7 @@ export const GenericEntityProfile: React.FC<GenericEntityProfileProps> = ({ enti
       case 'Transaction': return <ArrowLeftRight className="w-8 h-8 text-amber-600" />;
       case 'Communication': return <PhoneCall className="w-8 h-8 text-teal-600" />;
       case 'Evidence': return <FileCheck className="w-8 h-8 text-emerald-600" />;
-      default: return <Database className="w-8 h-8 text-slate-500" />;
+      default: return <Database className="w-8 h-8 text-[var(--text-muted)]" />;
     }
   };
 
@@ -63,7 +63,7 @@ export const GenericEntityProfile: React.FC<GenericEntityProfileProps> = ({ enti
                   {entity.id}
                 </span>
                 {entity.firstObserved && (
-                  <span className="text-xs font-mono text-slate-500">
+                  <span className="text-xs font-mono text-[var(--text-muted)]">
                     Logged: {entity.firstObserved}
                   </span>
                 )}
@@ -73,7 +73,7 @@ export const GenericEntityProfile: React.FC<GenericEntityProfileProps> = ({ enti
 
               <div className="flex flex-wrap items-center gap-4 text-xs text-slate-600 mt-2 font-mono">
                 <div>Source: <span className="text-slate-900 font-semibold">{entity.source}</span></div>
-                {entity.sourceDocument && <div>Ref: <span className="text-slate-500">{entity.sourceDocument}</span></div>}
+                {entity.sourceDocument && <div>Ref: <span className="text-[var(--text-muted)]">{entity.sourceDocument}</span></div>}
                 <div>Case: <span className="text-blue-700 font-semibold">{entity.caseIds?.join(', ')}</span></div>
               </div>
             </div>
@@ -83,7 +83,7 @@ export const GenericEntityProfile: React.FC<GenericEntityProfileProps> = ({ enti
           <div className="flex items-center gap-2 self-start shrink-0">
             <button
               onClick={() => setView('graph')}
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs transition-colors shadow-sm"
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[var(--primary)] hover:bg-blue-700 text-[var(--text-primary)] font-semibold text-xs transition-colors shadow-sm"
               title="Locate Entity in Network Graph"
             >
               <Share2 className="w-3.5 h-3.5" />
@@ -138,27 +138,27 @@ export const GenericEntityProfile: React.FC<GenericEntityProfileProps> = ({ enti
           {entity.type === 'Phone' && (
             <>
               <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200">
-                <div className="text-slate-500 font-mono text-[10px] uppercase font-semibold">Phone Number</div>
+                <div className="text-[var(--text-muted)] font-mono text-[10px] uppercase font-semibold">Phone Number</div>
                 <div className="text-sm font-bold text-slate-900 font-mono mt-1">{(entity as any).phoneNumber}</div>
               </div>
               <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200">
-                <div className="text-slate-500 font-mono text-[10px] uppercase font-semibold">Hardware IMEI</div>
+                <div className="text-[var(--text-muted)] font-mono text-[10px] uppercase font-semibold">Hardware IMEI</div>
                 <div className="text-sm font-mono text-slate-800 mt-1 font-semibold">{(entity as any).imei || 'Not Extracted'}</div>
               </div>
               <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200">
-                <div className="text-slate-500 font-mono text-[10px] uppercase font-semibold">Carrier / Provider</div>
+                <div className="text-[var(--text-muted)] font-mono text-[10px] uppercase font-semibold">Carrier / Provider</div>
                 <div className="text-sm text-emerald-700 font-bold mt-1">{(entity as any).serviceProvider}</div>
               </div>
               <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200">
-                <div className="text-slate-500 font-mono text-[10px] uppercase font-semibold">Registered Subscriber</div>
+                <div className="text-[var(--text-muted)] font-mono text-[10px] uppercase font-semibold">Registered Subscriber</div>
                 <div className="text-sm font-bold text-slate-900 mt-1">{(entity as any).registeredSubscriber}</div>
               </div>
               <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200">
-                <div className="text-slate-500 font-mono text-[10px] uppercase font-semibold">Last Active Tower</div>
+                <div className="text-[var(--text-muted)] font-mono text-[10px] uppercase font-semibold">Last Active Tower</div>
                 <div className="text-sm text-blue-700 font-mono mt-1 font-semibold">{(entity as any).lastActiveTower}</div>
               </div>
               <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200">
-                <div className="text-slate-500 font-mono text-[10px] uppercase font-semibold">CDR Call Volume</div>
+                <div className="text-[var(--text-muted)] font-mono text-[10px] uppercase font-semibold">CDR Call Volume</div>
                 <div className="text-sm font-mono text-amber-700 font-bold mt-1">{(entity as any).cdrCallCount} calls</div>
               </div>
             </>
@@ -168,27 +168,27 @@ export const GenericEntityProfile: React.FC<GenericEntityProfileProps> = ({ enti
           {entity.type === 'BankAccount' && (
             <>
               <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200">
-                <div className="text-slate-500 font-mono text-[10px] uppercase font-semibold">Account Number</div>
+                <div className="text-[var(--text-muted)] font-mono text-[10px] uppercase font-semibold">Account Number</div>
                 <div className="text-sm font-bold text-amber-900 font-mono mt-1">{(entity as any).accountNumber}</div>
               </div>
               <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200">
-                <div className="text-slate-500 font-mono text-[10px] uppercase font-semibold">Financial Institution</div>
+                <div className="text-[var(--text-muted)] font-mono text-[10px] uppercase font-semibold">Financial Institution</div>
                 <div className="text-sm text-slate-900 font-semibold mt-1">{(entity as any).bankName} ({(entity as any).branch})</div>
               </div>
               <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200">
-                <div className="text-slate-500 font-mono text-[10px] uppercase font-semibold">IFSC Code</div>
+                <div className="text-[var(--text-muted)] font-mono text-[10px] uppercase font-semibold">IFSC Code</div>
                 <div className="text-sm font-mono text-slate-700 mt-1 font-semibold">{(entity as any).ifscCode}</div>
               </div>
               <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200">
-                <div className="text-slate-500 font-mono text-[10px] uppercase font-semibold">Account Title</div>
+                <div className="text-[var(--text-muted)] font-mono text-[10px] uppercase font-semibold">Account Title</div>
                 <div className="text-sm font-bold text-slate-900 mt-1">{(entity as any).accountHolderName}</div>
               </div>
               <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200">
-                <div className="text-slate-500 font-mono text-[10px] uppercase font-semibold">Account Classification</div>
+                <div className="text-[var(--text-muted)] font-mono text-[10px] uppercase font-semibold">Account Classification</div>
                 <div className="text-sm text-blue-700 font-bold mt-1">{(entity as any).accountType}</div>
               </div>
               <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200">
-                <div className="text-slate-500 font-mono text-[10px] uppercase font-semibold">Total Transactions Logged</div>
+                <div className="text-[var(--text-muted)] font-mono text-[10px] uppercase font-semibold">Total Transactions Logged</div>
                 <div className="text-sm font-mono text-slate-900 font-bold mt-1">{(entity as any).totalTransactionsLogged} Entries</div>
               </div>
             </>
@@ -198,28 +198,28 @@ export const GenericEntityProfile: React.FC<GenericEntityProfileProps> = ({ enti
           {entity.type === 'Transaction' && (
             <>
               <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200">
-                <div className="text-slate-500 font-mono text-[10px] uppercase font-semibold">Settlement Amount</div>
+                <div className="text-[var(--text-muted)] font-mono text-[10px] uppercase font-semibold">Settlement Amount</div>
                 <div className="text-lg font-bold text-amber-700 font-mono mt-1">
                   ₹{(entity as any).amountINR?.toLocaleString('en-IN')}
                 </div>
               </div>
               <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200">
-                <div className="text-slate-500 font-mono text-[10px] uppercase font-semibold">Timestamp</div>
+                <div className="text-[var(--text-muted)] font-mono text-[10px] uppercase font-semibold">Timestamp</div>
                 <div className="text-sm font-mono text-slate-900 font-semibold mt-1">{(entity as any).timestamp}</div>
               </div>
               <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200">
-                <div className="text-slate-500 font-mono text-[10px] uppercase font-semibold">Payment Rails</div>
+                <div className="text-[var(--text-muted)] font-mono text-[10px] uppercase font-semibold">Payment Rails</div>
                 <div className="text-sm text-blue-700 font-bold mt-1">{(entity as any).channel}</div>
               </div>
               <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200">
-                <div className="text-slate-500 font-mono text-[10px] uppercase font-semibold">Originator Account</div>
+                <div className="text-[var(--text-muted)] font-mono text-[10px] uppercase font-semibold">Originator Account</div>
                 <div className="text-sm font-mono text-slate-900 font-bold mt-1">{(entity as any).sourceAccount}</div>
-                <div className="text-[11px] text-slate-500 font-medium">{(entity as any).sourceHolder}</div>
+                <div className="text-[11px] text-[var(--text-muted)] font-medium">{(entity as any).sourceHolder}</div>
               </div>
               <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200">
-                <div className="text-slate-500 font-mono text-[10px] uppercase font-semibold">Beneficiary Account</div>
+                <div className="text-[var(--text-muted)] font-mono text-[10px] uppercase font-semibold">Beneficiary Account</div>
                 <div className="text-sm font-mono text-slate-900 font-bold mt-1">{(entity as any).destinationAccount}</div>
-                <div className="text-[11px] text-slate-500 font-medium">{(entity as any).destinationHolder}</div>
+                <div className="text-[11px] text-[var(--text-muted)] font-medium">{(entity as any).destinationHolder}</div>
               </div>
             </>
           )}
@@ -228,17 +228,17 @@ export const GenericEntityProfile: React.FC<GenericEntityProfileProps> = ({ enti
           {entity.type === 'Location' && (
             <>
               <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200">
-                <div className="text-slate-500 font-mono text-[10px] uppercase font-semibold">Coordinates</div>
+                <div className="text-[var(--text-muted)] font-mono text-[10px] uppercase font-semibold">Coordinates</div>
                 <div className="text-sm font-mono text-red-600 font-bold mt-1">
                   {(entity as any).latitude}, {(entity as any).longitude}
                 </div>
               </div>
               <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200">
-                <div className="text-slate-500 font-mono text-[10px] uppercase font-semibold">Category</div>
+                <div className="text-[var(--text-muted)] font-mono text-[10px] uppercase font-semibold">Category</div>
                 <div className="text-sm text-slate-900 font-bold mt-1">{(entity as any).locationCategory}</div>
               </div>
               <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200">
-                <div className="text-slate-500 font-mono text-[10px] uppercase font-semibold">Jurisdiction Address</div>
+                <div className="text-[var(--text-muted)] font-mono text-[10px] uppercase font-semibold">Jurisdiction Address</div>
                 <div className="text-xs text-slate-700 mt-1 font-medium">{(entity as any).address}</div>
               </div>
             </>
@@ -248,19 +248,19 @@ export const GenericEntityProfile: React.FC<GenericEntityProfileProps> = ({ enti
           {entity.type === 'FIR' && (
             <>
               <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200">
-                <div className="text-slate-500 font-mono text-[10px] uppercase font-semibold">FIR Number</div>
+                <div className="text-[var(--text-muted)] font-mono text-[10px] uppercase font-semibold">FIR Number</div>
                 <div className="text-sm font-bold text-blue-700 font-mono mt-1">{(entity as any).firNumber}</div>
               </div>
               <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200">
-                <div className="text-slate-500 font-mono text-[10px] uppercase font-semibold">Police Station</div>
+                <div className="text-[var(--text-muted)] font-mono text-[10px] uppercase font-semibold">Police Station</div>
                 <div className="text-sm text-slate-900 font-semibold mt-1">{(entity as any).policeStation}</div>
               </div>
               <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200">
-                <div className="text-slate-500 font-mono text-[10px] uppercase font-semibold">Investigation Status</div>
+                <div className="text-[var(--text-muted)] font-mono text-[10px] uppercase font-semibold">Investigation Status</div>
                 <div className="text-sm text-emerald-700 font-bold mt-1">{(entity as any).status}</div>
               </div>
               <div className="col-span-full p-3.5 rounded-xl bg-slate-50 border border-slate-200">
-                <div className="text-slate-500 font-mono text-[10px] uppercase font-semibold mb-1.5">Applied Legal Sections</div>
+                <div className="text-[var(--text-muted)] font-mono text-[10px] uppercase font-semibold mb-1.5">Applied Legal Sections</div>
                 <div className="flex flex-wrap gap-1.5">
                   {(entity as any).sectionsApplied?.map((sec: string) => (
                     <span key={sec} className="px-2.5 py-1 rounded bg-blue-50 text-blue-800 border border-blue-200 font-mono text-[11px] font-semibold">
@@ -276,15 +276,15 @@ export const GenericEntityProfile: React.FC<GenericEntityProfileProps> = ({ enti
           {entity.type === 'Crime' && (
             <>
               <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200">
-                <div className="text-slate-500 font-mono text-[10px] uppercase font-semibold">Crime Incident ID</div>
+                <div className="text-[var(--text-muted)] font-mono text-[10px] uppercase font-semibold">Crime Incident ID</div>
                 <div className="text-sm font-bold text-rose-700 font-mono mt-1">{(entity as any).crimeId}</div>
               </div>
               <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200">
-                <div className="text-slate-500 font-mono text-[10px] uppercase font-semibold">Category</div>
+                <div className="text-[var(--text-muted)] font-mono text-[10px] uppercase font-semibold">Category</div>
                 <div className="text-sm text-slate-900 font-bold mt-1">{(entity as any).crimeCategory}</div>
               </div>
               <div className="col-span-full p-3.5 rounded-xl bg-slate-50 border border-slate-200">
-                <div className="text-slate-500 font-mono text-[10px] uppercase font-semibold mb-1">Modus Operandi</div>
+                <div className="text-[var(--text-muted)] font-mono text-[10px] uppercase font-semibold mb-1">Modus Operandi</div>
                 <p className="text-xs text-slate-700 leading-relaxed font-medium">{(entity as any).modusOperandi}</p>
               </div>
             </>
@@ -294,15 +294,15 @@ export const GenericEntityProfile: React.FC<GenericEntityProfileProps> = ({ enti
           {entity.type === 'Organization' && (
             <>
               <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200">
-                <div className="text-slate-500 font-mono text-[10px] uppercase font-semibold">Corporate Name</div>
+                <div className="text-[var(--text-muted)] font-mono text-[10px] uppercase font-semibold">Corporate Name</div>
                 <div className="text-sm font-bold text-purple-900 mt-1">{(entity as any).orgName}</div>
               </div>
               <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200">
-                <div className="text-slate-500 font-mono text-[10px] uppercase font-semibold">CIN / Registration</div>
+                <div className="text-[var(--text-muted)] font-mono text-[10px] uppercase font-semibold">CIN / Registration</div>
                 <div className="text-sm font-mono text-slate-800 mt-1 font-semibold">{(entity as any).registrationNumber}</div>
               </div>
               <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200">
-                <div className="text-slate-500 font-mono text-[10px] uppercase font-semibold">Type</div>
+                <div className="text-[var(--text-muted)] font-mono text-[10px] uppercase font-semibold">Type</div>
                 <div className="text-sm text-amber-800 font-bold mt-1">{(entity as any).orgType}</div>
               </div>
             </>

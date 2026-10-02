@@ -191,6 +191,7 @@ async def get_evidence(
 @router.get('/evidence/{evidence_id}/file', summary='Stream Evidence File / Image')
 async def get_evidence_file(
     evidence_id: str = Path(...),
+    current_user = Depends(require_permission('evidence:read')),
     db = Depends(get_db)
 ):
     from fastapi.responses import FileResponse, Response, RedirectResponse
@@ -202,8 +203,14 @@ async def get_evidence_file(
     if not ev_row:
         raise HTTPException(status_code=404, detail="Evidence item not found.")
     
+    from app.dependencies import assert_case_access
+    assert_case_access(db, current_user, ev_row.case_id)
+
+    from app.dependencies import assert_case_access
+    assert_case_access(db, current_user, ev_row.case_id)
+    
     meta = ev_row.metadata_json or {}
-    storage_path = meta.get('storagePath')
+    storage_path = meta.get('storagePath') or meta.get('filePath')
     
     if storage_path:
         supabase_svc = get_supabase_storage_service()
@@ -292,4 +299,6 @@ async def get_verification_discrepancies(
     from app.services.demo_data import get_case_discrepancies
     discrepancies = get_case_discrepancies(target_case_id)
     return ResponseEnvelope(data=discrepancies)
+
+
 

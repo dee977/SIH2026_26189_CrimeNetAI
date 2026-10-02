@@ -105,7 +105,7 @@ async def get_all_entities(
     pageSize: int = Query(50, ge=1, le=500),
     m3_client: M3GraphDataClient = Depends(get_m3_client)
 ):
-    target_case = case_id or caseId or 'CASE-2025-M3-DATASET'
+    target_case = case_id or caseId or None
     raw = await m3_client.query_entities(entity_type=type, query=query, case_id=target_case, limit=pageSize)
     items = []
     for r in raw:
@@ -205,7 +205,7 @@ async def get_evidence(query: Optional[str] = None, case_id: Optional[str] = Que
 
 @router.get('/{id}', response_model=ResponseEnvelope[dict], summary='Get Normalized Entity by ID')
 async def get_entity_by_id(id: str, case_id: Optional[str] = Query(None), caseId: Optional[str] = Query(None), m3_client: M3GraphDataClient = Depends(get_m3_client)):
-    target_case = case_id or caseId or 'CASE-2025-M3-DATASET'
+    target_case = case_id or caseId or None
     ent = await m3_client.get_node_by_id(id, target_case)
     if not ent:
         raise ResourceNotFoundError('Entity', id)

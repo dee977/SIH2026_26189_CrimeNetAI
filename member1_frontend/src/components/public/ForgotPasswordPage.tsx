@@ -1,10 +1,11 @@
+import { useNavigate } from 'react-router-dom';
 import React, { useState } from 'react';
 import { useNavigationStore } from '../../store/navigationStore';
 import { supabase } from '../../services/supabaseClient';
 import { Shield, Mail, KeyRound, ArrowLeft, CheckCircle2, AlertCircle } from 'lucide-react';
 
 export const ForgotPasswordPage: React.FC = () => {
-  const { setView } = useNavigationStore();
+  const navigate = useNavigate();
 
   const [step, setStep] = useState<'request' | 'success'>('request');
   const [email, setEmail] = useState('');
@@ -57,9 +58,9 @@ export const ForgotPasswordPage: React.FC = () => {
             <div className="w-10 h-10 rounded-xl bg-[var(--primary)]/20 border border-[var(--primary)]/40 flex items-center justify-center text-[var(--accent)] shadow-sm shadow-[var(--primary)]/20">
               <Shield className="w-5 h-5" />
             </div>
-            <span className="font-bold text-xl text-white tracking-tight">CrimeNet AI</span>
+            <span className="font-bold text-xl text-[var(--text-primary)] tracking-tight">CrimeNet AI</span>
           </div>
-          <h1 className="text-4xl font-bold tracking-tight text-white leading-tight mb-4 max-w-lg">
+          <h1 className="text-4xl font-bold tracking-tight text-[var(--text-primary)] leading-tight mb-4 max-w-lg">
             Credential Recovery
           </h1>
           <p className="text-lg text-[var(--sidebar-text-muted)] max-w-md font-medium">
@@ -74,7 +75,7 @@ export const ForgotPasswordPage: React.FC = () => {
           
           <div className="mb-6">
             <button
-              onClick={() => setView('login')}
+              onClick={() => navigate('/login')}
               className="inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--text-secondary)] hover:text-[var(--primary)] transition-colors mb-4"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
@@ -122,7 +123,7 @@ export const ForgotPasswordPage: React.FC = () => {
                   <button
                     type="submit"
                     disabled={isLoading}
-                    className="w-full py-3 mt-2 rounded-xl bg-[var(--primary)] hover:bg-[#1D4ED8] text-white font-semibold text-sm transition-all shadow-md flex items-center justify-center gap-2"
+                    className="w-full py-3 mt-2 rounded-xl bg-[var(--primary)] hover:bg-[#1D4ED8] text-[var(--text-primary)] font-semibold text-sm transition-all shadow-md flex items-center justify-center gap-2"
                   >
                     {isLoading ? 'Sending...' : 'Send Reset Link'}
                   </button>
@@ -140,8 +141,8 @@ export const ForgotPasswordPage: React.FC = () => {
                   Password reset link sent. Check your email for further instructions.
                 </p>
                 <button
-                  onClick={() => setView('login')}
-                  className="w-full mt-4 py-3 rounded-xl bg-[var(--surface-blue)] text-[var(--primary)] hover:bg-[var(--primary)] hover:text-white font-semibold text-sm transition-colors shadow-sm"
+                  onClick={() => navigate('/login')}
+                  className="w-full mt-4 py-3 rounded-xl bg-[var(--surface-blue)] text-[var(--primary)] hover:bg-[var(--primary)] hover:text-[var(--text-primary)] font-semibold text-sm transition-colors shadow-sm"
                 >
                   Return to Login
                 </button>
@@ -154,3 +155,4 @@ export const ForgotPasswordPage: React.FC = () => {
     </div>
   );
 };
+

@@ -22,7 +22,7 @@ import {
 } from 'lucide-react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from 'recharts';
 
-export const TimelineView: React.FC = () => {
+export const TimelineView: React.FC<{caseId?: string}> = ({caseId}) => {
   const { selectedCaseId, selectEntity, setView, selectEvidence } = useNavigationStore();
 
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
@@ -198,12 +198,12 @@ export const TimelineView: React.FC = () => {
 
   const getCategoryIcon = (cat: TimelineCategory) => {
     switch (cat) {
-      case 'Communication': return <PhoneCall className="w-4 h-4 text-emerald-400" />;
+      case 'Communication': return <PhoneCall className="w-4 h-4 text-[var(--success)]" />;
       case 'Transaction': return <ArrowLeftRight className="w-4 h-4 text-yellow-400" />;
       case 'Location': return <MapPin className="w-4 h-4 text-red-400" />;
       case 'Crime': return <ShieldAlert className="w-4 h-4 text-red-500" />;
       case 'Relationship': return <FileText className="w-4 h-4 text-cyan-400" />;
-      default: return <Clock className="w-4 h-4 text-slate-400" />;
+      default: return <Clock className="w-4 h-4 text-[var(--text-secondary)]" />;
     }
   };
 
@@ -234,7 +234,7 @@ export const TimelineView: React.FC = () => {
           <button
             onClick={fetchTimelineEvents}
             disabled={isLoading}
-            className="p-2 rounded-xl bg-[var(--bg-card)] border border-[var(--border)] text-slate-400 hover:text-cyan-300 transition-colors"
+            className="p-2 rounded-xl bg-[var(--bg-card)] border border-[var(--border)] text-[var(--text-secondary)] hover:text-cyan-300 transition-colors"
             title="Refresh Timeline"
           >
             <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
@@ -242,7 +242,7 @@ export const TimelineView: React.FC = () => {
 
           <button
             onClick={() => { setPlaybackIndex(0); setIsPlaying(true); }}
-            className="p-2 rounded-xl bg-[var(--bg-card)] border border-[var(--border)] text-slate-400 hover:text-cyan-300 transition-colors"
+            className="p-2 rounded-xl bg-[var(--bg-card)] border border-[var(--border)] text-[var(--text-secondary)] hover:text-cyan-300 transition-colors"
             title="Restart Playback from Beginning"
           >
             <RotateCcw className="w-4 h-4" />
@@ -355,12 +355,12 @@ export const TimelineView: React.FC = () => {
                         {event.category}
                       </span>
                       {event.isBurstPoint && (
-                        <span className="text-[10px] font-mono font-bold uppercase text-amber-400 bg-amber-950 px-2 py-0.5 rounded border border-amber-800">
+                        <span className="text-[10px] font-mono font-bold uppercase text-[var(--warning)] bg-amber-950 px-2 py-0.5 rounded border border-amber-800">
                           Critical Anomaly Window
                         </span>
                       )}
                     </div>
-                    <span className="text-[11px] font-mono text-slate-500">{event.locationName}</span>
+                    <span className="text-[11px] font-mono text-[var(--text-muted)]">{event.locationName}</span>
                   </div>
 
                   <h4 className="text-sm font-bold text-[var(--text-primary)]">{event.title}</h4>
@@ -368,17 +368,17 @@ export const TimelineView: React.FC = () => {
 
                   {/* Linked Entity Badges & Evidence Link */}
                   <div className="flex flex-wrap items-center gap-2 mt-3 pt-2 border-t border-[var(--border)] text-xs">
-                    <span className="text-[10px] uppercase font-mono text-slate-500">Entities:</span>
+                    <span className="text-[10px] uppercase font-mono text-[var(--text-muted)]">Entities:</span>
                     <button
                       onClick={() => { selectEntity(event.primaryEntity.id); setView('entity'); }}
-                      className="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-cyan-300 font-mono text-[11px] transition-colors"
+                      className="px-2 py-0.5 rounded bg-[var(--bg-card)] hover:bg-[var(--bg-card)] text-cyan-300 font-mono text-[11px] transition-colors"
                     >
                       {event.primaryEntity.label}
                     </button>
                     {event.secondaryEntity && (
                       <button
                         onClick={() => { selectEntity(event.secondaryEntity!.id); setView('entity'); }}
-                        className="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-cyan-300 font-mono text-[11px] transition-colors"
+                        className="px-2 py-0.5 rounded bg-[var(--bg-card)] hover:bg-[var(--bg-card)] text-cyan-300 font-mono text-[11px] transition-colors"
                       >
                         {event.secondaryEntity.label}
                       </button>
@@ -386,7 +386,7 @@ export const TimelineView: React.FC = () => {
                     {event.sourceEvidenceId && (
                       <button
                         onClick={() => { selectEvidence(event.sourceEvidenceId!); setView('evidence'); }}
-                        className="ml-auto text-[11px] font-mono text-emerald-400 hover:underline flex items-center gap-1"
+                        className="ml-auto text-[11px] font-mono text-[var(--success)] hover:underline flex items-center gap-1"
                       >
                         <span>Evidence Ref ({event.sourceEvidenceId})</span>
                         <ExternalLink className="w-3 h-3" />

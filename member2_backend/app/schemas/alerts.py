@@ -29,6 +29,7 @@ class AlertResponse(BaseModel):
     caseId: Optional[str] = None
     evidenceId: Optional[str] = None
     status: str = 'UNRESOLVED'
+    isRead: bool = False
     triggeredAt: str
     metadata: Dict[str, Any] = Field(default_factory=dict)
 
@@ -42,3 +43,6 @@ class AlertFilterRequest(BaseModel):
 class AlertAcknowledgeRequest(BaseModel):
     resolutionNotes: str
     status: str = 'RESOLVED'
+
+class AlertMarkReadRequest(BaseModel):
+    alertIds: Optional[List[str]] = None

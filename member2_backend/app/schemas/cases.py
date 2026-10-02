@@ -34,6 +34,10 @@ class CaseUpdateRequest(BaseModel):
     status: Optional[str] = None
     priority: Optional[str] = None
     notes: Optional[str] = None
+    caseType: Optional[str] = None
+    closedAt: Optional[str] = None
+    archivedAt: Optional[str] = None
+    closureReason: Optional[str] = None
 
 class CaseAccessMetadata(BaseModel):
     classificationLevel: str = 'CONFIDENTIAL - LAW ENFORCEMENT ONLY'
@@ -58,10 +62,21 @@ class CaseSummaryResponse(BaseModel):
     assignedTeam: str
     status: str
     priority: str
+    caseNumber: Optional[str] = None
+    jurisdiction: Optional[str] = None
+    policeStation: Optional[str] = None
+    caseType: Optional[str] = None
+    closedAt: Optional[str] = None
+    archivedAt: Optional[str] = None
     entityCount: int = 0
     relationshipCount: int = 0
     evidenceCount: int = 0
     reportCount: int = 0
+    alertCount: int = 0
+    noteCount: int = 0
+    teamCount: int = 0
+    importCount: int = 0
+    timelineEventCount: int = 0
     createdAt: str
     updatedAt: str
 
@@ -82,3 +97,26 @@ class CaseDetailResponse(BaseModel):
     accessMetadata: CaseAccessMetadata = Field(default_factory=CaseAccessMetadata)
     createdAt: str
     updatedAt: str
+
+class CaseMemberResponse(BaseModel):
+    email: str
+    role: str
+    addedAt: Optional[str] = None
+
+class CaseNoteCreate(BaseModel):
+    content: str = Field(..., min_length=1)
+    isPinned: Optional[bool] = False
+
+class CaseNoteResponse(BaseModel):
+    noteId: str
+    caseId: str
+    content: str
+    authorEmail: str
+    authorName: str
+    isPinned: bool = False
+    createdAt: Optional[str] = None
+    updatedAt: Optional[str] = None
+
+class CaseCloseRequest(BaseModel):
+    reason: str = Field(..., min_length=1)
+    notes: Optional[str] = None

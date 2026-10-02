@@ -27,6 +27,28 @@ class SupabaseStorageService:
         # Avoid checking list_buckets on every upload to prevent RLS 403 warnings for anon keys.
         return True
 
+    def ensure_case_storage_prefix(self, case_id: str) -> bool:
+        """
+        Ensures a case-scoped folder exists in Supabase Storage.
+        Creates a tiny placeholder file .case-folder under the case_id prefix.
+        """
+        if not self.client:
+            logger.warning(f"Storage client not initialized. Skipping prefix creation for {case_id}")
+            return False
+            
+        try:
+            placeholder_path = f"{case_id}/.case-folder"
+            self.client.storage.from_(self.bucket_name).upload(
+                path=placeholder_path,
+                file=b"CRIMENET_CASE_DIR",
+                file_options={"content-type": "text/plain", "upsert": "true"}
+            )
+            logger.info(f"Initialized storage prefix for case {case_id}")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to initialize storage prefix for case {case_id}: {e}")
+            return False
+
     def upload_file(self, case_id: str, file_name: str, file_bytes: bytes, content_type: str = "application/octet-stream") -> Optional[str]:
         """
         Uploads a file to Supabase storage.
@@ -36,10 +58,14 @@ class SupabaseStorageService:
             logger.error("Supabase client not initialized")
             return None
         
-        # Sanitize filename
+        # Sanitize filename but preserve directories
         import re
-        safe_filename = re.sub(r'[^a-zA-Z0-9_\-\.]', '_', file_name)
-        storage_path = f"{case_id}/{safe_filename}"
+        safe_filename = re.sub(r'[^a-zA-Z0-9_\-\.\/]', '_', file_name)
+        if safe_filename.startswith(f"{case_id}/"):
+            storage_path = safe_filename
+        else:
+            safe_filename = safe_filename.lstrip('/')
+            storage_path = f"{case_id}/{safe_filename}"
         
         try:
             res = self.client.storage.from_(self.bucket_name).upload(

@@ -19,6 +19,10 @@ class CaseModel(Base):
     police_station = Column(String, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now(), server_default=func.now())
+    case_type = Column(String, nullable=True)
+    closed_at = Column(DateTime(timezone=True), nullable=True)
+    archived_at = Column(DateTime(timezone=True), nullable=True)
+    closure_reason = Column(Text, nullable=True)
 
 from sqlalchemy import Boolean
 class UserProfileModel(Base):
@@ -28,6 +32,11 @@ class UserProfileModel(Base):
     email = Column(String, unique=True, index=True, nullable=False)
     role = Column(String, nullable=False)
     is_active = Column(Boolean, default=True)
+    phone_number = Column(String, nullable=True)
+    officer_name = Column(String, nullable=True)
+    badge_number = Column(String, nullable=True)
+    phone_number = Column(String, nullable=True)
+    department = Column(String, nullable=True)
 
 class AccessRequestModel(Base):
     __tablename__ = 'access_requests'
@@ -37,6 +46,7 @@ class AccessRequestModel(Base):
     user_email = Column(String, nullable=False, index=True)
     officer_name = Column(String, nullable=True)
     badge_number = Column(String, nullable=True)
+    phone_number = Column(String, nullable=True)
     department = Column(String, nullable=True)
     requested_role = Column(String, nullable=False)
     status = Column(String, default='pending', nullable=False)
@@ -57,6 +67,18 @@ class CaseMembershipModel(Base):
     user_email = Column(String, nullable=False, index=True)
     membership_role = Column(String, nullable=False, default='MEMBER')
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+class CaseNoteModel(Base):
+    __tablename__ = 'case_notes'
+    id = Column(Integer, primary_key=True, index=True)
+    note_id = Column(String, unique=True, nullable=False, index=True)
+    case_id = Column(String, ForeignKey('cases.case_id'), nullable=False, index=True)
+    content = Column(Text, nullable=False)
+    author_email = Column(String, nullable=False)
+    author_name = Column(String, nullable=False)
+    is_pinned = Column(Boolean, default=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now(), server_default=func.now())
 
 class WatchlistModel(Base):
     __tablename__ = 'watchlist_items'
@@ -86,6 +108,7 @@ class AlertModel(Base):
     related_entity_name = Column(String)
     evidence_id = Column(String)
     status = Column(String, default='UNRESOLVED', nullable=False)
+    is_read = Column(Boolean, default=False, nullable=False)
     metadata_json = Column(JSON, default=dict, nullable=False)
     triggered_at = Column(DateTime(timezone=True), server_default=func.now())
 

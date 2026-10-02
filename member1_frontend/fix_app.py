@@ -1,67 +1,18 @@
-import re
+﻿import re
 
-with open('src/App.tsx', 'r') as f:
-    content = f.read()
+filepath = "src/App.tsx"
+with open(filepath, "r", encoding="utf-8") as f:
+    code = f.read()
 
-# Add import if needed
-if "import { apiRequest } from './services/apiClient';" not in content:
-    content = content.replace("import { supabase } from './services/supabaseClient';", "import { supabase } from './services/supabaseClient';\nimport { apiRequest } from './services/apiClient';")
+import_stmt = "import { AdminDashboardView } from './components/admin/AdminDashboardView';\n"
+if "AdminDashboardView" not in code:
+    code = code.replace("import { ReportView } from './components/reports/ReportView';", "import { ReportView } from './components/reports/ReportView';\n" + import_stmt)
 
-# We want to replace the hardcoded setting of roles in both places
-# We will create a helper function outside App component or just use a helper
-helper = """
-async function syncUserWithBackend(session: any, setSession: any) {
-  if (!session) return;
-  
-  // Set temporary restricted session so apiClient has a token to use
-  setSession(session.access_token, {
-    id: session.user.id,
-    email: session.user.email || '',
-    name: session.user.user_metadata?.name || 'Officer',
-    phone: session.user.user_metadata?.phone || '',
-    officerId: session.user.user_metadata?.officerId || 'LEO-0000',
-    organization: 'CrimeNet',
-    requestedRole: 'RESTRICTED',
-    grantedRole: 'RESTRICTED',
-    status: 'APPROVED',
-    permissions: [],
-    createdAt: session.user.created_at,
-    lastLogin: new Date().toISOString()
-  });
+route_stmt = '          <Route path="/admin" element={<RouteGuard viewId="admin"><AdminDashboardView /></RouteGuard>} />\n'
+if "/admin" not in code:
+    code = code.replace('          <Route path="/reports" element={<RouteGuard viewId="reports"><ReportView /></RouteGuard>} />', '          <Route path="/reports" element={<RouteGuard viewId="reports"><ReportView /></RouteGuard>} />\n' + route_stmt)
 
-  try {
-    const resp = await apiRequest<any>('/auth/me');
-    if (resp.data) {
-       const beUser = resp.data;
-       setSession(session.access_token, {
-          id: session.user.id,
-          email: beUser.email || session.user.email,
-          name: beUser.fullName || session.user.user_metadata?.name || 'Officer',
-          phone: session.user.user_metadata?.phone || '',
-          officerId: beUser.badgeNumber || session.user.user_metadata?.officerId || 'LEO-0000',
-          organization: beUser.agencyUnit || 'CrimeNet',
-          requestedRole: beUser.role,
-          grantedRole: beUser.grantedRole,
-          status: beUser.isActive ? 'APPROVED' : 'SUSPENDED',
-          permissions: beUser.permissions || [],
-          createdAt: session.user.created_at,
-          lastLogin: new Date().toISOString()
-       });
-    }
-  } catch (err) {
-    console.error("Failed to fetch backend profile:", err);
-  }
-}
-"""
+with open(filepath, "w", encoding="utf-8") as f:
+    f.write(code)
 
-if "syncUserWithBackend" not in content:
-    content = content.replace("export function App() {", helper + "\nexport function App() {")
-
-# Replace all occurrences of setSession logic that parses session.user_metadata
-content = re.sub(r"const role = \(session\.user\?\.user_metadata\?\.role.*?;.*?\n\s*setSession\(session\.access_token, \{[\s\S]*?lastLogin: new Date\(\)\.toISOString\(\)\n\s*\}\);", "syncUserWithBackend(session, setSession);", content)
-
-# But there is another occurrence inside onAuthStateChange:
-content = re.sub(r"const role = \(session\.user\?\.user_metadata\?\.role.*?;.*?\n\s*setSession\(session\.access_token, \{[\s\S]*?createdAt: session\.user\.created_at,\n\s*lastLogin: new Date\(\)\.toISOString\(\)\n\s*\}\);", "syncUserWithBackend(session, setSession);", content)
-
-with open('src/App.tsx', 'w') as f:
-    f.write(content)
+print("App fixed.")

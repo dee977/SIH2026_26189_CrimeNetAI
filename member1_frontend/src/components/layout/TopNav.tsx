@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigationStore } from '../../store/navigationStore';
 import { useAuthStore } from '../../store/authStore';
+import { useCaseStore } from '../../store/caseStore';
 import { useNotificationStore } from '../../store/notificationStore';
 import { 
   Search, 
@@ -27,7 +28,15 @@ export const TopNav: React.FC = () => {
   } = useNavigationStore();
 
   const { user, logout, switchRole, triggerSessionExpiry } = useAuthStore();
+  const { cases, fetchCases } = useCaseStore();
   const { unreadAlertCount, isNotificationDropdownOpen, toggleNotificationDropdown } = useNotificationStore();
+
+  
+  useEffect(() => {
+    if (user && cases.length === 0) {
+      fetchCases();
+    }
+  }, [user, cases.length, fetchCases]);
 
   const [searchInput, setSearchInput] = useState('');
   const [isRoleDropdownOpen, setIsRoleDropdownOpen] = useState(false);
@@ -66,25 +75,16 @@ export const TopNav: React.FC = () => {
           <Briefcase className="w-3.5 h-3.5 text-[var(--primary)]" />
           <span className="text-[11px] text-[var(--text-secondary)]">Case:</span>
           <select
-            value={selectedCaseId || 'CASE-2025-M3-DATASET'}
+            value={selectedCaseId || ''}
             onChange={(e) => selectCase(e.target.value)}
             className="bg-transparent text-xs font-semibold text-[var(--primary)] focus:outline-none cursor-pointer"
           >
-            <option value="CASE-2025-M3-DATASET" className="bg-white text-[var(--text-primary)]">
-              CASE-2025-M3-DATASET (Falcon Web - National Dataset)
-            </option>
-            <option value="CASE-VIDEO-001" className="bg-white text-[var(--text-primary)]">
-              CASE-VIDEO-001 (Golden Fleece - Financial)
-            </option>
-            <option value="CASE-VIDEO-002" className="bg-white text-[var(--text-primary)]">
-              CASE-VIDEO-002 (White Dust - Narcotics)
-            </option>
-            <option value="CASE-VIDEO-003" className="bg-white text-[var(--text-primary)]">
-              CASE-VIDEO-003 (Phishnet - Cyber Fraud)
-            </option>
-            <option value="CASE-VIDEO-004" className="bg-white text-[var(--text-primary)]">
-              CASE-VIDEO-004 (Iron Shield - Human Trafficking)
-            </option>
+            <option value="" disabled className="bg-white text-[var(--text-secondary)]">Select Active Case...</option>
+            {cases.map((c) => (
+              <option key={c.caseId} value={c.caseId} className="bg-white text-[var(--text-primary)]">
+                {c.caseNumber} ({c.title})
+              </option>
+            ))}
           </select>
         </div>
       </div>
@@ -134,17 +134,17 @@ export const TopNav: React.FC = () => {
         <div className="relative">
           <button
             onClick={() => setIsRoleDropdownOpen(!isRoleDropdownOpen)}
-            className="flex items-center gap-2.5 px-3 py-1.5 rounded-xl bg-slate-900/40 hover:bg-slate-800/80 border border-slate-700/80 text-[var(--text-primary)] transition-all shadow-sm"
+            className="flex items-center gap-2.5 px-3 py-1.5 rounded-xl bg-white hover:bg-slate-50 border border-[var(--border)] text-[var(--text-primary)] transition-all shadow-sm"
           >
             <div className="w-7 h-7 rounded-lg bg-blue-500/20 border border-blue-500/40 flex items-center justify-center text-cyan-400">
               <User className="w-4 h-4" />
             </div>
             <div className="text-left hidden sm:block">
-              <div className="text-[11px] font-bold text-white leading-tight flex items-center gap-1.5">
+              <div className="text-[11px] font-bold text-[var(--text-primary)] leading-tight flex items-center gap-1.5">
                 <span>{user?.name || user?.email?.split('@')[0] || 'Officer'}</span>
               </div>
               <div className="text-[10px] font-mono flex items-center gap-1">
-                <span className="text-slate-400">Logged in as:</span>
+                <span className="text-[var(--text-secondary)]">Logged in as:</span>
                 <span className={`font-bold px-1.5 py-0.2 rounded text-[9px] uppercase ${
                   (user?.grantedRole || 'INVESTIGATOR') === 'ADMIN' ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40' :
                   (user?.grantedRole || 'INVESTIGATOR') === 'INVESTIGATOR' ? 'bg-blue-500/20 text-blue-300 border border-blue-500/40' :
@@ -158,12 +158,12 @@ export const TopNav: React.FC = () => {
           </button>
 
           {isRoleDropdownOpen && (
-            <div className="absolute right-0 mt-2 w-72 rounded-2xl bg-[#0f172a] border border-slate-800 shadow-2xl p-3 z-50 animate-in fade-in slide-in-from-top-2 text-xs">
-              <div className="pb-3 border-b border-slate-800">
-                <p className="font-bold text-white text-sm">{user?.name || 'Officer'}</p>
-                <p className="text-[11px] text-slate-400 font-mono mt-0.5">{user?.email}</p>
+            <div className="absolute right-0 mt-2 w-72 rounded-2xl bg-white border border-[var(--border)] shadow-2xl p-3 z-50 animate-in fade-in slide-in-from-top-2 text-xs">
+              <div className="pb-3 border-b border-[var(--border)]">
+                <p className="font-bold text-[var(--text-primary)] text-sm">{user?.name || 'Officer'}</p>
+                <p className="text-[11px] text-[var(--text-secondary)] font-mono mt-0.5">{user?.email}</p>
                 <div className="mt-2 flex items-center justify-between">
-                  <span className="text-[10px] text-slate-400 font-mono">Statutory Role:</span>
+                  <span className="text-[10px] text-[var(--text-secondary)] font-mono">Statutory Role:</span>
                   <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded border uppercase ${
                     (user?.grantedRole || 'INVESTIGATOR') === 'ADMIN' ? 'bg-rose-500/20 text-rose-300 border-rose-500/40' :
                     (user?.grantedRole || 'INVESTIGATOR') === 'INVESTIGATOR' ? 'bg-blue-500/20 text-blue-300 border-blue-500/40' :
@@ -175,22 +175,13 @@ export const TopNav: React.FC = () => {
                 </div>
               </div>
 
-              <div className="py-2 border-b border-slate-800 space-y-1">
-                <div className="text-[10px] font-mono text-slate-400">Badge: {user?.officerId || 'LEO-7729'}</div>
-                <div className="text-[10px] font-mono text-slate-400">Unit: {user?.organization || 'CrimeNet State Bureau'}</div>
+              <div className="py-2 border-b border-[var(--border)] space-y-1">
+                <div className="text-[10px] font-mono text-[var(--text-secondary)]">Badge: {user?.officerId || 'LEO-7729'}</div>
+                <div className="text-[10px] font-mono text-[var(--text-secondary)]">Unit: {user?.organization || 'CrimeNet State Bureau'}</div>
               </div>
 
               <div className="pt-2 space-y-1">
-                <button
-                  onClick={() => {
-                    setIsRoleDropdownOpen(false);
-                    triggerSessionExpiry();
-                  }}
-                  className="w-full text-left px-3 py-2 rounded-xl text-xs text-amber-300 hover:bg-amber-950/30 flex items-center gap-2 transition-colors"
-                >
-                  <Clock className="w-3.5 h-3.5" />
-                  <span>Simulate Session Expiry</span>
-                </button>
+                
                 
                 <button
                   onClick={() => {

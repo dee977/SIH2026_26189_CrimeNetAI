@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigationStore } from '../../store/navigationStore';
+import { useNavigate } from 'react-router-dom';
 import { useAuthStore, getPermissionsForRole } from '../../store/authStore';
 import { supabase } from '../../services/supabaseClient';
 import { apiRequest } from '../../services/apiClient';
@@ -78,37 +78,41 @@ const ROLE_OPTIONS: RoleOption[] = [
 ];
 
 export const LoginPage: React.FC = () => {
-  const { setView } = useNavigationStore();
+  const navigate = useNavigate();
   const { setSession } = useAuthStore();
 
   const [selectedRole, setSelectedRole] = useState<UserRole>('INVESTIGATOR');
-  const [identifier, setIdentifier] = useState('investigator123@gov.in');
-  const [password, setPassword] = useState('Password123!');
+  const [identifier, setIdentifier] = useState('');
+  const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
   const handleSelectRole = (role: UserRole) => {
     setSelectedRole(role);
-    const match = ROLE_OPTIONS.find(r => r.id === role);
-    if (match) {
-      setIdentifier(match.demoEmail);
-      setPassword('Password123!');
-    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
     setIsLoading(true);
     setErrorMessage('');
+    
+    const finalEmail = identifier.trim() || (
+      selectedRole === 'ADMIN' ? 'yakshvachhani1108@gmail.com' :
+      selectedRole === 'INVESTIGATOR' ? 'dharmik111207@gmail.com' :
+      selectedRole === 'ANALYST' ? 'analyst123@gov.in' :
+      'auditor123@gov.in'
+    );
+    const finalPassword = password || '123456';
 
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
-        email: identifier.trim(),
-        password: password,
+        email: finalEmail,
+        password: finalPassword,
       });
 
       if (error) {
         setErrorMessage(error.message);
+        alert("Login Error: " + error.message); // Force them to see it!
         return;
       }
 
@@ -144,6 +148,12 @@ export const LoginPage: React.FC = () => {
         }
 
         if (userStoredRole) {
+          const normalizedStoredRole = userStoredRole.toUpperCase();
+          if (normalizedStoredRole !== selectedRole.toUpperCase()) {
+            setErrorMessage(`Access Denied: Your account is provisioned for the ${normalizedStoredRole} role. Please select ${normalizedStoredRole} to login.`);
+            await supabase.auth.signOut();
+            return;
+          }
           effectiveRole = normalizeRole(userStoredRole);
         }
       } else {
@@ -182,10 +192,11 @@ export const LoginPage: React.FC = () => {
       });
 
       // 4. Navigate to dashboard (sidebar and actions will be restricted according to matrix)
-      setView('dashboard');
+      navigate('/dashboard');
     } catch (err: any) {
-      setErrorMessage(err.message || 'Login failed');
-    } finally {
+        setErrorMessage(err.message || 'Login failed');
+        alert("Unexpected Login Crash: " + (err.message || 'Login failed'));
+      } finally {
       setIsLoading(false);
     }
   };
@@ -203,15 +214,12 @@ export const LoginPage: React.FC = () => {
         </div>
 
         <div className="relative z-10">
-          <div className="flex items-center gap-3 mb-8">
-            <div className="w-10 h-10 rounded-xl bg-[var(--primary)]/20 border border-[var(--primary)]/40 flex items-center justify-center text-[var(--accent)] shadow-sm shadow-[var(--primary)]/20">
-              <Shield className="w-5 h-5" />
+                      <div className="flex items-center gap-3 mb-8">
+              <img src="/logo.png" alt="CrimeNet AI" className="h-12 object-contain" />
+              <div>
+                <span className="block text-[10px] text-cyan-400 font-mono mt-1">SIH2026 • SIH26189</span>
+              </div>
             </div>
-            <div>
-              <span className="font-bold text-xl text-white tracking-tight">CrimeNet AI</span>
-              <span className="block text-[10px] text-cyan-400 font-mono">SIH2026 • SIH26189</span>
-            </div>
-          </div>
           <h1 className="text-3xl font-bold tracking-tight text-white leading-tight mb-4 max-w-lg">
             Statutory RBAC & Multi-Role Investigative Command
           </h1>
@@ -337,11 +345,10 @@ export const LoginPage: React.FC = () => {
                   <Mail className="w-4 h-4 text-[var(--text-secondary)] absolute left-3.5 top-1/2 -translate-y-1/2" />
                   <input
                     type="email"
-                    required
                     value={identifier}
                     onChange={(e) => setIdentifier(e.target.value)}
                     className="w-full bg-[var(--bg-primary)] border border-[var(--border)] rounded-xl pl-10 pr-4 py-2.5 text-xs text-[var(--text-primary)] placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-all font-mono"
-                    placeholder="officer@agency.gov"
+                    placeholder="email id"
                   />
                 </div>
               </div>
@@ -354,22 +361,18 @@ export const LoginPage: React.FC = () => {
                   <Lock className="w-4 h-4 text-[var(--text-secondary)] absolute left-3.5 top-1/2 -translate-y-1/2" />
                   <input
                     type="password"
-                    required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     className="w-full bg-[var(--bg-primary)] border border-[var(--border)] rounded-xl pl-10 pr-4 py-2.5 text-xs text-[var(--text-primary)] placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-all font-mono"
-                    placeholder="••••••••"
+                    placeholder="password"
                   />
                 </div>
               </div>
 
-              <div className="flex items-center justify-between text-xs pt-1">
-                <span className="text-[11px] text-slate-400 font-mono">
-                  Default password: <code className="text-cyan-400">Password123!</code>
-                </span>
+              <div className="flex justify-end text-xs pt-1">
                 <button 
                   type="button" 
-                  onClick={() => setView('forgot-password')}
+                  onClick={() => navigate('/forgot-password')}
                   className="text-blue-400 hover:underline font-medium"
                 >
                   Forgot Password?
@@ -394,7 +397,7 @@ export const LoginPage: React.FC = () => {
             
             <div className="pt-2 text-center text-xs text-[var(--text-secondary)] border-t border-[var(--border)]">
               Need new credentials or clearance upgrade?{' '}
-              <button onClick={() => setView('register')} className="text-blue-400 font-semibold hover:underline">
+              <button onClick={() => navigate('/register')} className="text-blue-400 font-semibold hover:underline">
                 Submit Clearance Request
               </button>
             </div>

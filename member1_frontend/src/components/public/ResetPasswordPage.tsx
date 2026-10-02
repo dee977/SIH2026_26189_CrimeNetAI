@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom';
 import React, { useState, useEffect } from 'react';
 import { useNavigationStore } from '../../store/navigationStore';
 import { supabase } from '../../services/supabaseClient';
@@ -5,7 +6,7 @@ import { Shield, Lock, CheckCircle2, AlertCircle } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 
 export const ResetPasswordPage: React.FC = () => {
-  const { setView } = useNavigationStore();
+  const navigate = useNavigate();
   const { logout } = useAuthStore();
 
   const [newPassword, setNewPassword] = useState('');
@@ -74,12 +75,9 @@ export const ResetPasswordPage: React.FC = () => {
 
         <div className="relative z-10">
           <div className="flex items-center gap-3 mb-8">
-            <div className="w-10 h-10 rounded-xl bg-[var(--primary)]/20 border border-[var(--primary)]/40 flex items-center justify-center text-[var(--accent)] shadow-sm shadow-[var(--primary)]/20">
-              <Shield className="w-5 h-5" />
-            </div>
-            <span className="font-bold text-xl text-white tracking-tight">CrimeNet AI</span>
+            <img src="/logo.png" alt="CrimeNet AI" className="h-10 object-contain" style={{ filter: 'invert(1)', mixBlendMode: 'screen' }} />
           </div>
-          <h1 className="text-4xl font-bold tracking-tight text-white leading-tight mb-4 max-w-lg">
+          <h1 className="text-4xl font-bold tracking-tight text-[var(--text-primary)] leading-tight mb-4 max-w-lg">
             Credential Reset
           </h1>
           <p className="text-lg text-[var(--sidebar-text-muted)] max-w-md font-medium">
@@ -150,7 +148,7 @@ export const ResetPasswordPage: React.FC = () => {
                   <button
                     type="submit"
                     disabled={isLoading}
-                    className="w-full py-3 mt-2 rounded-xl bg-[var(--primary)] hover:bg-[#1D4ED8] text-white font-semibold text-sm transition-all shadow-md flex items-center justify-center gap-2"
+                    className="w-full py-3 mt-2 rounded-xl bg-[var(--primary)] hover:bg-[#1D4ED8] text-[var(--text-primary)] font-semibold text-sm transition-all shadow-md flex items-center justify-center gap-2"
                   >
                     {isLoading ? 'Updating...' : 'Update Password'}
                   </button>
@@ -166,8 +164,8 @@ export const ResetPasswordPage: React.FC = () => {
                   Password updated successfully. You can now use your new credentials to securely log in.
                 </p>
                 <button
-                  onClick={() => setView('login')}
-                  className="w-full mt-4 py-3 rounded-xl bg-[var(--primary)] text-white hover:bg-[#1D4ED8] font-semibold text-sm transition-colors shadow-sm"
+                  onClick={() => navigate('/login')}
+                  className="w-full mt-4 py-3 rounded-xl bg-[var(--primary)] text-[var(--text-primary)] hover:bg-[#1D4ED8] font-semibold text-sm transition-colors shadow-sm"
                 >
                   Back to Login
                 </button>
@@ -180,3 +178,4 @@ export const ResetPasswordPage: React.FC = () => {
     </div>
   );
 };
+

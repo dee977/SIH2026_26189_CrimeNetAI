@@ -21,7 +21,7 @@ interface NotificationState {
 
 export const useNotificationStore = create<NotificationState>((set) => ({
   toasts: [],
-  unreadAlertCount: 4,
+  unreadAlertCount: 0,
   isNotificationDropdownOpen: false,
 
   addToast: (toast) => {

@@ -220,7 +220,44 @@ async def list_watchlist(
     if entityType and entityType != 'ALL':
         rows = rows.filter(WatchlistModel.entity_type.ilike(entityType))
 
-    filtered = [{'watchId': w.watch_id, 'entityType': w.entity_type, 'identifierValue': w.identifier_value, 'canonicalName': w.canonical_name, 'reason': w.reason, 'priority': w.priority, 'caseId': w.case_id, 'addedBy': w.added_by, 'addedAt': w.added_at.isoformat() if w.added_at else '', 'isActive': w.is_active, 'matchCount': w.match_count} for w in rows.all()]
+    from app.models import EntityModel, CaseMembershipModel
+    watchlist_items = rows.all()
+    search_names = list(set([w.identifier_value for w in watchlist_items] + [w.canonical_name for w in watchlist_items]))
+
+    entity_cases = db.query(EntityModel.canonical_name, EntityModel.case_id).filter(
+        EntityModel.canonical_name.in_(search_names)
+    ).distinct().all()
+
+    entity_case_map = {}
+    for name, cid in entity_cases:
+        if cid:
+            entity_case_map.setdefault(name, set()).add(cid)
+
+    all_case_ids = set()
+    for cids in entity_case_map.values():
+        all_case_ids.update(cids)
+
+    if current_user.grantedRole in ('ADMIN', 'INVESTIGATOR'):
+        authorized_case_set = all_case_ids
+    else:
+        memberships = db.query(CaseMembershipModel.case_id).filter(
+            CaseMembershipModel.case_id.in_(list(all_case_ids)),
+            CaseMembershipModel.user_email.ilike(current_user.email)
+        ).all()
+        authorized_case_set = set([m[0] for m in memberships])
+
+    filtered = []
+    for w in watchlist_items:
+        cids = entity_case_map.get(w.identifier_value, set()).union(entity_case_map.get(w.canonical_name, set()))
+        auth_cids = list(cids.intersection(authorized_case_set))
+        filtered.append({
+            'watchId': w.watch_id, 'entityType': w.entity_type, 'identifierValue': w.identifier_value, 
+            'canonicalName': w.canonical_name, 'reason': w.reason, 'priority': w.priority, 
+            'caseId': w.case_id, 'addedBy': w.added_by, 'addedAt': w.added_at.isoformat() if w.added_at else '', 
+            'isActive': w.is_active, 'matchCount': w.match_count,
+            'authorizedCaseCount': len(auth_cids),
+            'authorizedCases': auth_cids
+        })
 
     start = (page - 1) * pageSize
     items_slice = filtered[start:start + pageSize]
@@ -233,6 +270,64 @@ async def list_watchlist(
         pagination=PaginationMeta(page=page, pageSize=pageSize, totalRecords=total, totalPages=pages)
     )
 
+
+@router.get('/entity/{identifier_value}/cases', response_model=ResponseEnvelope[dict], summary='Get Authorized Cases for Entity')
+async def get_entity_cases(
+    identifier_value: str,
+    current_user: UserProfile = Depends(require_permission('watchlist:read')),
+    db = Depends(get_db)
+):
+    from app.models import EntityModel, CaseMembershipModel
+    
+    cases = db.query(EntityModel.case_id).filter(
+        EntityModel.canonical_name == identifier_value
+    ).distinct().all()
+    
+    case_ids = [c[0] for c in cases if c[0]]
+    
+    if current_user.grantedRole in ('ADMIN', 'INVESTIGATOR'):
+        authorized_cases = case_ids
+    else:
+        memberships = db.query(CaseMembershipModel.case_id).filter(
+            CaseMembershipModel.case_id.in_(case_ids),
+            CaseMembershipModel.user_email.ilike(current_user.email)
+        ).all()
+        authorized_cases = [m[0] for m in memberships]
+        
+    return ResponseEnvelope(data={
+        'authorizedCaseCount': len(authorized_cases),
+        'authorizedCases': authorized_cases
+    })
+
+
+@router.get('/search', response_model=ResponseEnvelope[list], summary='Search Entities Across Authorized Cases')
+async def search_entities(
+    query: str = Query(..., min_length=2),
+    current_user: UserProfile = Depends(require_permission('watchlist:read')),
+    db = Depends(get_db)
+):
+    from app.models import EntityModel, CaseMembershipModel
+    
+    if current_user.grantedRole in ('ADMIN', 'INVESTIGATOR'):
+        case_filter = True
+    else:
+        memberships = db.query(CaseMembershipModel.case_id).filter(
+            CaseMembershipModel.user_email.ilike(current_user.email)
+        ).all()
+        authorized_case_ids = [m[0] for m in memberships]
+        case_filter = EntityModel.case_id.in_(authorized_case_ids)
+        
+    results = db.query(
+        EntityModel.canonical_name,
+        EntityModel.entity_type
+    ).filter(
+        EntityModel.canonical_name.ilike(f"%{query}%"),
+        case_filter
+    ).distinct().limit(50).all()
+    
+    return ResponseEnvelope(data=[
+        {'canonicalName': r[0], 'entityType': r[1]} for r in results
+    ])
 
 @router.delete('/{watchId}', response_model=ResponseEnvelope[dict], summary='Remove Target from Watchlist')
 async def remove_watchlist_item(

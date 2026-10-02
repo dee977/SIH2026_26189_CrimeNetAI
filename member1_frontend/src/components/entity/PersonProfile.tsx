@@ -70,7 +70,7 @@ export const PersonProfile: React.FC<PersonProfileProps> = ({ person }) => {
           <div className="flex items-center gap-2 self-start shrink-0">
             <button
               onClick={() => setView('graph')}
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs transition-colors shadow-sm"
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[var(--primary)] hover:bg-blue-700 text-[var(--text-primary)] font-semibold text-xs transition-colors shadow-sm"
               title="Inspect in Interactive Network Graph"
             >
               <Share2 className="w-3.5 h-3.5" />
@@ -108,9 +108,9 @@ export const PersonProfile: React.FC<PersonProfileProps> = ({ person }) => {
           </div>
 
           <div className="text-xs text-slate-700 bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-1 font-mono">
-            <div className="text-[10px] uppercase text-slate-500 font-bold">Corroborated Sources:</div>
+            <div className="text-[10px] uppercase text-[var(--text-muted)] font-bold">Corroborated Sources:</div>
             <div className="text-slate-900 font-semibold">{person.source || 'Central Criminal Database'}</div>
-            <div className="text-slate-500 text-[11px] truncate">Ref: {person.sourceDocument || 'Primary Dossier Filing'}</div>
+            <div className="text-[var(--text-muted)] text-[11px] truncate">Ref: {person.sourceDocument || 'Primary Dossier Filing'}</div>
             <div className="text-emerald-700 font-semibold text-[11px]">Chain of Evidence: {person.evidenceCount || 1} Files Logged</div>
           </div>
         </div>
@@ -159,7 +159,7 @@ export const PersonProfile: React.FC<PersonProfileProps> = ({ person }) => {
                 </div>
               ))
             ) : (
-              <div className="text-xs text-slate-400 italic py-2">No phone records registered</div>
+              <div className="text-xs text-[var(--text-secondary)] italic py-2">No phone records registered</div>
             )}
           </div>
         </div>
@@ -188,7 +188,7 @@ export const PersonProfile: React.FC<PersonProfileProps> = ({ person }) => {
                 </div>
               ))
             ) : (
-              <div className="text-xs text-slate-400 italic py-2">No banking accounts registered</div>
+              <div className="text-xs text-[var(--text-secondary)] italic py-2">No banking accounts registered</div>
             )}
           </div>
         </div>
@@ -217,7 +217,7 @@ export const PersonProfile: React.FC<PersonProfileProps> = ({ person }) => {
                 </div>
               ))
             ) : (
-              <div className="text-xs text-slate-400 italic py-2">No vehicle registrations linked</div>
+              <div className="text-xs text-[var(--text-secondary)] italic py-2">No vehicle registrations linked</div>
             )}
           </div>
         </div>
@@ -246,7 +246,7 @@ export const PersonProfile: React.FC<PersonProfileProps> = ({ person }) => {
                 </div>
               ))
             ) : (
-              <div className="text-xs text-slate-400 italic py-2">No corporate shells linked</div>
+              <div className="text-xs text-[var(--text-secondary)] italic py-2">No corporate shells linked</div>
             )}
           </div>
         </div>
@@ -275,7 +275,7 @@ export const PersonProfile: React.FC<PersonProfileProps> = ({ person }) => {
                 </div>
               ))
             ) : (
-              <div className="text-xs text-slate-400 italic py-2">No active FIRs filed</div>
+              <div className="text-xs text-[var(--text-secondary)] italic py-2">No active FIRs filed</div>
             )}
           </div>
         </div>
@@ -301,7 +301,7 @@ export const PersonProfile: React.FC<PersonProfileProps> = ({ person }) => {
                 >
                   <div>
                     <span className="font-bold text-slate-900">{assoc.name}</span>
-                    <div className="text-[10px] text-slate-500">{assoc.relationType}</div>
+                    <div className="text-[10px] text-[var(--text-muted)]">{assoc.relationType}</div>
                   </div>
                   <span className="text-[10px] font-mono text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200 font-semibold">
                     Conf: {assoc.confidence}
@@ -309,7 +309,7 @@ export const PersonProfile: React.FC<PersonProfileProps> = ({ person }) => {
                 </div>
               ))
             ) : (
-              <div className="text-xs text-slate-400 italic py-2">No documented associates</div>
+              <div className="text-xs text-[var(--text-secondary)] italic py-2">No documented associates</div>
             )}
           </div>
         </div>
@@ -344,7 +344,7 @@ export const PersonProfile: React.FC<PersonProfileProps> = ({ person }) => {
                 Forensic Physical Clone: OnePlus 11 5G (IMEI 864201048821901)
               </span>
             </div>
-            <div className="text-[11px] text-slate-500 font-mono mt-1.5">
+            <div className="text-[11px] text-[var(--text-muted)] font-mono mt-1.5">
               Original SHA-256: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
             </div>
           </div>

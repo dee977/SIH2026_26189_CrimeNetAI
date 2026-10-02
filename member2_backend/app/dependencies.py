@@ -24,26 +24,10 @@ async def get_current_user(
     
     db_profile = db.query(UserProfileModel).filter(UserProfileModel.email.ilike(user.email)).first()
     if not db_profile:
-        try:
-            # Auto-provision authenticated Supabase user profile in local database
-            db_profile = UserProfileModel(
-                email=user.email,
-                role='INVESTIGATOR',
-                is_active=True
-            )
-            db.add(db_profile)
-            db.commit()
-            db.refresh(db_profile)
-        except Exception:
-            db.rollback()
-            db_profile = db.query(UserProfileModel).filter(UserProfileModel.email.ilike(user.email)).first()
+        raise AuthenticationError('Your account is pending Admin approval or does not exist.')
 
-    if db_profile and not db_profile.is_active:
-        try:
-            db_profile.is_active = True
-            db.commit()
-        except Exception:
-            db.rollback()
+    if not db_profile.is_active:
+        raise AuthenticationError('Your account is currently suspended or pending Admin approval.')
 
     user.grantedRole = (db_profile.role.upper() if db_profile else 'INVESTIGATOR')
 

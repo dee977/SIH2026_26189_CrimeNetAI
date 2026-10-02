@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigationStore } from '../../store/navigationStore';
-import { SYNTHETIC_AI_KNOWLEDGE_BASE, GroundedAIResponse } from '../../data/syntheticData';
+import { GroundedAIResponse } from '../../types/ai';
 import { askGroundedAssistant } from '../../services/aiAssistantService';
 import { 
   Bot, 
@@ -56,6 +56,9 @@ export const AIAssistantView: React.FC = () => {
 
     try {
       const response = await askGroundedAssistant(q, selectedCaseId || undefined);
+      if (!response.success || !response.data) {
+          throw new Error(response.error || "Failed to get AI response");
+      }
       const assistantMsg: ChatMessage = {
         id: `msg-${Date.now()}-a`,
         sender: 'assistant',
@@ -107,7 +110,7 @@ export const AIAssistantView: React.FC = () => {
 
       {/* Suggested Prompts */}
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-[11px] font-mono text-slate-500 uppercase">Suggested Inquiries:</span>
+        <span className="text-[11px] font-mono text-[var(--text-muted)] uppercase">Suggested Inquiries:</span>
         {samplePrompts.map((p, idx) => (
           <button
             key={idx}
@@ -127,7 +130,7 @@ export const AIAssistantView: React.FC = () => {
             {/* Investigator Message */}
             {msg.sender === 'investigator' && (
               <div className="flex justify-end">
-                <div className="max-w-xl p-3.5 rounded-2xl bg-[var(--primary)] text-white border border-[var(--primary)] text-[var(--text-primary)] text-xs shadow-md">
+                <div className="max-w-xl p-3.5 rounded-2xl bg-[var(--primary)] text-[var(--text-primary)] border border-[var(--primary)] text-[var(--text-primary)] text-xs shadow-md">
                   <div className="text-[10px] font-mono text-[var(--primary)] mb-1 flex items-center justify-between">
                     <span>Officer Inquiry</span>
                     <span>{msg.timestamp}</span>
@@ -144,7 +147,7 @@ export const AIAssistantView: React.FC = () => {
                   <Bot className="w-4 h-4" />
                 </div>
                 <div className="p-3.5 rounded-2xl bg-[var(--bg-card)] border border-[var(--border)] text-xs text-[var(--text-secondary)] leading-relaxed shadow-sm">
-                  <div className="text-[10px] font-mono text-slate-500 mb-1 flex items-center justify-between">
+                  <div className="text-[10px] font-mono text-[var(--text-muted)] mb-1 flex items-center justify-between">
                     <span>CrimeNet AI Knowledge Daemon</span>
                     <span>{msg.timestamp}</span>
                   </div>
@@ -204,7 +207,7 @@ export const AIAssistantView: React.FC = () => {
                                 className="px-2.5 py-1 rounded-lg bg-[var(--bg-card)] hover:bg-slate-850 text-cyan-300 border border-[var(--border)] font-mono text-[11px] flex items-center gap-1 transition-colors"
                               >
                                 <span>{ent.label || ent.name || ent.id}</span>
-                                <span className="text-[9px] text-slate-500 font-sans">({ent.type || ent.entityType})</span>
+                                <span className="text-[9px] text-[var(--text-muted)] font-sans">({ent.type || ent.entityType})</span>
                               </button>
                             ))}
                           </div>
@@ -239,7 +242,7 @@ export const AIAssistantView: React.FC = () => {
                               <div key={rIdx} className="p-2.5 rounded-lg bg-[var(--bg-card)] border border-[var(--border)] text-[11px]">
                                 <div className="flex items-center justify-between text-[var(--text-secondary)] font-mono mb-0.5">
                                   <span className="font-semibold text-[var(--primary)]">{rec.source}</span>
-                                  <span className="text-slate-500">{rec.documentRef}</span>
+                                  <span className="text-[var(--text-muted)]">{rec.documentRef}</span>
                                 </div>
                                 <p className="text-[var(--text-secondary)] italic font-sans">{rec.excerpt}</p>
                               </div>
@@ -264,15 +267,15 @@ export const AIAssistantView: React.FC = () => {
                                     setView('evidence');
                                   }
                                 }}
-                                className="flex items-center justify-between p-2 rounded-lg bg-[var(--bg-card)] hover:bg-slate-800/40 cursor-pointer border border-[var(--border)] text-[11px] font-mono transition-colors"
+                                className="flex items-center justify-between p-2 rounded-lg bg-[var(--bg-card)] hover:bg-[var(--bg-card)]/40 cursor-pointer border border-[var(--border)] text-[11px] font-mono transition-colors"
                                 title="Click to view evidence details & verify SHA-256 in Evidence Vault"
                               >
                                 <div className="flex items-center gap-1.5">
                                   <span className="text-cyan-300 font-bold mr-2 hover:underline">{ev.evidenceId}:</span>
                                   <span className="text-[var(--text-primary)]">{ev.title || ev.docType || 'Evidence Record'}</span>
-                                  <ExternalLink className="w-3 h-3 text-slate-500" />
+                                  <ExternalLink className="w-3 h-3 text-[var(--text-muted)]" />
                                 </div>
-                                <span className="px-2 py-0.5 rounded text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold flex items-center gap-1">
+                                <span className="px-2 py-0.5 rounded text-[10px] bg-emerald-500/10 text-[var(--success)] border border-emerald-500/20 font-bold flex items-center gap-1">
                                   <CheckCircle2 className="w-3 h-3" />
                                   <span>{ev.status || 'VERIFIED'}</span>
                                 </span>
@@ -319,7 +322,7 @@ export const AIAssistantView: React.FC = () => {
         <button
           type="submit"
           disabled={!inputQuery.trim() || isLoading}
-          className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-lg bg-[var(--primary)] text-white hover:bg-cyan-400 disabled:opacity-40 disabled:pointer-events-none text-slate-950 transition-colors"
+          className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-lg bg-[var(--primary)] text-[var(--text-primary)] hover:bg-cyan-400 disabled:opacity-40 disabled:pointer-events-none text-slate-950 transition-colors"
         >
           <Send className="w-4 h-4" />
         </button>

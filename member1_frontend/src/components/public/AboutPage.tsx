@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom';
 import React from 'react';
 import { useNavigationStore } from '../../store/navigationStore';
 import { 
@@ -14,7 +15,7 @@ import {
 } from 'lucide-react';
 
 export const AboutPage: React.FC = () => {
-  const { setView } = useNavigationStore();
+  const navigate = useNavigate();
 
   const teamArchitecture = [
     { member: 'M1', role: 'Frontend Engineer', folder: 'member1_frontend/', responsibility: 'Investigative UI, Cytoscape network canvas, temporal timeline, GIS tactical interface, Shadcn components & demo orchestration' },
@@ -31,7 +32,7 @@ export const AboutPage: React.FC = () => {
       {/* Header */}
       <nav className="border-b border-[var(--border)] bg-[var(--bg-card)] backdrop-blur-md px-6 py-4 flex items-center justify-between sticky top-0 z-30">
         <button
-          onClick={() => setView('landing')}
+          onClick={() => navigate('/')}
           className="flex items-center gap-2 text-xs font-semibold text-[var(--primary)] hover:text-cyan-300 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
@@ -64,7 +65,7 @@ export const AboutPage: React.FC = () => {
         {/* Global Ethical Guardrails (MANDATORY PROJECT POLICY) */}
         <div className="bg-[var(--bg-card)] shadow-sm border border-[var(--border)] rounded-2xl rounded-2xl p-6 border-[var(--primary)] bg-[var(--bg-card)]">
           <div className="flex items-start gap-3">
-            <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0">
+            <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-[var(--warning)] shrink-0">
               <AlertCircle className="w-5 h-5" />
             </div>
             <div>
@@ -76,25 +77,25 @@ export const AboutPage: React.FC = () => {
                 <div className="p-3 rounded-lg bg-[var(--bg-card)] border border-[var(--border)] flex items-start gap-2.5">
                   <span className="text-red-400 font-bold">✕</span>
                   <span className="text-[var(--text-secondary)]">
-                    <strong className="text-white">NO Risk Scores or Criminal Labels:</strong> The system never computes arbitrary numerical "risk scores" or assigns automated guilt labels.
+                    <strong className="text-[var(--text-primary)]">NO Risk Scores or Criminal Labels:</strong> The system never computes arbitrary numerical "risk scores" or assigns automated guilt labels.
                   </span>
                 </div>
                 <div className="p-3 rounded-lg bg-[var(--bg-card)] border border-[var(--border)] flex items-start gap-2.5">
                   <span className="text-red-400 font-bold">✕</span>
                   <span className="text-[var(--text-secondary)]">
-                    <strong className="text-white">NO Automated Legal Decisions:</strong> The system does not make final legal adjudications or invent synthetic evidence.
+                    <strong className="text-[var(--text-primary)]">NO Automated Legal Decisions:</strong> The system does not make final legal adjudications or invent synthetic evidence.
                   </span>
                 </div>
                 <div className="p-3 rounded-lg bg-[var(--bg-card)] border border-[var(--border)] flex items-start gap-2.5">
                   <span className="text-[var(--primary)] font-bold">✓</span>
                   <span className="text-[var(--text-secondary)]">
-                    <strong className="text-white">Centrality = Analytical Lead:</strong> High graph connectivity indicates network bridging, not culpability.
+                    <strong className="text-[var(--text-primary)]">Centrality = Analytical Lead:</strong> High graph connectivity indicates network bridging, not culpability.
                   </span>
                 </div>
                 <div className="p-3 rounded-lg bg-[var(--bg-card)] border border-[var(--border)] flex items-start gap-2.5">
                   <span className="text-[var(--primary)] font-bold">✓</span>
                   <span className="text-[var(--text-secondary)]">
-                    <strong className="text-white">Objective Discrepancy Highlighting:</strong> Highlights conflicts between sources without picking which source is truthful.
+                    <strong className="text-[var(--text-primary)]">Objective Discrepancy Highlighting:</strong> Highlights conflicts between sources without picking which source is truthful.
                   </span>
                 </div>
               </div>
@@ -134,3 +135,4 @@ export const AboutPage: React.FC = () => {
     </div>
   );
 };
+

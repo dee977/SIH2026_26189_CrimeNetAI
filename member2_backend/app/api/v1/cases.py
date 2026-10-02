@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status, UploadFile, File, Form
 from app.dependencies import get_current_user, require_permission, assert_case_access
 from app.database import get_db
-from app.models import CaseMembershipModel
+from app.models import CaseMembershipModel, CaseModel
 from app.exceptions import ResourceNotFoundError
 from app.schemas.auth import UserProfile
 from app.schemas.cases import (
@@ -203,14 +203,12 @@ async def attach_case_document(
     evidence_id = f"EVD-{datetime.now().year}-{uuid.uuid4().hex[:6].upper()}"
     cert_id = f"BSA-63-{datetime.now().year}-{evidence_id}"
 
-    upload_dir = os.path.join(os.getcwd(), "uploads", case_id)
-    os.makedirs(upload_dir, exist_ok=True)
-    file_path = os.path.join(upload_dir, file.filename)
-    try:
-        with open(file_path, "wb") as f:
-            f.write(content)
-    except Exception as fe:
-        print(f"[Document Upload] File write warning: {fe}")
+    from app.services.supabase_service import get_supabase_storage_service
+    storage_service = get_supabase_storage_service()
+    supabase_path = storage_service.upload_file(case_id, file.filename, content, file.content_type or "application/octet-stream")
+    if not supabase_path:
+        raise HTTPException(status_code=502, detail="Storage service rejected the physical upload. Evidence record aborted.")
+    final_storage_location = supabase_path
 
     from app.models import EvidenceModel, EntityModel
     ev_row = EvidenceModel(
@@ -223,7 +221,7 @@ async def attach_case_document(
         description=description or f"Document '{file.filename}' attached to case {case_id}.",
         collected_date=now,
         collected_by=current_user.fullName,
-        storage_location=f"Secure Case Vault / {case_id} / {file.filename}",
+        storage_location=final_storage_location,
         sha256_hash=sha256_hash,
         bsa_certificate_id=cert_id,
         confidence='1.0',
@@ -234,7 +232,7 @@ async def attach_case_document(
             'chainOfCustodyVerified': True,
             'fileSize': len(content),
             'documentType': document_type,
-            'filePath': file_path
+            'filePath': final_storage_location
         }
     )
     db.add(ev_row)
@@ -322,4 +320,237 @@ async def list_case_documents(
             'description': r.description
         })
     return ResponseEnvelope(data=results)
+
+@router.get('/{case_id}/members', response_model=ResponseEnvelope[List[Dict[str, Any]]], summary='List Case Team Members')
+async def list_case_members(
+    case_id: str,
+    current_user: UserProfile = Depends(get_current_user),
+    db = Depends(get_db)
+):
+    assert_case_access(db, current_user, case_id)
+    members = db.query(CaseMembershipModel).filter(CaseMembershipModel.case_id == case_id).all()
+    return ResponseEnvelope(data=[{
+        'email': m.user_email,
+        'role': m.membership_role,
+        'addedAt': m.created_at.isoformat() if m.created_at else None
+    } for m in members])
+
+@router.post('/{case_id}/members', response_model=ResponseEnvelope[Dict[str, Any]], summary='Add Case Team Member')
+async def add_case_member(
+    case_id: str,
+    member: Dict[str, Any],
+    current_user: UserProfile = Depends(require_permission('case:write')),
+    m6_client: M6SecurityClient = Depends(get_m6_client),
+    db = Depends(get_db)
+):
+    assert_case_access(db, current_user, case_id)
+    email = member.get('email', '').strip().lower()
+    role = member.get('role', 'MEMBER').upper()
+    if not email:
+        raise HTTPException(status_code=422, detail='Email is required')
+    
+    existing = db.query(CaseMembershipModel).filter(
+        CaseMembershipModel.case_id == case_id,
+        CaseMembershipModel.user_email.ilike(email)
+    ).first()
+    if existing:
+        existing.membership_role = role
+        db.commit()
+        return ResponseEnvelope(data={'email': email, 'role': role, 'status': 'updated'})
+    
+    new_member = CaseMembershipModel(case_id=case_id, user_email=email, membership_role=role)
+    db.add(new_member)
+    db.commit()
+    
+    await m6_client.log_audit_event({
+        'action': 'CASE_MEMBER_ADDED',
+        'caseId': case_id,
+        'memberEmail': email,
+        'memberRole': role,
+        'addedBy': current_user.fullName
+    })
+    return ResponseEnvelope(data={'email': email, 'role': role, 'status': 'added'})
+
+@router.delete('/{case_id}/members/{email}', response_model=ResponseEnvelope[Dict[str, Any]], summary='Remove Case Team Member')
+async def remove_case_member(
+    case_id: str,
+    email: str,
+    current_user: UserProfile = Depends(require_permission('case:write')),
+    m6_client: M6SecurityClient = Depends(get_m6_client),
+    db = Depends(get_db)
+):
+    assert_case_access(db, current_user, case_id)
+    member = db.query(CaseMembershipModel).filter(
+        CaseMembershipModel.case_id == case_id,
+        CaseMembershipModel.user_email.ilike(email)
+    ).first()
+    if not member:
+        raise HTTPException(status_code=404, detail='Member not found')
+    db.delete(member)
+    db.commit()
+    
+    await m6_client.log_audit_event({
+        'action': 'CASE_MEMBER_REMOVED',
+        'caseId': case_id,
+        'memberEmail': email,
+        'removedBy': current_user.fullName
+    })
+    return ResponseEnvelope(data={'email': email, 'status': 'removed'})
+
+@router.post('/{case_id}/close', response_model=ResponseEnvelope[CaseSummaryResponse], summary='Close Investigation Case')
+async def close_case(
+    case_id: str,
+    body: Dict[str, Any],
+    current_user: UserProfile = Depends(require_permission('case:write')),
+    m6_client: M6SecurityClient = Depends(get_m6_client),
+    db = Depends(get_db)
+):
+    assert_case_access(db, current_user, case_id)
+    case_svc = get_case_service()
+    now = datetime.now(timezone.utc).isoformat()
+    
+    case = db.query(CaseModel).filter(
+        (CaseModel.case_id == case_id) | (CaseModel.case_number == case_id)
+    ).first()
+    if not case:
+        raise ResourceNotFoundError('Case', case_id)
+    
+    case.status = 'closed'
+    case.closure_reason = body.get('reason', 'Case closed')
+    case.closed_at = datetime.now(timezone.utc)
+    db.commit()
+    
+    await m6_client.log_audit_event({
+        'action': 'CASE_CLOSED',
+        'caseId': case_id,
+        'closedBy': current_user.fullName,
+        'reason': body.get('reason', 'Case closed')
+    })
+    
+    updated = case_svc.get_case(case_id)
+    return ResponseEnvelope(data=CaseSummaryResponse(**updated))
+
+@router.post('/{case_id}/archive', response_model=ResponseEnvelope[CaseSummaryResponse], summary='Archive Case')
+async def archive_case(
+    case_id: str,
+    current_user: UserProfile = Depends(require_permission('case:write')),
+    m6_client: M6SecurityClient = Depends(get_m6_client),
+    db = Depends(get_db)
+):
+    assert_case_access(db, current_user, case_id)
+    case_svc = get_case_service()
+    
+    case = db.query(CaseModel).filter(
+        (CaseModel.case_id == case_id) | (CaseModel.case_number == case_id)
+    ).first()
+    if not case:
+        raise ResourceNotFoundError('Case', case_id)
+    
+    case.status = 'archived'
+    case.archived_at = datetime.now(timezone.utc)
+    db.commit()
+    
+    await m6_client.log_audit_event({
+        'action': 'CASE_ARCHIVED',
+        'caseId': case_id,
+        'archivedBy': current_user.fullName
+    })
+    
+    updated = case_svc.get_case(case_id)
+    return ResponseEnvelope(data=CaseSummaryResponse(**updated))
+
+@router.post('/{case_id}/reactivate', response_model=ResponseEnvelope[CaseSummaryResponse], summary='Reactivate Case')
+async def reactivate_case(
+    case_id: str,
+    current_user: UserProfile = Depends(require_permission('case:write')),
+    m6_client: M6SecurityClient = Depends(get_m6_client),
+    db = Depends(get_db)
+):
+    assert_case_access(db, current_user, case_id)
+    case_svc = get_case_service()
+    
+    case = db.query(CaseModel).filter(
+        (CaseModel.case_id == case_id) | (CaseModel.case_number == case_id)
+    ).first()
+    if not case:
+        raise ResourceNotFoundError('Case', case_id)
+    
+    case.status = 'active'
+    case.closed_at = None
+    case.archived_at = None
+    case.closure_reason = None
+    db.commit()
+    
+    await m6_client.log_audit_event({
+        'action': 'CASE_REACTIVATED',
+        'caseId': case_id,
+        'reactivatedBy': current_user.fullName
+    })
+    
+    updated = case_svc.get_case(case_id)
+    return ResponseEnvelope(data=CaseSummaryResponse(**updated))
+
+@router.get('/{case_id}/notes', response_model=ResponseEnvelope[List[Dict[str, Any]]], summary='List Case Notes')
+async def list_case_notes(
+    case_id: str,
+    current_user: UserProfile = Depends(get_current_user),
+    db = Depends(get_db)
+):
+    assert_case_access(db, current_user, case_id)
+    from app.models import CaseNoteModel
+    notes = db.query(CaseNoteModel).filter(CaseNoteModel.case_id == case_id).order_by(CaseNoteModel.created_at.desc()).all()
+    return ResponseEnvelope(data=[{
+        'noteId': n.note_id,
+        'caseId': n.case_id,
+        'content': n.content,
+        'authorEmail': n.author_email,
+        'authorName': n.author_name,
+        'isPinned': n.is_pinned,
+        'createdAt': n.created_at.isoformat() if n.created_at else None,
+        'updatedAt': n.updated_at.isoformat() if n.updated_at else None
+    } for n in notes])
+
+@router.post('/{case_id}/notes', response_model=ResponseEnvelope[Dict[str, Any]], status_code=status.HTTP_201_CREATED, summary='Create Case Note')
+async def create_case_note(
+    case_id: str,
+    body: Dict[str, Any],
+    current_user: UserProfile = Depends(require_permission('case:write')),
+    m6_client: M6SecurityClient = Depends(get_m6_client),
+    db = Depends(get_db)
+):
+    assert_case_access(db, current_user, case_id)
+    from app.models import CaseNoteModel
+    
+    note_id = f"NOTE-{uuid.uuid4().hex[:8].upper()}"
+    note = CaseNoteModel(
+        note_id=note_id,
+        case_id=case_id,
+        content=body.get('content', ''),
+        author_email=current_user.email,
+        author_name=current_user.fullName,
+        is_pinned=body.get('isPinned', False)
+    )
+    db.add(note)
+    db.commit()
+    db.refresh(note)
+    
+    await m6_client.log_audit_event({
+        'action': 'CASE_NOTE_ADDED',
+        'caseId': case_id,
+        'noteId': note_id,
+        'addedBy': current_user.fullName
+    })
+    
+    return ResponseEnvelope(data={
+        'noteId': note.note_id,
+        'caseId': note.case_id,
+        'content': note.content,
+        'authorEmail': note.author_email,
+        'authorName': note.author_name,
+        'isPinned': note.is_pinned,
+        'createdAt': note.created_at.isoformat() if note.created_at else None
+    })
+
+
+
 

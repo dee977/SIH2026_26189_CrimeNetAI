@@ -38,7 +38,7 @@ export interface PersonEntity extends BaseEntity {
   vehicles: string[];
   addresses: string[];
   organizations: string[];
-  associatedFIRs: string[];
+  associatedFIRs?: string[];
   crimesReferenced: string[];
   knownAssociates: { personId: string; name: string; relationType: string; confidence: string }[];
   analyticalSummary: string; // Investigator analytical context

@@ -1,17 +1,8 @@
-import React from 'react';
-import { useNavigationStore } from './store/navigationStore';
+import React, { useEffect } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuthStore, getPermissionsForRole } from './store/authStore';
 import { supabase } from './services/supabaseClient';
 import { apiRequest } from './services/apiClient';
-
-// Layout & Common
-import { Sidebar } from './components/layout/Sidebar';
-import { TopNav } from './components/layout/TopNav';
-import { ToastContainer } from './components/common/ToastContainer';
-import { SessionExpiredModal } from './components/common/UIStates';
-import { AccessDeniedView } from './components/common/AccessDeniedView';
-import { DemoWalkthroughBar } from './components/demo/DemoWalkthroughBar';
-import { canAccessView, VIEW_REQUIRED_PERMISSIONS, normalizeRole } from './utils/rbac';
 
 // Public Pages
 import { LandingPage } from './components/public/LandingPage';
@@ -20,6 +11,13 @@ import { LoginPage } from './components/public/LoginPage';
 import { RegisterPage } from './components/public/RegisterPage';
 import { ForgotPasswordPage } from './components/public/ForgotPasswordPage';
 import { ResetPasswordPage } from './components/public/ResetPasswordPage';
+
+// Layout & Common
+import { ProtectedRoute } from './components/auth/ProtectedRoute';
+import { NotFoundView } from './components/common/NotFoundView';
+import { AccessDeniedView } from './components/common/AccessDeniedView';
+import { canAccessView, VIEW_REQUIRED_PERMISSIONS, normalizeRole } from './utils/rbac';
+import { AppView } from './store/navigationStore';
 
 // Main Application Modules
 import { InvestigatorDashboard } from './components/dashboard/InvestigatorDashboard';
@@ -30,27 +28,24 @@ import { NetworkGraphView } from './components/graph/NetworkGraphView';
 import { HiddenRelationshipDiscovery } from './components/graph/HiddenRelationshipDiscovery';
 import { GraphAnalyticsView } from './components/graph/GraphAnalyticsView';
 import { CommunityView } from './components/graph/CommunityView';
-import { TimelineView } from './components/timeline/TimelineView';
 import { GISMapView } from './components/gis/GISMapView';
-import { CrossVerificationView } from './components/verification/CrossVerificationView';
 import { EvidenceView } from './components/evidence/EvidenceView';
 import { WatchlistView } from './components/watchlist/WatchlistView';
 import { AlertsView } from './components/alerts/AlertsView';
-import { AIAssistantView } from './components/assistant/AIAssistantView';
-import { AuthorityDashboardView } from './components/authority/AuthorityDashboardView';
-import { AdminDashboardView } from './components/admin/AdminDashboardView';
 import { ReportView } from './components/reports/ReportView';
-import { ImportCenterView } from './components/ingestion/ImportCenterView';
+import { AdminDashboardView } from './components/admin/AdminDashboardView';
+import { AIAssistantView } from './components/assistant/AIAssistantView';
 
+import { ImportCenterView } from './components/ingestion/ImportCenterView';
+import { TimelineView } from './components/timeline/TimelineView';
+import { CrossVerificationView } from './components/verification/CrossVerificationView';
 
 async function syncUserWithBackend(session: any, setSession: any) {
   if (!session) return;
-  
   const localActiveRole = typeof localStorage !== 'undefined' ? localStorage.getItem('crimenet_active_role') : null;
   const defaultRole = (localActiveRole || session.user.user_metadata?.role || 'INVESTIGATOR').toUpperCase();
   const defaultPerms = getPermissionsForRole(defaultRole as any);
 
-  // Set active session immediately so that views and auth guards do not bounce to login
   setSession(session.access_token, {
     id: session.user.id,
     email: session.user.email || '',
@@ -86,127 +81,106 @@ async function syncUserWithBackend(session: any, setSession: any) {
           lastLogin: new Date().toISOString()
        });
     }
-  } catch (err) {
-    console.warn("Backend profile sync warning, maintaining active session:", err);
+  } catch (err: any) {
+    console.warn("Backend profile sync error:", err);
+    if (err.message === 'Unauthorized' || err.status === 401) {
+      // If the backend rejects the token (e.g. user not approved), kill the session entirely
+      // to prevent infinite retry loops and secure the frontend.
+      await supabase.auth.signOut();
+      setSession(null, null);
+    }
   }
 }
 
-export const App: React.FC = () => {
-  const { currentView, setView } = useNavigationStore();
-  const { user, isAuthenticated, isSessionExpired, setSession } = useAuthStore();
-  const currentViewRef = React.useRef(currentView);
-  currentViewRef.current = currentView;
-
+const RouteGuard = ({ viewId, children }: { viewId: AppView, children: React.ReactNode }) => {
+  const { user } = useAuthStore();
   const userRole = normalizeRole(user?.grantedRole);
-  const isViewAllowed = canAccessView(userRole, currentView);
+  const isAllowed = canAccessView(userRole, viewId);
 
-  React.useEffect(() => {
-    // Check initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        syncUserWithBackend(session, setSession);
-      } else {
-        const storedToken = typeof localStorage !== 'undefined' ? localStorage.getItem('crimenet_auth_token') : null;
-        if (!storedToken) {
-          setSession(null, null);
-        }
-      }
-    });
+  if (!isAllowed) {
+    return (
+      <AccessDeniedView 
+        view={viewId}
+        requiredPermission={VIEW_REQUIRED_PERMISSIONS[viewId]}
+        currentRole={userRole}
+        onBackToDashboard={() => { window.location.href = '/dashboard'; }}
+      />
+    );
+  }
+  return <>{children}</>;
+};
 
+const SettingsPlaceholder = () => (
+  <div className="p-6">
+    <h2 className="text-2xl font-bold mb-4">Settings</h2>
+    <p>Settings configuration goes here.</p>
+  </div>
+);
+
+const AuthListener = () => {
+  const { setSession } = useAuthStore();
+
+  useEffect(() => {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
       if (session) {
         syncUserWithBackend(session, setSession);
-        
-        if (event === 'PASSWORD_RECOVERY') {
-          setView('reset-password');
-        } else if (['login', 'register', 'forgot-password'].includes(currentViewRef.current)) {
-          setView('dashboard');
-        }
       } else if (event === 'SIGNED_OUT') {
         setSession(null, null);
-        if (!['landing', 'about', 'login', 'register', 'forgot-password', 'reset-password'].includes(currentViewRef.current)) {
-          setView('login');
-        }
       }
     });
 
     return () => subscription.unsubscribe();
-  }, [setView, setSession]);
+  }, [setSession]);
 
-  // Public standalone views
-  if (currentView === 'landing') return <LandingPage />;
-  if (currentView === 'about') return <AboutPage />;
-  if (currentView === 'login') return <LoginPage />;
-  if (currentView === 'register') return <RegisterPage />;
-  if (currentView === 'forgot-password') return <ForgotPasswordPage />;
-  if (currentView === 'reset-password') return <ResetPasswordPage />;
+  return null;
+};
 
-  // If not authenticated and trying to view app, redirect to login
-  if (!isAuthenticated) {
-    return <LoginPage />;
-  }
-
-  // Authenticated Main Investigator Application Layout
+export const App: React.FC = () => {
   return (
-    <div className="flex h-screen bg-[var(--bg-primary)] text-[var(--text-primary)] overflow-hidden select-none">
-      
-      {/* Sidebar Navigation */}
-      <Sidebar />
+    <BrowserRouter>
+      <AuthListener />
+      <Routes>
+        {/* Public Routes */}
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/about" element={<AboutPage />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
 
-      {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        
-        {/* Top Header Navigation */}
-        <TopNav />
-
-        {/* Dynamic Main View with Route Guard */}
-        <main className="flex-1 overflow-y-auto p-6 relative">
-          <div className="max-w-7xl mx-auto pb-20">
-            {!isViewAllowed ? (
-              <AccessDeniedView 
-                view={currentView}
-                requiredPermission={VIEW_REQUIRED_PERMISSIONS[currentView]}
-                currentRole={userRole}
-                onBackToDashboard={() => setView('dashboard')}
-              />
-            ) : (
-              <>
-                {currentView === 'dashboard' && <InvestigatorDashboard />}
-                {currentView === 'search' && <UnifiedEntitySearchView />}
-                {currentView === 'cases' && <CaseManagementView />}
-                {currentView === 'case-workspace' && <InvestigationWorkspace />}
-                {currentView === 'entity' && <UnifiedEntitySearchView />}
-                {currentView === 'graph' && <NetworkGraphView />}
-                {currentView === 'hidden-discovery' && <HiddenRelationshipDiscovery />}
-                {currentView === 'analytics' && <GraphAnalyticsView />}
-                {currentView === 'community' && <CommunityView />}
-                {currentView === 'timeline' && <TimelineView />}
-                {currentView === 'gis' && <GISMapView />}
-                {currentView === 'verification' && <CrossVerificationView />}
-                {currentView === 'evidence' && <EvidenceView />}
-                {currentView === 'watchlist' && <WatchlistView />}
-                {currentView === 'alerts' && <AlertsView />}
-                {currentView === 'assistant' && <AIAssistantView />}
-                {currentView === 'authority' && <AuthorityDashboardView />}
-                {currentView === 'admin' && <AdminDashboardView />}
-                {currentView === 'ingestion' && <ImportCenterView />}
-                {currentView === 'reports' && <ReportView />}
-              </>
-            )}
-          </div>
-        </main>
-
-      </div>
-
-      {/* Toast Notification Container */}
-      <ToastContainer />
-
-      {/* Cryptographic Session Expiration Modal Simulation */}
-      {isSessionExpired && <SessionExpiredModal />}
-
-    </div>
+        {/* Protected Routes */}
+        <Route element={<ProtectedRoute />}>
+          <Route path="/dashboard" element={<RouteGuard viewId="dashboard"><InvestigatorDashboard /></RouteGuard>} />
+          <Route path="/cases" element={<RouteGuard viewId="cases"><CaseManagementView /></RouteGuard>} />
+          <Route path="/cases/:caseId" element={<RouteGuard viewId="case-workspace"><InvestigationWorkspace /></RouteGuard>} />
+          <Route path="/import" element={<RouteGuard viewId="ingestion"><ImportCenterView /></RouteGuard>} />
+          <Route path="/evidence" element={<RouteGuard viewId="evidence"><EvidenceView /></RouteGuard>} />
+          <Route path="/entities" element={<RouteGuard viewId="entity"><UnifiedEntitySearchView /></RouteGuard>} />
+          
+          <Route path="/graph" element={<RouteGuard viewId="graph"><NetworkGraphView /></RouteGuard>} />
+          <Route path="/graph/analytics" element={<RouteGuard viewId="analytics"><GraphAnalyticsView /></RouteGuard>} />
+          <Route path="/graph/hidden" element={<RouteGuard viewId="hidden-discovery"><HiddenRelationshipDiscovery /></RouteGuard>} />
+          <Route path="/graph/communities" element={<RouteGuard viewId="community"><CommunityView /></RouteGuard>} />
+          
+          <Route path="/gis" element={<RouteGuard viewId="gis"><GISMapView /></RouteGuard>} />
+          <Route path="/alerts" element={<RouteGuard viewId="alerts"><AlertsView /></RouteGuard>} />
+          <Route path="/timeline" element={<RouteGuard viewId="timeline"><TimelineView /></RouteGuard>} />
+          <Route path="/verification" element={<RouteGuard viewId="verification"><CrossVerificationView /></RouteGuard>} />
+          <Route path="/watchlist" element={<RouteGuard viewId="watchlist"><WatchlistView /></RouteGuard>} />
+          <Route path="/reports" element={<RouteGuard viewId="reports"><ReportView /></RouteGuard>} />
+          <Route path="/assistant" element={<RouteGuard viewId="assistant"><AIAssistantView /></RouteGuard>} />
+            <Route path="/settings" element={<SettingsPlaceholder />} />
+          
+          {/* Catch-all 404 inside protected layout? Or outside? The requirements say:
+            "Include a `*` catch-all route for a professional 404 page (create `src/components/common/NotFoundView.tsx`)."
+          */}
+                    <Route path="/admin" element={<RouteGuard viewId="admin"><AdminDashboardView /></RouteGuard>} />
+            <Route path="*" element={<NotFoundView />} />
+        </Route>
+      </Routes>
+    </BrowserRouter>
   );
 };
 

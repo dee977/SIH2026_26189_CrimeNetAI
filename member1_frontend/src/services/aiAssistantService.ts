@@ -1,8 +1,8 @@
 import { apiRequest } from './apiClient';
-import { GroundedAIResponse } from '../data/syntheticData';
+import { GroundedAIResponse } from '../types/ai';
 
 export async function askGroundedAssistant(query: string, caseId?: string) {
-  const targetCase = caseId || 'CASE-2025-M3-DATASET';
+  const targetCase = caseId || '';
   return apiRequest<GroundedAIResponse>(
     '/assistant/query',
     {

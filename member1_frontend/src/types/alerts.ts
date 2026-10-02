@@ -48,4 +48,7 @@ export interface WatchlistEntry {
   matchCount: number;
   lastMatchedAt?: string;
   status: 'ACTIVE' | 'ARCHIVED';
+  priority?: string;
+  authorizedCaseCount?: number;
+  authorizedCases?: any[];
 }

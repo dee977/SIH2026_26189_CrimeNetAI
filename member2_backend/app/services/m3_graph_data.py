@@ -177,14 +177,30 @@ class M3GraphDataClient:
             except Exception as e:
                 print(f"[M3 Client] Neo4j get_node_by_id fallback on {node_id}: {e}")
 
-        # 2. Canonical case entity lookup fallback if Neo4j is offline or record not in graph
-        from app.services.demo_data import DEMO_ENTITIES
-        for e in DEMO_ENTITIES:
-            if (e.get('id') == node_id or e.get('person_id') == node_id) and (not case_id or e.get('caseId') == case_id):
-                return dict(e)
-        for e in DEMO_ENTITIES:
-            if e.get('id') == node_id:
-                return dict(e)
+
+        # 2. Query Real PostgreSQL Database (Supabase)
+        try:
+            from app.database import SessionLocal
+            from app.models import EntityModel, RelationshipModel
+            db = SessionLocal()
+            q = db.query(EntityModel).filter(EntityModel.entity_id == node_id)
+            if case_id:
+                q = q.filter((EntityModel.case_id == case_id) | (EntityModel.case_id == None))
+            
+            ent = q.first()
+            if ent:
+                d = dict(ent.properties or {})
+                d.setdefault('id', ent.entity_id)
+                d.setdefault('name', ent.canonical_name)
+                d.setdefault('canonicalName', ent.canonical_name)
+                d.setdefault('entityType', ent.entity_type)
+                d.setdefault('caseId', ent.case_id)
+                d.setdefault('confidence', float(ent.confidence or 0.95))
+                db.close()
+                return d
+            db.close()
+        except Exception as e:
+            print(f"[M3 Client] Postgres get_node_by_id error: {e}")
 
         return None
 
@@ -258,39 +274,13 @@ class M3GraphDataClient:
         except Exception as e:
             print(f"[M3 Client] Postgres query_entities error: {e}")
 
-        # 3. Canonical case entity query fallback
-        from app.services.demo_data import DEMO_ENTITIES
-        seen_ids = {e.get('id') for e in entities if e.get('id')}
-        res = list(entities)
-        for e in DEMO_ENTITIES:
-            if entity_type and e.get('entityType', '').lower() != entity_type.lower():
-                continue
-            if case_id and e.get('caseId') != case_id:
-                continue
-            if e.get('id') in seen_ids:
-                continue
-            if query:
-                q = query.lower()
-                name = str(e.get('name') or e.get('canonicalName') or '').lower()
-                eid = str(e.get('id', '')).lower()
-                if q not in name and q not in eid:
-                    continue
-            seen_ids.add(e.get('id'))
-            res.append(dict(e))
-            if len(res) >= limit:
-                break
-        return res
+        return entities
 
     async def get_neighborhood(self, node_id: str, case_id: str, hops: int = 1, relationship_types: Optional[List[str]] = None) -> GraphDataResponse:
         # 1. Query Neo4j (Primary Real Dataset)
         if self.driver:
             def _query_graph(tx):
-                # If node_id is a demo ID not in Neo4j, or default FIR-2024-8841, pick a central real subject if node not found
                 target_id = node_id
-                check = tx.run("MATCH (n {id: $id}) RETURN n.id LIMIT 1", id=target_id).single()
-                if not check and node_id in ['FIR-2024-8841', 'ALL', 'default', '']:
-                    # Default to prominent real person P00001
-                    target_id = 'P00001'
 
                 query = """
                 MATCH (source {id: $node_id})-[r]-(target)
@@ -368,49 +358,7 @@ class M3GraphDataClient:
             except Exception as e:
                 print(f"[M3 Client] Neo4j get_neighborhood fallback: {e}")
 
-        # 2. Canonical case graph fallback
-        from app.services.demo_data import DEMO_ENTITIES, DEMO_EDGES
-        matching_nodes = []
-        matching_edges = []
-        connected_ids = {node_id}
-        for e in DEMO_EDGES:
-            if e['source'] == node_id:
-                connected_ids.add(e['target'])
-                matching_edges.append(GraphEdge(
-                    id=e.get('id', f"{e['source']}-{e['target']}"),
-                    source=e['source'],
-                    target=e['target'],
-                    relationshipType=e.get('relationshipType', 'CONNECTED_TO'),
-                    relationType=e.get('relationshipType', 'CONNECTED_TO'),
-                    properties=e.get('properties', {}),
-                    confidence=0.95
-                ))
-            elif e['target'] == node_id:
-                connected_ids.add(e['source'])
-                matching_edges.append(GraphEdge(
-                    id=e.get('id', f"{e['source']}-{e['target']}"),
-                    source=e['source'],
-                    target=e['target'],
-                    relationshipType=e.get('relationshipType', 'CONNECTED_TO'),
-                    relationType=e.get('relationshipType', 'CONNECTED_TO'),
-                    properties=e.get('properties', {}),
-                    confidence=0.95
-                ))
-        for ent in DEMO_ENTITIES:
-            if ent.get('id') in connected_ids or (not matching_edges and ent.get('caseId') == (case_id or 'CASE-2024-001')):
-                matching_nodes.append(GraphNode(
-                    id=ent.get('id', ''),
-                    label=ent.get('canonicalName') or ent.get('name') or ent.get('id', ''),
-                    type=ent.get('entityType', 'Entity'),
-                    entityType=ent.get('entityType', 'Entity'),
-                    properties=ent,
-                    source='member3_data_graph/datasets',
-                    caseId=case_id or ent.get('caseId', 'CASE-2024-001'),
-                    confidence=0.95
-                ))
-                if len(matching_nodes) >= 15:
-                    break
-        return GraphDataResponse(nodes=matching_nodes, edges=matching_edges, totalNodes=len(matching_nodes), totalEdges=len(matching_edges))
+        return GraphDataResponse(nodes=[], edges=[], totalNodes=0, totalEdges=0)
 
     async def get_subgraph(self, node_ids: List[str], case_id: str) -> GraphDataResponse:
         # 1. Query Neo4j (Primary Real Dataset)
@@ -485,35 +433,7 @@ class M3GraphDataClient:
             except Exception as e:
                 print(f"[M3 Client] Neo4j get_subgraph error: {e}")
 
-        # 2. Canonical subgraph fallback
-        from app.services.demo_data import DEMO_ENTITIES, DEMO_EDGES
-        nodes_list = []
-        edges_list = []
-        id_set = set(node_ids)
-        for ent in DEMO_ENTITIES:
-            if ent.get('id') in id_set:
-                nodes_list.append(GraphNode(
-                    id=ent.get('id', ''),
-                    label=ent.get('canonicalName') or ent.get('name') or ent.get('id', ''),
-                    type=ent.get('entityType', 'Entity'),
-                    entityType=ent.get('entityType', 'Entity'),
-                    properties=ent,
-                    source='member3_data_graph/datasets',
-                    caseId=case_id or ent.get('caseId', 'CASE-2024-001'),
-                    confidence=0.95
-                ))
-        for e in DEMO_EDGES:
-            if e['source'] in id_set and e['target'] in id_set:
-                edges_list.append(GraphEdge(
-                    id=e.get('id', f"{e['source']}-{e['target']}"),
-                    source=e['source'],
-                    target=e['target'],
-                    relationshipType=e.get('relationshipType', 'CONNECTED_TO'),
-                    relationType=e.get('relationshipType', 'CONNECTED_TO'),
-                    properties=e.get('properties', {}),
-                    confidence=0.95
-                ))
-        return GraphDataResponse(nodes=nodes_list, edges=edges_list, totalNodes=len(nodes_list), totalEdges=len(edges_list))
+        return GraphDataResponse(nodes=[], edges=[], totalNodes=0, totalEdges=0)
 
     async def get_case_graph(self, case_id: str, limit: int = 60) -> GraphDataResponse:
         if self.driver:
@@ -561,41 +481,7 @@ class M3GraphDataClient:
                     with self.driver.session() as session:
                         return session.execute_read(_neo4j_case_graph, case_id, limit)
                 res = await loop.run_in_executor(None, _run_case)
-                if res and (res.nodes or res.edges):
-                    from app.services.demo_data import DEMO_ENTITIES, DEMO_EDGES
-                    node_ids = {n.id for n in res.nodes}
-                    for ent in DEMO_ENTITIES:
-                        if not case_id or ent.get('caseId') == case_id:
-                            n_id = ent.get('id', '')
-                            if n_id and n_id not in node_ids:
-                                node_ids.add(n_id)
-                                res.nodes.append(GraphNode(
-                                    id=n_id,
-                                    label=ent.get('canonicalName') or ent.get('name') or n_id,
-                                    type=ent.get('entityType', 'Entity'),
-                                    entityType=ent.get('entityType', 'Entity'),
-                                    properties=ent,
-                                    source=ent.get('source', 'Uploaded Evidence'),
-                                    caseId=case_id or ent.get('caseId', 'CASE-2025-M3-DATASET'),
-                                    confidence=float(ent.get('confidence', 0.95))
-                                ))
-                    edge_keys = {f"{e.source}-{e.target}" for e in res.edges}
-                    for e in DEMO_EDGES:
-                        if not case_id or e.get('caseId') == case_id:
-                            k = f"{e['source']}-{e['target']}"
-                            if k not in edge_keys:
-                                edge_keys.add(k)
-                                res.edges.append(GraphEdge(
-                                    id=e.get('id', k),
-                                    source=e['source'],
-                                    target=e['target'],
-                                    relationshipType=e.get('relationshipType', e.get('relType', 'CONNECTED_TO')),
-                                    relationType=e.get('relationshipType', e.get('relType', 'CONNECTED_TO')),
-                                    properties=e.get('properties', {}),
-                                    confidence=float(e.get('confidence', 0.95))
-                                ))
-                    res.totalNodes = len(res.nodes)
-                    res.totalEdges = len(res.edges)
+                if res:
                     return res
             except Exception as e:
                 import traceback
@@ -668,42 +554,7 @@ class M3GraphDataClient:
         except Exception as e:
             print(f"[M3 Client] Postgres get_case_graph error: {e}")
 
-        # 3. Canonical case graph fallback (safety net)
-        from app.services.demo_data import DEMO_ENTITIES, DEMO_EDGES
-        nodes = []
-        node_ids = set()
-        for ent in DEMO_ENTITIES:
-            if not case_id or ent.get('caseId') == case_id:
-                n_id = ent.get('id', '')
-                if n_id and n_id not in node_ids:
-                    node_ids.add(n_id)
-                    nodes.append(GraphNode(
-                        id=n_id,
-                        label=ent.get('canonicalName') or ent.get('name') or n_id,
-                        type=ent.get('entityType', 'Entity'),
-                        entityType=ent.get('entityType', 'Entity'),
-                        properties=ent,
-                        source=ent.get('source', 'Uploaded CSV'),
-                        caseId=case_id or ent.get('caseId', 'CASE-2024-001'),
-                        confidence=float(ent.get('confidence', 0.95))
-                    ))
-                    if len(nodes) >= limit:
-                        break
-        edges = []
-        for e in DEMO_EDGES:
-            if not case_id or e.get('caseId') == case_id or (e.get('source') in node_ids and e.get('target') in node_ids):
-                edges.append(GraphEdge(
-                    id=e.get('id', f"{e['source']}-{e['target']}"),
-                    source=e['source'],
-                    target=e['target'],
-                    relationshipType=e.get('relationshipType', e.get('relType', 'CONNECTED_TO')),
-                    relationType=e.get('relationshipType', e.get('relType', 'CONNECTED_TO')),
-                    properties=e.get('properties', {}),
-                    confidence=float(e.get('confidence', 0.95))
-                ))
-                if len(edges) >= limit:
-                    break
-        return GraphDataResponse(nodes=nodes, edges=edges, totalNodes=len(nodes), totalEdges=len(edges))
+        return GraphDataResponse(nodes=[], edges=[], totalNodes=0, totalEdges=0)
 
 
 _m3_client_instance = None

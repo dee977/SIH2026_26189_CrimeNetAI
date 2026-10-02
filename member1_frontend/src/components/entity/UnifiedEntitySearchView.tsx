@@ -149,7 +149,7 @@ export const UnifiedEntitySearchView: React.FC = () => {
               LIVE GRAPH (NEO4J)
             </span>
           </div>
-          <p className="text-xs text-slate-500 mt-1">
+          <p className="text-xs text-[var(--text-muted)] mt-1">
             Search, filter, and inspect entities and relational dossiers within the current active case.
           </p>
         </div>
@@ -158,7 +158,7 @@ export const UnifiedEntitySearchView: React.FC = () => {
       {/* Search Bar & Tabs Box */}
       <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-4 shrink-0">
         <div className="relative">
-          <Search className="w-5 h-5 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+          <Search className="w-5 h-5 text-[var(--text-secondary)] absolute left-3.5 top-1/2 -translate-y-1/2" />
           <input
             type="text"
             value={searchQuery}
@@ -169,7 +169,7 @@ export const UnifiedEntitySearchView: React.FC = () => {
           {searchQuery && (
             <button
               onClick={() => setSearchQuery('')}
-              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs text-slate-400 hover:text-slate-600 font-medium"
+              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs text-[var(--text-secondary)] hover:text-slate-600 font-medium"
             >
               Clear
             </button>
@@ -185,7 +185,7 @@ export const UnifiedEntitySearchView: React.FC = () => {
                 onClick={() => setActiveTab(tab.type)}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
                   isActive
-                    ? 'bg-blue-600 text-white shadow-sm'
+                    ? 'bg-[var(--primary)] text-[var(--text-primary)] shadow-sm'
                     : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                 }`}
               >
@@ -201,25 +201,25 @@ export const UnifiedEntitySearchView: React.FC = () => {
         
         {/* Left: Entity Quick Selector */}
         <div className="lg:col-span-1 space-y-2 h-[640px] overflow-y-auto pr-2 custom-scrollbar">
-          <div className="text-[11px] font-mono uppercase tracking-wider text-slate-500 mb-2 font-bold flex justify-between px-1">
+          <div className="text-[11px] font-mono uppercase tracking-wider text-[var(--text-muted)] mb-2 font-bold flex justify-between px-1">
             <span>Search Results</span>
             <span>({liveEntities.length})</span>
           </div>
 
           {!selectedCaseId ? (
-            <div className="text-sm text-slate-500 text-center py-10 bg-white border border-slate-200 rounded-xl p-6">
+            <div className="text-sm text-[var(--text-muted)] text-center py-10 bg-white border border-slate-200 rounded-xl p-6">
               Select a case first to search entities.
             </div>
           ) : isLoading && liveEntities.length === 0 ? (
-            <div className="text-sm text-slate-500 text-center py-10 bg-white border border-slate-200 rounded-xl p-6">
+            <div className="text-sm text-[var(--text-muted)] text-center py-10 bg-white border border-slate-200 rounded-xl p-6">
               Searching entities...
             </div>
           ) : error ? (
-            <div className="text-sm text-rose-500 text-center py-10 bg-white border border-rose-200 rounded-xl p-6">
+            <div className="text-sm text-[var(--danger)] text-center py-10 bg-white border border-rose-200 rounded-xl p-6">
               {error}
             </div>
           ) : liveEntities.length === 0 ? (
-            <div className="text-sm text-slate-500 text-center py-10 bg-white border border-slate-200 rounded-xl p-6">
+            <div className="text-sm text-[var(--text-muted)] text-center py-10 bg-white border border-slate-200 rounded-xl p-6">
               {searchQuery ? "No entities found matching your search." : "No entities available for this filter."}
             </div>
           ) : (
@@ -231,31 +231,31 @@ export const UnifiedEntitySearchView: React.FC = () => {
                   onClick={() => selectEntity(item.id)}
                   className={`p-3.5 rounded-xl border cursor-pointer transition-all ${
                     isSelected
-                      ? 'bg-blue-600 border-blue-600 text-white shadow-md ring-2 ring-blue-300/40'
+                      ? 'bg-[var(--primary)] border-blue-600 text-[var(--text-primary)] shadow-md ring-2 ring-blue-300/40'
                       : 'bg-white border-slate-200 hover:border-blue-300 hover:bg-slate-50 text-slate-800'
                   }`}
                 >
                   <div className="flex items-center justify-between text-[10px] font-mono mb-1.5">
                     <span className={`px-2 py-0.5 rounded font-bold ${
                       isSelected
-                        ? 'bg-blue-700 text-white'
+                        ? 'bg-blue-700 text-[var(--text-primary)]'
                         : 'bg-blue-50 text-blue-700 border border-blue-200'
                     }`}>
                       {item.type}
                     </span>
                     <span className={`truncate ml-2 max-w-[110px] font-mono ${
-                      isSelected ? 'text-blue-100' : 'text-slate-400'
+                      isSelected ? 'text-blue-100' : 'text-[var(--text-secondary)]'
                     }`}>
                       {item.id}
                     </span>
                   </div>
                   <div className={`text-xs font-bold truncate ${
-                    isSelected ? 'text-white' : 'text-slate-900'
+                    isSelected ? 'text-[var(--text-primary)]' : 'text-slate-900'
                   }`}>
                     {item.label}
                   </div>
                   <div className={`text-[10px] truncate mt-1 ${
-                    isSelected ? 'text-blue-200' : 'text-slate-400'
+                    isSelected ? 'text-blue-200' : 'text-[var(--text-secondary)]'
                   }`}>
                     {item.source || 'Graph Database'}
                   </div>
@@ -268,8 +268,8 @@ export const UnifiedEntitySearchView: React.FC = () => {
         {/* Right: Selected Entity Detailed Profile */}
         <div className="lg:col-span-3 h-[640px] overflow-y-auto custom-scrollbar">
           {!selectedEntityId ? (
-            <div className="bg-white border border-slate-200 rounded-2xl h-full flex flex-col items-center justify-center text-slate-400 p-12">
-              <Database className="w-12 h-12 mb-3 text-slate-300" />
+            <div className="bg-white border border-slate-200 rounded-2xl h-full flex flex-col items-center justify-center text-[var(--text-secondary)] p-12">
+              <Database className="w-12 h-12 mb-3 text-[var(--text-secondary)]" />
               <p className="text-sm font-medium text-slate-600">Select an entity from the search results to inspect dossier</p>
             </div>
           ) : liveDetail ? (
@@ -281,8 +281,8 @@ export const UnifiedEntitySearchView: React.FC = () => {
               )}
             </div>
           ) : (
-            <div className="bg-white border border-slate-200 rounded-2xl h-full flex flex-col items-center justify-center text-slate-400 p-12">
-              <p className="text-sm text-slate-500">{isLoading ? 'Loading entity details...' : 'Entity not found in this case.'}</p>
+            <div className="bg-white border border-slate-200 rounded-2xl h-full flex flex-col items-center justify-center text-[var(--text-secondary)] p-12">
+              <p className="text-sm text-[var(--text-muted)]">{isLoading ? 'Loading entity details...' : 'Entity not found in this case.'}</p>
             </div>
           )}
         </div>

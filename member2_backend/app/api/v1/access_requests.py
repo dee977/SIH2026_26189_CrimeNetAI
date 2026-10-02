@@ -225,6 +225,14 @@ async def create_access_request(
         req_in.justification or
         f'New user enrolment / access clearance for {email}'
     )
+    
+    phone = (
+        getattr(req_in, 'phone', None) or
+        getattr(req_in, 'phone_number', None) or
+        getattr(req_in, 'phoneNumber', None) or
+        '+91 Not Provided'
+    )
+
     warrant_ref = (
         req_in.warrant_ref or
         req_in.warrantRef or
@@ -248,6 +256,7 @@ async def create_access_request(
         user_email=email,
         officer_name=officer_name,
         badge_number=badge_number,
+        phone_number=phone,
         department=department,
         requested_role=role_normalized,
         status='pending',
@@ -295,12 +304,20 @@ async def approve_access_request(
         db_profile = UserProfileModel(
             email=req.user_email,
             role=target_role,
-            is_active=True
+            is_active=True,
+            phone_number=req.phone_number,
+            officer_name=req.officer_name,
+            badge_number=req.badge_number,
+            department=req.department
         )
         db.add(db_profile)
     else:
         db_profile.role = target_role
         db_profile.is_active = True
+        db_profile.phone_number = req.phone_number or db_profile.phone_number
+        db_profile.officer_name = req.officer_name or db_profile.officer_name
+        db_profile.badge_number = req.badge_number or db_profile.badge_number
+        db_profile.department = req.department or db_profile.department
         
     db.commit()
     db.refresh(req)
@@ -393,8 +410,10 @@ async def list_admin_users(
         user_list.append({
             'id': f"USR-{p.id:03d}",
             'email': p.email,
-            'name': p.email.split('@')[0].replace('.', ' ').title(),
-            'badgeNumber': f"LEO-{1000 + p.id}",
+            'name': p.officer_name or p.email.split('@')[0].replace('.', ' ').title(),
+            'badgeNumber': p.badge_number or f"LEO-{1000 + p.id}",
+            'phone': p.phone_number,
+            'unit': p.department or 'CrimeNet State Bureau',
             'role': p.role.upper(),
             'unit': 'CrimeNet State Bureau',
             'status': 'ACTIVE' if p.is_active else 'RESTRICTED',

@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom';
 import React, { useState } from 'react';
 import { useNavigationStore } from '../../store/navigationStore';
 import { supabase } from '../../services/supabaseClient';
@@ -6,7 +7,7 @@ import { Mail, Phone, Lock, User, Building, BadgeCheck, AlertCircle, CheckCircle
 import { UserRole } from '../../types/auth';
 
 export const RegisterPage: React.FC = () => {
-  const { setView } = useNavigationStore();
+  const navigate = useNavigate();
   
   const [formData, setFormData] = useState({
     userName: '',
@@ -105,7 +106,7 @@ export const RegisterPage: React.FC = () => {
     <div className="min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)] flex items-center justify-center p-4">
       {isSuccess ? (
          <div className="w-full max-w-lg text-center p-8 bg-[var(--bg-card)] shadow-xl border border-[var(--border)] rounded-2xl animate-in zoom-in-95 duration-300">
-            <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center mx-auto mb-4 text-emerald-400">
+            <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center mx-auto mb-4 text-[var(--success)]">
               <CheckCircle2 className="w-10 h-10" />
             </div>
             <h2 className="text-xl font-bold mb-2 text-[var(--text-primary)]">Officer Enrolment Ticket Queued</h2>
@@ -127,7 +128,7 @@ export const RegisterPage: React.FC = () => {
             </div>
 
             <button 
-              onClick={() => setView('login')} 
+              onClick={() => navigate('/login')} 
               className="w-full py-2.5 rounded-xl bg-[var(--primary)] text-slate-950 font-bold text-xs uppercase tracking-wider hover:bg-cyan-400 transition-colors shadow-lg shadow-cyan-500/20"
             >
               Proceed to Sign In
@@ -161,7 +162,7 @@ export const RegisterPage: React.FC = () => {
                     Officer Full Name *
                   </label>
                   <div className="relative">
-                    <User className="absolute left-3 top-2.5 w-4 h-4 text-slate-500" />
+                    <User className="absolute left-3 top-2.5 w-4 h-4 text-[var(--text-muted)]" />
                     <input 
                       type="text" 
                       required 
@@ -179,7 +180,7 @@ export const RegisterPage: React.FC = () => {
                     Badge / Service ID *
                   </label>
                   <div className="relative">
-                    <BadgeCheck className="absolute left-3 top-2.5 w-4 h-4 text-slate-500" />
+                    <BadgeCheck className="absolute left-3 top-2.5 w-4 h-4 text-[var(--text-muted)]" />
                     <input 
                       type="text" 
                       required 
@@ -199,7 +200,7 @@ export const RegisterPage: React.FC = () => {
                     Official Police / Gov Email *
                   </label>
                   <div className="relative">
-                    <Mail className="absolute left-3 top-2.5 w-4 h-4 text-slate-500" />
+                    <Mail className="absolute left-3 top-2.5 w-4 h-4 text-[var(--text-muted)]" />
                     <input 
                       type="email" 
                       required 
@@ -217,7 +218,7 @@ export const RegisterPage: React.FC = () => {
                     Official Mobile / Contact *
                   </label>
                   <div className="relative">
-                    <Phone className="absolute left-3 top-2.5 w-4 h-4 text-slate-500" />
+                    <Phone className="absolute left-3 top-2.5 w-4 h-4 text-[var(--text-muted)]" />
                     <input 
                       type="tel" 
                       required 
@@ -237,7 +238,7 @@ export const RegisterPage: React.FC = () => {
                     Agency / Police Department *
                   </label>
                   <div className="relative">
-                    <Building className="absolute left-3 top-2.5 w-4 h-4 text-slate-500" />
+                    <Building className="absolute left-3 top-2.5 w-4 h-4 text-[var(--text-muted)]" />
                     <input 
                       type="text" 
                       required 
@@ -271,7 +272,7 @@ export const RegisterPage: React.FC = () => {
                 <div>
                   <label className="block text-[11px] font-mono uppercase text-[var(--text-secondary)] mb-1">Password *</label>
                   <div className="relative">
-                    <Lock className="absolute left-3 top-2.5 w-4 h-4 text-slate-500" />
+                    <Lock className="absolute left-3 top-2.5 w-4 h-4 text-[var(--text-muted)]" />
                     <input 
                       type="password" 
                       required 
@@ -287,7 +288,7 @@ export const RegisterPage: React.FC = () => {
                 <div>
                   <label className="block text-[11px] font-mono uppercase text-[var(--text-secondary)] mb-1">Confirm Password *</label>
                   <div className="relative">
-                    <Lock className="absolute left-3 top-2.5 w-4 h-4 text-slate-500" />
+                    <Lock className="absolute left-3 top-2.5 w-4 h-4 text-[var(--text-muted)]" />
                     <input 
                       type="password" 
                       required 
@@ -303,7 +304,7 @@ export const RegisterPage: React.FC = () => {
               <div className="pt-2 flex gap-4">
                 <button 
                   type="button" 
-                  onClick={() => setView('login')} 
+                  onClick={() => navigate('/login')} 
                   className="w-1/3 py-2.5 rounded-xl border border-[var(--border)] text-xs font-semibold hover:bg-slate-500/10 transition-colors"
                 >
                   Back to Sign In
@@ -331,3 +332,4 @@ export const RegisterPage: React.FC = () => {
     </div>
   );
 };
+

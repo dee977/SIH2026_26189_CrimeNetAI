@@ -2,7 +2,7 @@ import { apiRequest } from './apiClient';
 import { EvidenceRecord, CrossVerificationDiscrepancy } from '../types/evidence';
 
 export async function fetchEvidenceList(caseId: string) {
-  const targetCase = caseId || 'CASE-2025-M3-DATASET';
+  const targetCase = caseId || '';
   const res = await apiRequest<any>(
     `/evidence?case_id=${targetCase}`,
     { method: 'GET' }
@@ -35,7 +35,7 @@ export async function verifyEvidenceSHA256(evidenceId: string) {
 }
 
 export async function fetchDiscrepancies(caseId: string) {
-  const targetCase = caseId || 'CASE-2025-M3-DATASET';
+  const targetCase = caseId || '';
   const res = await apiRequest<any>(
     `/verification/discrepancies?case_id=${targetCase}`,
     { method: 'GET' }

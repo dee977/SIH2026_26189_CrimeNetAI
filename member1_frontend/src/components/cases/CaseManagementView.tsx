@@ -1,308 +1,221 @@
-import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigationStore } from '../../store/navigationStore';
+import { useCaseStore } from '../../store/caseStore';
 import { useNotificationStore } from '../../store/notificationStore';
 import { useAuthStore } from '../../store/authStore';
-import { hasPermission } from '../../utils/rbac';
-import { SYNTHETIC_CASES } from '../../data/syntheticData';
-import { CaseDossier } from '../../types/cases';
-import { apiRequest } from '../../services/apiClient';
 import { 
-  Briefcase, 
-  Plus, 
-  Calendar, 
-  User, 
-  Shield, 
-  FileText, 
-  ExternalLink, 
-  CheckCircle2, 
-  Clock, 
-  X,
-  FileCheck,
-  AlertTriangle
+  Briefcase, Plus, Calendar, User, Shield, ExternalLink, 
+  Clock, X, Database, Users, Search, Filter, SlidersHorizontal, 
+  Archive, CheckSquare, AlertTriangle, FileText, CheckCircle2,
+  ListFilter
 } from 'lucide-react';
 
-const DEMO_5_CASES: CaseDossier[] = [
-  {
-    id: 'CASE-2025-M3-DATASET',
-    caseNumber: 'CASE-2025-M3-DATASET',
-    title: 'Operation Falcon Web - National Contraband & Communications Syndicate',
-    description: 'Centralized multi-state intelligence graph synthesized from the live Member 3 repository dataset: CDR call logs, hawala accounts, and co-conspirator networks across Mumbai, Delhi, Pune, Ahmedabad, and Hyderabad.',
-    leadInvestigator: 'Deputy Director Vikramaditya Rao (LEO-7729)',
-    assignedTeam: ['Insp. V. Rao', 'SI Priyanka Sen', 'Analyst K. Nair'],
-    status: 'Active',
-    priority: 'Critical',
-    openedDate: '2025-01-15',
-    lastUpdated: '2025-03-26',
-    policeStation: 'Central Intelligence Grid HQ, New Delhi',
-    jurisdiction: 'National Multi-State Cyber & Economic Zone',
-    entityCount: 184,
-    evidenceCount: 12,
-    alertCount: 4,
-    associatedFIRs: ['F000001', 'F000002', 'F000003'],
-    accessClassification: 'TOP SECRET',
-    auditHistory: [
-      {
-        timestamp: '2025-01-15 09:00:00',
-        officer: 'Deputy Director V. Rao',
-        action: 'CASE_CREATION',
-        details: 'Dossier initialized from National Central Bureau multi-modal intelligence feed.'
-      }
-    ]
-  },
-  {
-    id: 'CASE-VIDEO-001',
-    caseNumber: 'CASE-VIDEO-001',
-    title: 'Operation Golden Fleece - Financial Syndicate',
-    description: 'Multi-layer money laundering operation spanning offshore shell accounts, hawala conduits, and luxury asset liquidations.',
-    leadInvestigator: 'Inspector Sharma (LEO-5521)',
-    assignedTeam: ['Insp. Sharma', 'Analyst S. Verma'],
-    status: 'Active',
-    priority: 'Critical',
-    openedDate: '2025-02-01',
-    lastUpdated: '2025-03-24',
-    policeStation: 'Cyber Cell HQ, Mumbai',
-    jurisdiction: 'Economic Offences Wing, Maharashtra',
-    entityCount: 100,
-    evidenceCount: 8,
-    alertCount: 3,
-    associatedFIRs: ['FIR-2025-FIN-088'],
-    accessClassification: 'RESTRICTED',
-    auditHistory: [
-      {
-        timestamp: '2025-02-01 10:15:00',
-        officer: 'Inspector Sharma',
-        action: 'CASE_CREATION',
-        details: 'Financial crime dossier opened following suspicious transaction report.'
-      }
-    ]
-  },
-  {
-    id: 'CASE-VIDEO-002',
-    caseNumber: 'CASE-VIDEO-002',
-    title: 'Operation White Dust - Narcotics Ring',
-    description: 'Multi-state coastal narcotics trafficking ring coordinating distribution via domestic express courier services and darknet dead drops.',
-    leadInvestigator: 'Officer Reddy (LEO-3342)',
-    assignedTeam: ['Officer Reddy', 'SI K. Raman'],
-    status: 'Active',
-    priority: 'High',
-    openedDate: '2025-02-10',
-    lastUpdated: '2025-03-25',
-    policeStation: 'Narcotics Enforcement Wing, Goa',
-    jurisdiction: 'Western Coastal Narcotics Control Zone',
-    entityCount: 100,
-    evidenceCount: 6,
-    alertCount: 2,
-    associatedFIRs: ['FIR-2025-NAR-104'],
-    accessClassification: 'CONFIDENTIAL',
-    auditHistory: [
-      {
-        timestamp: '2025-02-10 11:30:00',
-        officer: 'Officer Reddy',
-        action: 'CASE_CREATION',
-        details: 'Narcotics intercept registered.'
-      }
-    ]
-  },
-  {
-    id: 'CASE-VIDEO-003',
-    caseNumber: 'CASE-VIDEO-003',
-    title: 'Operation Phishnet - Cyber Fraud',
-    description: 'Organized phishing and banking credential harvesting network targeting critical national infrastructure and banking consumers.',
-    leadInvestigator: 'Inspector Khan (LEO-9102)',
-    assignedTeam: ['Insp. Khan', 'Tech Specialist D. Gupta'],
-    status: 'Active',
-    priority: 'High',
-    openedDate: '2025-02-20',
-    lastUpdated: '2025-03-25',
-    policeStation: 'Cyber Crime Police Station, Bangalore',
-    jurisdiction: 'National Cyber Crime Coordination Centre (I4C)',
-    entityCount: 100,
-    evidenceCount: 7,
-    alertCount: 5,
-    associatedFIRs: ['FIR-2025-CYB-201'],
-    accessClassification: 'RESTRICTED',
-    auditHistory: [
-      {
-        timestamp: '2025-02-20 14:00:00',
-        officer: 'Inspector Khan',
-        action: 'CASE_CREATION',
-        details: 'Cyber fraud task force initiated.'
-      }
-    ]
-  },
-  {
-    id: 'CASE-VIDEO-004',
-    caseNumber: 'CASE-VIDEO-004',
-    title: 'Operation Iron Shield - Human Trafficking',
-    description: 'Cross-border organized human trafficking, forged transit visa syndicate, and illegal border transit conduit across regional corridors.',
-    leadInvestigator: 'Officer Patel (LEO-4419)',
-    assignedTeam: ['Officer Patel', 'SI M. Joshi'],
-    status: 'Active',
-    priority: 'Critical',
-    openedDate: '2025-03-01',
-    lastUpdated: '2025-03-26',
-    policeStation: 'Border Anti-Trafficking Unit, Kolkata',
-    jurisdiction: 'Eastern Frontier Security Grid',
-    entityCount: 100,
-    evidenceCount: 5,
-    alertCount: 3,
-    associatedFIRs: ['FIR-2025-TRF-312'],
-    accessClassification: 'TOP SECRET',
-    auditHistory: [
-      {
-        timestamp: '2025-03-01 08:45:00',
-        officer: 'Officer Patel',
-        action: 'CASE_CREATION',
-        details: 'Anti-human trafficking joint operation initiated.'
-      }
-    ]
-  }
-];
-
 export const CaseManagementView: React.FC = () => {
-  const { selectCase, setView } = useNavigationStore();
+  const { openCase } = useNavigationStore();
+  const navigate = useNavigate();
   const { addToast } = useNotificationStore();
+  const { cases, isLoading, fetchCases, createCase, addMember, closeCase, archiveCase } = useCaseStore();
   const { user } = useAuthStore();
-  const canCreateCase = hasPermission(user?.grantedRole, 'case:write');
 
-  const [cases, setCases] = useState<CaseDossier[]>(DEMO_5_CASES);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const loadCases = async () => {
-    try {
-      const res = await apiRequest<any>('/cases');
-      if (res.success && res.data) {
-        const backendCases = Array.isArray(res.data) ? res.data : (res.data.items || []);
-        if (backendCases.length > 0) {
-          const mapped: CaseDossier[] = backendCases.map((bc: any) => ({
-            id: bc.caseId,
-            caseNumber: bc.caseNumber || bc.caseId,
-            title: bc.title || 'Investigation Case',
-            description: bc.description || '',
-            leadInvestigator: bc.assignedInvestigator || 'Lead Investigator',
-            assignedTeam: [bc.assignedTeam || 'Special Task Force'],
-            status: bc.status ? (bc.status.charAt(0).toUpperCase() + bc.status.slice(1)) : 'Active',
-            priority: bc.priority ? (bc.priority.charAt(0).toUpperCase() + bc.priority.slice(1)) : 'High',
-            openedDate: bc.createdAt ? bc.createdAt.slice(0, 10) : '2025-01-15',
-            lastUpdated: bc.updatedAt ? bc.updatedAt.slice(0, 10) : '2025-03-26',
-            policeStation: bc.policeStation || 'Central Cyber Grid',
-            jurisdiction: bc.jurisdiction || 'Special Crime Branch',
-            entityCount: bc.entityCount || 0,
-            evidenceCount: bc.evidenceCount || 0,
-            alertCount: bc.alertCount || 0,
-            associatedFIRs: bc.associatedFIRs || [],
-            accessClassification: 'RESTRICTED',
-            auditHistory: []
-          }));
-          setCases(mapped);
-        }
+  useEffect(() => {
+    fetchCases();
+  }, [fetchCases]);
+
+  // Filters and Sorting State
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterStatus, setFilterStatus] = useState('');
+  const [filterPriority, setFilterPriority] = useState('');
+  const [filterType, setFilterType] = useState('');
+  const [sortBy, setSortBy] = useState('recent'); // 'recent', 'priority', 'title'
+
+  // Dashboard Stats
+  const totalCases = cases.length;
+  const activeCases = cases.filter(c => c.status?.toLowerCase() === 'active').length;
+  const highPriorityCases = cases.filter(c => ['high', 'critical'].includes(c.priority?.toLowerCase() || '')).length;
+  const closedArchivedCases = cases.filter(c => ['closed', 'archived'].includes(c.status?.toLowerCase() || '')).length;
+
+  // Filter & Sort Logic
+  const filteredAndSortedCases = useMemo(() => {
+    let result = cases.filter(c => {
+      const searchMatch = !searchTerm || [c.caseNumber, c.title, c.jurisdiction, c.policeStation, c.assignedInvestigator]
+        .some(val => val?.toLowerCase().includes(searchTerm.toLowerCase()));
+      
+      const statusMatch = !filterStatus || c.status?.toLowerCase() === filterStatus.toLowerCase();
+      const priorityMatch = !filterPriority || c.priority?.toLowerCase() === filterPriority.toLowerCase();
+      const typeMatch = !filterType || c.caseType?.toLowerCase() === filterType.toLowerCase();
+
+      return searchMatch && statusMatch && priorityMatch && typeMatch;
+    });
+
+    result.sort((a, b) => {
+      if (sortBy === 'recent') {
+        return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
       }
-    } catch (err) {
-      console.warn('Failed to fetch dynamic cases, using fallback:', err);
+      if (sortBy === 'title') {
+        return (a.title || '').localeCompare(b.title || '');
+      }
+      if (sortBy === 'priority') {
+        const priorities: Record<string, number> = { critical: 4, high: 3, medium: 2, low: 1 };
+        const pA = priorities[a.priority?.toLowerCase() || ''] || 0;
+        const pB = priorities[b.priority?.toLowerCase() || ''] || 0;
+        return pB - pA;
+      }
+      return 0;
+    });
+
+    return result;
+  }, [cases, searchTerm, filterStatus, filterPriority, filterType, sortBy]);
+
+  const clearFilters = () => {
+    setSearchTerm('');
+    setFilterStatus('');
+    setFilterPriority('');
+    setFilterType('');
+    setSortBy('recent');
+  };
+
+  const handleClose = async (caseId: string) => {
+    try {
+      if (closeCase) {
+        await closeCase(caseId, 'Closed via Case Management Dashboard');
+        addToast({ type: 'success', title: 'Case Closed', message: 'Case successfully closed.' });
+        fetchCases();
+      }
+    } catch (e: any) {
+      addToast({ type: 'error', title: 'Error', message: e.message || 'Failed to close case.' });
     }
   };
 
-  useEffect(() => {
-    loadCases();
-  }, []);
+  const handleArchive = async (caseId: string) => {
+    try {
+      if (archiveCase) {
+        await archiveCase(caseId);
+        addToast({ type: 'success', title: 'Case Archived', message: 'Case successfully archived.' });
+        fetchCases();
+      }
+    } catch (e: any) {
+      addToast({ type: 'error', title: 'Error', message: e.message || 'Failed to archive case.' });
+    }
+  };
 
   // New Case State
   const [newTitle, setNewTitle] = useState('');
+  const [newCaseNumber, setNewCaseNumber] = useState('');
+  const [newCaseType, setNewCaseType] = useState('Financial Crime');
   const [newDesc, setNewDesc] = useState('');
-  const [newStation, setNewStation] = useState('CID Crime Branch Mumbai');
-  const [newPriority, setNewPriority] = useState<'Critical' | 'High' | 'Medium' | 'Low'>('High');
-  const [newStatus, setNewStatus] = useState<'Active' | 'Under Review' | 'Charge Sheeted' | 'Archived'>('Active');
-  const [newInvestigator, setNewInvestigator] = useState('Inspector Vikramaditya Rao (LEO-7729)');
-  const [newJurisdiction, setNewJurisdiction] = useState('National Multi-State Cyber & Economic Zone');
-  const [newClassification, setNewClassification] = useState<'RESTRICTED' | 'CONFIDENTIAL' | 'TOP SECRET'>('CONFIDENTIAL');
-  const [newFIR, setNewFIR] = useState('');
+  const [newPriority, setNewPriority] = useState('High');
+  const [newStatus, setNewStatus] = useState('Active');
+  const [newJurisdiction, setNewJurisdiction] = useState('');
+  const [newStation, setNewStation] = useState('');
+  const [newTeam, setNewTeam] = useState('');
+  const [newLeadInvestigator, setNewLeadInvestigator] = useState('');
+  const [newAdditionalInvestigators, setNewAdditionalInvestigators] = useState('');
+  const [newAnalysts, setNewAnalysts] = useState('');
 
   const handleCreateSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newTitle.trim()) {
-      addToast({ type: 'error', title: 'Validation Error', message: 'Case Title is required.' });
+    if (!newTitle.trim() || !newCaseType.trim() || !newPriority.trim() || !newJurisdiction.trim() || !newStatus.trim()) {
+      addToast({ type: 'error', title: 'Validation Error', message: 'Please fill in all required fields.' });
       return;
     }
+
+    if (isSubmitting) return;
 
     setIsSubmitting(true);
 
     try {
-      const res = await apiRequest<any>('/cases', {
-        method: 'POST',
-        body: JSON.stringify({
-          title: newTitle.trim(),
-          description: newDesc.trim() || 'Organized crime investigation case dossier.',
-          assignedInvestigator: newInvestigator.trim(),
-          assignedTeam: newStation.trim(),
-          policeStation: newStation.trim(),
-          jurisdiction: newJurisdiction.trim(),
-          priority: newPriority.toLowerCase(),
-          status: newStatus.toLowerCase(),
-          caseType: 'Organized Crime Investigation',
-          accessClassification: newClassification
-        })
+      const createdCase = await createCase({
+        title: newTitle.trim(),
+        caseNumber: newCaseNumber.trim() || undefined,
+        description: newDesc.trim(),
+        policeStation: newStation.trim(),
+        jurisdiction: newJurisdiction.trim(),
+        assignedTeam: newTeam.trim(),
+        priority: newPriority.toLowerCase(),
+        caseType: newCaseType.trim(),
+        status: newStatus.toLowerCase(),
       });
 
-      if (res.success && res.data) {
-        const createdCase = res.data;
-        const mappedCreated: CaseDossier = {
-          id: createdCase.caseId,
-          caseNumber: createdCase.caseNumber || createdCase.caseId,
-          title: createdCase.title || newTitle,
-          description: createdCase.description || newDesc,
-          leadInvestigator: createdCase.assignedInvestigator || newInvestigator,
-          assignedTeam: [newStation],
-          status: newStatus,
-          priority: newPriority,
-          openedDate: (createdCase.createdAt || new Date().toISOString()).slice(0, 10),
-          lastUpdated: (createdCase.updatedAt || new Date().toISOString()).slice(0, 10),
-          policeStation: newStation,
-          jurisdiction: newJurisdiction,
-          entityCount: createdCase.entityCount || 0,
-          evidenceCount: createdCase.evidenceCount || 0,
-          alertCount: createdCase.alertCount || 0,
-          associatedFIRs: newFIR ? [newFIR] : [],
-          accessClassification: newClassification,
-          auditHistory: [
-            {
-              timestamp: new Date().toISOString().replace('T', ' ').slice(0, 19),
-              officer: newInvestigator,
-              action: 'CASE_CREATION',
-              details: `Dossier initialized with ${newPriority} priority.`
-            }
-          ]
-        };
+      if (createdCase) {
+        // Add memberships
+        if (user?.email) {
+          await addMember(createdCase.caseId, user.email, 'OWNER');
+        }
+        if (newLeadInvestigator.trim()) {
+          await addMember(createdCase.caseId, newLeadInvestigator.trim(), 'LEAD');
+        }
+        
+        const additionalInvs = newAdditionalInvestigators.split(',').map(e => e.trim()).filter(Boolean);
+        for (const email of additionalInvs) {
+          await addMember(createdCase.caseId, email, 'INVESTIGATOR');
+        }
+        
+        const analysts = newAnalysts.split(',').map(e => e.trim()).filter(Boolean);
+        for (const email of analysts) {
+          await addMember(createdCase.caseId, email, 'ANALYST');
+        }
 
-        setCases(prev => [mappedCreated, ...prev]);
         setIsCreateModalOpen(false);
+        // Reset state
         setNewTitle('');
+        setNewCaseNumber('');
         setNewDesc('');
-        setNewFIR('');
-
+        setNewStation('');
+        setNewJurisdiction('');
+        setNewTeam('');
+        setNewLeadInvestigator('');
+        setNewAdditionalInvestigators('');
+        setNewAnalysts('');
+        setNewCaseType('Financial Crime');
+        setNewPriority('High');
+        setNewStatus('Active');
+        
         addToast({
           type: 'success',
-          title: 'Case Dossier Created',
-          message: `${mappedCreated.caseNumber}: "${mappedCreated.title}" registered in Supabase.`
+          title: 'Case Created',
+          message: `${createdCase.caseNumber} has been created.`
         });
 
-        // Background reload to sync all properties
-        loadCases();
+        openCase(createdCase.caseId);
+        navigate('/cases/' + createdCase.caseId);
       } else {
         addToast({
           type: 'error',
           title: 'Creation Failed',
-          message: res.error || 'Server rejected case creation request.'
+          message: 'Failed to create case.'
         });
       }
     } catch (err: any) {
       addToast({
         type: 'error',
-        title: 'Network Error',
-        message: err.message || 'Unable to connect to backend server.'
+        title: 'Error',
+        message: err.message || 'An error occurred while creating the case.'
       });
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch(status?.toLowerCase()) {
+      case 'active': return 'text-emerald-600 bg-emerald-500/10 border-emerald-500/20';
+      case 'closed': return 'text-rose-600 bg-rose-500/10 border-rose-500/20';
+      case 'archived': return 'text-slate-600 bg-slate-500/10 border-slate-500/20';
+      default: return 'text-cyan-600 bg-cyan-500/10 border-cyan-500/20';
+    }
+  };
+
+  const getPriorityColor = (priority: string) => {
+    switch(priority?.toLowerCase()) {
+      case 'critical': return 'text-rose-600 bg-rose-500/10 border-rose-500/20';
+      case 'high': return 'text-orange-600 bg-orange-500/10 border-orange-500/20';
+      case 'medium': return 'text-amber-600 bg-amber-500/10 border-amber-500/20';
+      case 'low': return 'text-emerald-600 bg-emerald-500/10 border-emerald-500/20';
+      default: return 'text-slate-600 bg-slate-500/10 border-slate-500/20';
     }
   };
 
@@ -310,262 +223,494 @@ export const CaseManagementView: React.FC = () => {
     <div className="space-y-6 animate-in fade-in duration-300">
       
       {/* Title & Action */}
-      <div className="bg-[var(--bg-card)] shadow-sm border border-[var(--border)] rounded-2xl rounded-2xl p-5 border-[var(--border)] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="bg-[var(--bg-card)] shadow-sm rounded-2xl p-6 border border-[var(--border)] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-mono uppercase tracking-wider text-[var(--primary)] font-semibold">
-              Multi-Agency Operations
-            </span>
-            <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-950 text-[var(--primary)] border border-cyan-800">
-              CCTNS Master Dossiers
-            </span>
+          <div className="flex items-center gap-2 mb-1">
+            <div className="p-2 rounded-xl bg-[var(--bg-primary)] border border-[var(--border)] text-[var(--primary)]">
+              <Briefcase className="w-5 h-5" />
+            </div>
+            <h1 className="text-xl font-bold text-slate-900">
+              Case Management
+            </h1>
           </div>
-          <h1 className="text-xl font-bold text-[var(--text-primary)] mt-1">
-            Case Management & Investigation Dossiers
-          </h1>
-          <p className="text-xs text-[var(--text-secondary)] mt-0.5">
-            Organized syndicates partitioned by formal investigation dossiers with access classification and immutable audit logging.
+          <p className="text-sm text-slate-600 max-w-2xl mt-2">
+            Manage investigation dossiers, review analytics, and collaborate with your team.
           </p>
         </div>
 
-        {canCreateCase ? (
-          <button
-            onClick={() => setIsCreateModalOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[var(--primary)] text-white hover:bg-cyan-400 text-slate-950 font-bold text-xs uppercase tracking-wider transition-colors shadow-lg shadow-cyan-500/20 self-start sm:self-auto"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Initialize New Case</span>
-          </button>
-        ) : (
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-mono">
-            <Shield className="w-3.5 h-3.5" />
-            <span>Read-Only Dossier Access ({user?.grantedRole || 'ANALYST'})</span>
-          </div>
-        )}
+        <button
+          onClick={() => setIsCreateModalOpen(true)}
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[var(--primary)] text-white hover:opacity-90 font-bold text-sm uppercase tracking-wider transition-colors shadow-sm"
+        >
+          <Plus className="w-4 h-4" />
+          <span>Create Case</span>
+        </button>
       </div>
 
-      {/* Case Dossiers Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {cases.map(c => (
-          <div
-            key={c.id}
-            className="bg-[var(--bg-card)] shadow-sm border border-[var(--border)] rounded-2xl rounded-2xl p-6 border-[var(--border)] hover:border-[var(--primary)] transition-all flex flex-col justify-between space-y-4"
-          >
+      {/* Header Dashboard Metrics */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {[ 
+          { label: 'Total Cases', value: totalCases, icon: Database, color: 'text-[var(--primary)]', bg: 'bg-blue-500/10' },
+          { label: 'Active Cases', value: activeCases, icon: Clock, color: 'text-[var(--success)]', bg: 'bg-emerald-500/10' },
+          { label: 'High Priority', value: highPriorityCases, icon: AlertTriangle, color: 'text-orange-500', bg: 'bg-orange-500/10' },
+          { label: 'Closed / Archived', value: closedArchivedCases, icon: Archive, color: 'text-[var(--text-muted)]', bg: 'bg-slate-500/10' }
+        ].map((metric, idx) => (
+          <div key={idx} className="bg-[var(--bg-card)] border border-[var(--border)] rounded-xl p-4 flex items-center gap-4">
+            <div className={`p-3 rounded-lg \${metric.bg} \${metric.color}`}>
+              <metric.icon className="w-5 h-5" />
+            </div>
             <div>
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-mono font-bold text-[var(--primary)] bg-cyan-950 px-2 py-0.5 rounded border border-cyan-800">
-                    {c.caseNumber}
-                  </span>
-                  <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-amber-50 text-amber-800 border border-amber-200">
-                    {c.priority} Priority
-                  </span>
-                </div>
-                <span className="text-xs font-mono text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded border border-emerald-200 font-bold">
-                  {c.status}
-                </span>
-              </div>
-
-              <h3 className="text-base font-bold text-slate-900 mt-1">{c.title}</h3>
-              <p className="text-xs text-slate-600 mt-1.5 leading-relaxed line-clamp-3">
-                {c.description}
-              </p>
+              <p className="text-xs text-slate-600 font-semibold uppercase tracking-wider">{metric.label}</p>
+              <h4 className="text-xl font-bold text-slate-900">{metric.value}</h4>
             </div>
-
-            {/* Metrics Ribbon */}
-            <div className="grid grid-cols-3 gap-2 p-3 rounded-xl bg-slate-50 border border-slate-200 text-center font-mono">
-              <div>
-                <div className="text-slate-500 text-[10px] uppercase font-bold">Entities</div>
-                <div className="text-sm font-bold text-blue-700">{c.entityCount}</div>
-              </div>
-              <div>
-                <div className="text-slate-500 text-[10px] uppercase font-bold">Evidence</div>
-                <div className="text-sm font-bold text-emerald-700">{c.evidenceCount}</div>
-              </div>
-              <div>
-                <div className="text-slate-500 text-[10px] uppercase font-bold">Alerts</div>
-                <div className="text-sm font-bold text-amber-700">{c.alertCount}</div>
-              </div>
-            </div>
-
-            {/* Bottom Details & Button */}
-            <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
-              <div className="text-[11px] text-slate-500">
-                Lead: <span className="text-slate-900 font-semibold">{c.leadInvestigator}</span>
-              </div>
-              <button
-                onClick={() => selectCase(c.id)}
-                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold transition-colors shadow-sm"
-              >
-                <span>Enter Workspace</span>
-                <ExternalLink className="w-3.5 h-3.5" />
-              </button>
-            </div>
-
           </div>
         ))}
       </div>
 
+      {/* Search & Filter Bar */}
+      <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-xl p-4 flex flex-col md:flex-row gap-4">
+        <div className="relative flex-1">
+          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-600" />
+          <input 
+            type="text" 
+            placeholder="Search by Case Number, Title, Jurisdiction..." 
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full bg-[var(--bg-primary)] border border-[var(--border)] rounded-lg pl-10 pr-4 py-2 text-sm text-slate-900 focus:outline-none focus:border-[var(--primary)] transition-all"
+          />
+        </div>
+        
+        <div className="flex flex-wrap md:flex-nowrap gap-3 items-center">
+          <select 
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value)}
+            className="bg-[var(--bg-primary)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-slate-900 focus:outline-none focus:border-[var(--primary)]"
+          >
+            <option value="">All Statuses</option>
+            <option value="active">Active</option>
+            <option value="under investigation">Under Investigation</option>
+            <option value="on hold">On Hold</option>
+            <option value="closed">Closed</option>
+            <option value="archived">Archived</option>
+          </select>
+
+          <select 
+            value={filterPriority}
+            onChange={(e) => setFilterPriority(e.target.value)}
+            className="bg-[var(--bg-primary)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-slate-900 focus:outline-none focus:border-[var(--primary)]"
+          >
+            <option value="">All Priorities</option>
+            <option value="critical">Critical</option>
+            <option value="high">High</option>
+            <option value="medium">Medium</option>
+            <option value="low">Low</option>
+          </select>
+
+          <select 
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value)}
+            className="bg-[var(--bg-primary)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-slate-900 focus:outline-none focus:border-[var(--primary)]"
+          >
+            <option value="recent">Sort by: Recent</option>
+            <option value="priority">Sort by: Priority</option>
+            <option value="title">Sort by: Title</option>
+          </select>
+
+          <button 
+            onClick={clearFilters}
+            className="p-2 rounded-lg bg-[var(--bg-primary)] border border-[var(--border)] text-slate-600 hover:text-slate-900 hover:border-[var(--text-secondary)] transition-colors"
+            title="Clear Filters"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+
+      {/* Main Content Area */}
+      {isLoading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[1, 2, 3].map((skeleton) => (
+            <div key={skeleton} className="bg-[var(--bg-card)] border border-[var(--border)] rounded-2xl p-6 h-[320px] animate-pulse flex flex-col">
+              <div className="flex justify-between mb-4">
+                <div className="h-6 w-24 bg-[var(--bg-primary)] rounded"></div>
+                <div className="h-6 w-16 bg-[var(--bg-primary)] rounded-full"></div>
+              </div>
+              <div className="h-6 w-3/4 bg-[var(--bg-primary)] rounded mb-2"></div>
+              <div className="h-4 w-full bg-[var(--bg-primary)] rounded mb-4"></div>
+              <div className="space-y-2 mb-6">
+                <div className="h-4 w-1/2 bg-[var(--bg-primary)] rounded"></div>
+                <div className="h-4 w-2/3 bg-[var(--bg-primary)] rounded"></div>
+              </div>
+              <div className="mt-auto grid grid-cols-3 gap-2">
+                <div className="h-10 bg-[var(--bg-primary)] rounded"></div>
+                <div className="h-10 bg-[var(--bg-primary)] rounded"></div>
+                <div className="h-10 bg-[var(--bg-primary)] rounded"></div>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : cases.length === 0 ? (
+        <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-2xl p-16 flex flex-col items-center justify-center text-center">
+          <Database className="w-16 h-16 text-slate-600 mb-6 opacity-40" />
+          <h3 className="text-xl font-bold text-slate-900 mb-3">No cases have been created yet</h3>
+          <p className="text-base text-slate-600 max-w-md mb-8">
+            Get started by initializing a new investigation dossier. It will appear here once created.
+          </p>
+          <button
+            onClick={() => setIsCreateModalOpen(true)}
+            className="flex items-center gap-2 px-6 py-3 rounded-xl bg-[var(--primary)] text-white hover:opacity-90 font-bold text-sm uppercase tracking-wider transition-colors shadow-lg"
+          >
+            <Plus className="w-5 h-5" />
+            <span>Create First Case</span>
+          </button>
+        </div>
+      ) : filteredAndSortedCases.length === 0 ? (
+        <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-2xl p-12 flex flex-col items-center justify-center text-center">
+          <ListFilter className="w-12 h-12 text-slate-600 mb-4 opacity-50" />
+          <h3 className="text-lg font-semibold text-slate-900 mb-2">No matching cases</h3>
+          <p className="text-sm text-slate-600">
+            Try adjusting your search or filters to find what you're looking for.
+          </p>
+          <button 
+            onClick={clearFilters}
+            className="mt-4 px-4 py-2 rounded-lg bg-[var(--bg-primary)] border border-[var(--border)] text-slate-900 hover:border-[var(--text-secondary)] text-sm font-medium transition-colors"
+          >
+            Clear All Filters
+          </button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredAndSortedCases.map(c => (
+            <div
+              key={c.caseId}
+              className="bg-[var(--bg-card)] shadow-sm border border-[var(--border)] rounded-2xl p-6 hover:shadow-md transition-all flex flex-col h-full group"
+            >
+              <div className="flex-1">
+                <div className="flex items-start justify-between mb-3">
+                  <span className="text-sm font-mono font-bold text-[var(--primary)] bg-[var(--bg-primary)] px-2.5 py-1 rounded-md border border-[var(--border)]">
+                    {c.caseNumber}
+                  </span>
+                  <div className="flex gap-2">
+                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border \${getStatusColor(c.status)}`}>
+                      {c.status}
+                    </span>
+                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border \${getPriorityColor(c.priority)}`}>
+                      {c.priority}
+                    </span>
+                  </div>
+                </div>
+
+                <h3 className="text-lg font-bold text-slate-900 mt-4 leading-tight group-hover:text-[var(--primary)] transition-colors line-clamp-2">
+                  {c.title}
+                </h3>
+                <p className="text-sm text-slate-600 mt-2 font-medium">
+                  {c.caseType}
+                </p>
+                
+                {/* Case Details */}
+                <div className="mt-5 space-y-2.5 text-xs text-slate-600 bg-[var(--bg-primary)] p-3 rounded-lg border border-[var(--border)]">
+                  <div className="flex items-center gap-2">
+                    <Shield className="w-4 h-4 text-cyan-600" />
+                    <span className="truncate"><strong className="text-slate-900 font-semibold">Jurisdiction:</strong> {c.jurisdiction || 'N/A'} - {c.policeStation || 'N/A'}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <User className="w-4 h-4 text-indigo-600" />
+                    <span className="truncate"><strong className="text-slate-900 font-semibold">Lead:</strong> {c.assignedInvestigator || 'Unassigned'}</span>
+                  </div>
+                  <div className="flex items-center justify-between mt-1 pt-2 border-t border-[var(--border)]">
+                    <div className="flex items-center gap-1.5">
+                      <Users className="w-3.5 h-3.5 text-[var(--warning)]" />
+                      <span className="font-medium">{c.teamCount || 0} Members</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <Calendar className="w-3.5 h-3.5 text-slate-600" />
+                      <span className="font-medium">{c.createdAt ? new Date(c.createdAt).toLocaleDateString() : 'N/A'}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Metrics Ribbon */}
+              <div className="grid grid-cols-6 gap-1 p-2 mt-5 rounded-lg bg-slate-100 border border-slate-200 text-center font-mono text-slate-800">
+                <div className="flex flex-col items-center justify-center">
+                  <span className="text-[10px] text-slate-600 font-semibold mb-0.5">ENT</span>
+                  <span className="text-xs font-bold text-slate-900">{c.entityCount || 0}</span>
+                </div>
+                <div className="flex flex-col items-center justify-center">
+                  <span className="text-[10px] text-slate-600 font-semibold mb-0.5">REL</span>
+                  <span className="text-xs font-bold text-slate-900">{c.relationshipCount || 0}</span>
+                </div>
+                <div className="flex flex-col items-center justify-center">
+                  <span className="text-[10px] text-slate-600 font-semibold mb-0.5">EVD</span>
+                  <span className="text-xs font-bold text-slate-900">{c.evidenceCount || 0}</span>
+                </div>
+                <div className="flex flex-col items-center justify-center">
+                  <span className="text-[10px] text-slate-600 font-semibold mb-0.5">DOC</span>
+                  <span className="text-xs font-bold text-slate-900">{c.importCount || 0}</span>
+                </div>
+                <div className="flex flex-col items-center justify-center">
+                  <span className="text-[10px] text-slate-600 font-semibold mb-0.5">ALR</span>
+                  <span className="text-xs font-bold text-slate-900">{c.alertCount || 0}</span>
+                </div>
+                <div className="flex flex-col items-center justify-center">
+                  <span className="text-[10px] text-slate-600 font-semibold mb-0.5">NOT</span>
+                  <span className="text-xs font-bold text-slate-900">{c.noteCount || 0}</span>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="mt-5 grid grid-cols-1 gap-2">
+                <button
+                  onClick={() => { openCase(c.caseId); navigate('/cases/' + c.caseId); }}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-[var(--primary)] text-white font-bold text-sm uppercase tracking-wider transition-opacity hover:opacity-90"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                  <span>Enter Workspace</span>
+                </button>
+                <div className="flex gap-2">
+                  {c.status?.toLowerCase() !== 'closed' && c.status?.toLowerCase() !== 'archived' && (
+                    <button
+                      onClick={() => handleClose(c.caseId)}
+                      className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-[var(--bg-primary)] border border-[var(--border)] text-sm font-semibold text-slate-600 hover:text-[var(--danger)] hover:border-rose-200 transition-colors"
+                    >
+                      <CheckSquare className="w-4 h-4" />
+                      <span>Close</span>
+                    </button>
+                  )}
+                  {c.status?.toLowerCase() !== 'archived' && (
+                    <button
+                      onClick={() => handleArchive(c.caseId)}
+                      className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-[var(--bg-primary)] border border-[var(--border)] text-sm font-semibold text-slate-600 hover:text-[var(--text-muted)] hover:border-slate-300 transition-colors"
+                    >
+                      <Archive className="w-4 h-4" />
+                      <span>Archive</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* CREATE CASE MODAL */}
       {isCreateModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-[var(--bg-card)] shadow-sm border border-[var(--border)] rounded-2xl bg-[var(--bg-card)] rounded-2xl border-[var(--primary)] p-6 max-w-lg w-full shadow-2xl animate-in zoom-in-95">
-            <div className="flex items-center justify-between pb-3 border-b border-[var(--border)] mb-4">
-              <h3 className="text-base font-bold text-[var(--text-primary)]">Initialize Formal Investigation Dossier</h3>
-              <button onClick={() => setIsCreateModalOpen(false)} className="text-[var(--text-secondary)] hover:text-[var(--text-primary)]">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-2xl p-6 max-w-xl w-full shadow-2xl animate-in zoom-in-95">
+            <div className="flex items-center justify-between pb-4 border-b border-[var(--border)] mb-5">
+              <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                <Plus className="w-5 h-5 text-[var(--primary)]" />
+                Initialize New Case
+              </h3>
+              <button onClick={() => setIsCreateModalOpen(false)} className="text-slate-600 hover:text-slate-900 transition-colors">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleCreateSubmit} className="space-y-3.5 text-xs max-h-[75vh] overflow-y-auto pr-1">
-              <div>
-                <label className="block text-[11px] font-mono uppercase text-[var(--text-secondary)] mb-1">
-                  Investigation Title *
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Operation Blue Tide: Port Smuggling Syndicate"
-                  value={newTitle}
-                  onChange={(e) => setNewTitle(e.target.value)}
-                  className="w-full bg-[var(--bg-card)] border border-[var(--border)] rounded-xl px-3 py-2 text-[var(--text-primary)] focus:outline-none focus:border-[var(--primary)]"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <form onSubmit={handleCreateSubmit} className="space-y-4 max-h-[70vh] overflow-y-auto pr-2 custom-scrollbar">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[11px] font-mono uppercase text-[var(--text-secondary)] mb-1 font-semibold text-cyan-400">
-                    Priority Level *
-                  </label>
-                  <select
-                    value={newPriority}
-                    onChange={(e) => setNewPriority(e.target.value as any)}
-                    className="w-full bg-[var(--bg-card)] border border-[var(--border)] rounded-xl px-3 py-2 text-[var(--text-primary)] focus:outline-none focus:border-[var(--primary)] font-medium"
-                  >
-                    <option value="Critical">🔴 Critical (High Threat / Multi-Agency)</option>
-                    <option value="High">🟠 High (Syndicate / Active Hawala)</option>
-                    <option value="Medium">🟡 Medium (Standard Cross-Jurisdiction)</option>
-                    <option value="Low">🟢 Low (Routine Intercept Inquiry)</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-mono uppercase text-[var(--text-secondary)] mb-1">
-                    Dossier Status *
-                  </label>
-                  <select
-                    value={newStatus}
-                    onChange={(e) => setNewStatus(e.target.value as any)}
-                    className="w-full bg-[var(--bg-card)] border border-[var(--border)] rounded-xl px-3 py-2 text-[var(--text-primary)] focus:outline-none focus:border-[var(--primary)]"
-                  >
-                    <option value="Active">Active Investigation</option>
-                    <option value="Under Review">Under Review</option>
-                    <option value="Charge Sheeted">Charge Sheeted</option>
-                    <option value="Archived">Archived</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[11px] font-mono uppercase text-[var(--text-secondary)] mb-1">
-                    Lead Investigator *
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5">
+                    Case Title *
                   </label>
                   <input
                     type="text"
                     required
-                    value={newInvestigator}
-                    onChange={(e) => setNewInvestigator(e.target.value)}
-                    className="w-full bg-[var(--bg-card)] border border-[var(--border)] rounded-xl px-3 py-2 text-[var(--text-primary)] focus:outline-none focus:border-[var(--primary)]"
+                    placeholder="e.g. Operation Blue Tide"
+                    value={newTitle}
+                    onChange={(e) => setNewTitle(e.target.value)}
+                    className="w-full bg-[var(--bg-primary)] border border-[var(--border)] rounded-xl px-4 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-[var(--primary)] transition-all"
                   />
                 </div>
-
                 <div>
-                  <label className="block text-[11px] font-mono uppercase text-[var(--text-secondary)] mb-1">
-                    Police Unit / Station *
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5">
+                    Case Number
                   </label>
                   <input
                     type="text"
-                    required
-                    value={newStation}
-                    onChange={(e) => setNewStation(e.target.value)}
-                    className="w-full bg-[var(--bg-card)] border border-[var(--border)] rounded-xl px-3 py-2 text-[var(--text-primary)] focus:outline-none focus:border-[var(--primary)]"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[11px] font-mono uppercase text-[var(--text-secondary)] mb-1">
-                    Security Classification *
-                  </label>
-                  <select
-                    value={newClassification}
-                    onChange={(e) => setNewClassification(e.target.value as any)}
-                    className="w-full bg-[var(--bg-card)] border border-[var(--border)] rounded-xl px-3 py-2 text-[var(--text-primary)] focus:outline-none focus:border-[var(--primary)] font-mono"
-                  >
-                    <option value="RESTRICTED">RESTRICTED</option>
-                    <option value="CONFIDENTIAL">CONFIDENTIAL</option>
-                    <option value="TOP SECRET">TOP SECRET</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-mono uppercase text-[var(--text-secondary)] mb-1">
-                    Associated FIR No.
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. FIR-2025-MUM-8841"
-                    value={newFIR}
-                    onChange={(e) => setNewFIR(e.target.value)}
-                    className="w-full bg-[var(--bg-card)] border border-[var(--border)] rounded-xl px-3 py-2 text-[var(--text-primary)] focus:outline-none focus:border-[var(--primary)] font-mono"
+                    placeholder="Auto-generated if blank"
+                    value={newCaseNumber}
+                    onChange={(e) => setNewCaseNumber(e.target.value)}
+                    className="w-full bg-[var(--bg-primary)] border border-[var(--border)] rounded-xl px-4 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-[var(--primary)] transition-all"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-[11px] font-mono uppercase text-[var(--text-secondary)] mb-1">
-                  Jurisdiction *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={newJurisdiction}
-                  onChange={(e) => setNewJurisdiction(e.target.value)}
-                  className="w-full bg-[var(--bg-card)] border border-[var(--border)] rounded-xl px-3 py-2 text-[var(--text-primary)] focus:outline-none focus:border-[var(--primary)]"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-mono uppercase text-[var(--text-secondary)] mb-1">
-                  Operational Facts & Scope *
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5">
+                  Description / Summary
                 </label>
                 <textarea
                   rows={3}
-                  required
-                  placeholder="Detail primary allegations, intercepted consignments, or suspect groups."
+                  placeholder="Briefly describe the objective or initial facts of this case..."
                   value={newDesc}
                   onChange={(e) => setNewDesc(e.target.value)}
-                  className="w-full bg-[var(--bg-card)] border border-[var(--border)] rounded-xl px-3 py-2 text-[var(--text-primary)] focus:outline-none focus:border-[var(--primary)]"
+                  className="w-full bg-[var(--bg-primary)] border border-[var(--border)] rounded-xl px-4 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-[var(--primary)] transition-all resize-none"
                 />
               </div>
 
-              <div className="pt-2 flex justify-end gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-[var(--primary)] mb-1.5">
+                    Case Type *
+                  </label>
+                  <select
+                    required
+                    value={newCaseType}
+                    onChange={(e) => setNewCaseType(e.target.value)}
+                    className="w-full bg-[var(--bg-primary)] border border-[var(--border)] rounded-xl px-4 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-[var(--primary)] font-medium"
+                  >
+                    <option value="Financial Crime">Financial Crime</option>
+                    <option value="Cyber Crime">Cyber Crime</option>
+                    <option value="Organized Crime">Organized Crime</option>
+                    <option value="Fraud">Fraud</option>
+                    <option value="Narcotics">Narcotics</option>
+                    <option value="Human Trafficking">Human Trafficking</option>
+                    <option value="Theft">Theft</option>
+                    <option value="Violent Crime">Violent Crime</option>
+                    <option value="Extortion">Extortion</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-[var(--primary)] mb-1.5">
+                    Priority Level *
+                  </label>
+                  <select
+                    required
+                    value={newPriority}
+                    onChange={(e) => setNewPriority(e.target.value)}
+                    className="w-full bg-[var(--bg-primary)] border border-[var(--border)] rounded-xl px-4 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-[var(--primary)] font-medium"
+                  >
+                    <option value="Critical">Critical</option>
+                    <option value="High">High</option>
+                    <option value="Medium">Medium</option>
+                    <option value="Low">Low</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-[var(--primary)] mb-1.5">
+                    Status *
+                  </label>
+                  <select
+                    required
+                    value={newStatus}
+                    onChange={(e) => setNewStatus(e.target.value)}
+                    className="w-full bg-[var(--bg-primary)] border border-[var(--border)] rounded-xl px-4 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-[var(--primary)] font-medium"
+                  >
+                    <option value="Draft">Draft</option>
+                    <option value="Active">Active</option>
+                    <option value="Under Investigation">Under Investigation</option>
+                    <option value="On Hold">On Hold</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-[var(--primary)] mb-1.5">
+                    Jurisdiction *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. National Cyber Crime Zone"
+                    value={newJurisdiction}
+                    onChange={(e) => setNewJurisdiction(e.target.value)}
+                    className="w-full bg-[var(--bg-primary)] border border-[var(--border)] rounded-xl px-4 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-[var(--primary)]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5">
+                    Police Station
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Cyber Cell HQ"
+                    value={newStation}
+                    onChange={(e) => setNewStation(e.target.value)}
+                    className="w-full bg-[var(--bg-primary)] border border-[var(--border)] rounded-xl px-4 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-[var(--primary)]"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5">
+                    Assigned Team
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Special Task Force Alpha"
+                    value={newTeam}
+                    onChange={(e) => setNewTeam(e.target.value)}
+                    className="w-full bg-[var(--bg-primary)] border border-[var(--border)] rounded-xl px-4 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-[var(--primary)]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5">
+                    Lead Investigator Email
+                  </label>
+                  <input
+                    type="email"
+                    placeholder="lead@police.gov"
+                    value={newLeadInvestigator}
+                    onChange={(e) => setNewLeadInvestigator(e.target.value)}
+                    className="w-full bg-[var(--bg-primary)] border border-[var(--border)] rounded-xl px-4 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-[var(--primary)]"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5">
+                  Additional Investigators (comma separated)
+                </label>
+                <input
+                  type="text"
+                  placeholder="inv1@police.gov, inv2@police.gov"
+                  value={newAdditionalInvestigators}
+                  onChange={(e) => setNewAdditionalInvestigators(e.target.value)}
+                  className="w-full bg-[var(--bg-primary)] border border-[var(--border)] rounded-xl px-4 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-[var(--primary)]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5">
+                  Analysts (comma separated)
+                </label>
+                <input
+                  type="text"
+                  placeholder="ana1@police.gov, ana2@police.gov"
+                  value={newAnalysts}
+                  onChange={(e) => setNewAnalysts(e.target.value)}
+                  className="w-full bg-[var(--bg-primary)] border border-[var(--border)] rounded-xl px-4 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-[var(--primary)]"
+                />
+              </div>
+
+              <div className="pt-4 flex justify-end gap-3 mt-2 border-t border-[var(--border)]">
                 <button
                   type="button"
                   onClick={() => setIsCreateModalOpen(false)}
-                  className="px-4 py-2 rounded-xl bg-[var(--bg-card)] hover:bg-slate-50 text-[var(--text-secondary)] font-medium"
+                  className="px-5 py-2.5 rounded-xl bg-[var(--bg-primary)] border border-[var(--border)] hover:bg-slate-200 text-slate-900 font-semibold transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="px-5 py-2 rounded-xl bg-[var(--primary)] text-white hover:bg-cyan-400 text-slate-950 font-bold uppercase tracking-wider shadow disabled:opacity-50 flex items-center gap-2"
+                  className="px-6 py-2.5 rounded-xl bg-[var(--primary)] text-white font-bold uppercase tracking-wider hover:opacity-90 transition-opacity shadow-sm disabled:opacity-50 flex items-center gap-2"
                 >
-                  {isSubmitting && <span className="w-3.5 h-3.5 border-2 border-slate-900 border-t-transparent rounded-full animate-spin" />}
-                  <span>{isSubmitting ? 'Creating Case...' : 'Create Dossier'}</span>
+                  {isSubmitting ? (
+                    <>
+                      <Clock className="w-4 h-4 animate-spin" />
+                      <span>Creating...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="w-4 h-4" />
+                      <span>Create Case</span>
+                    </>
+                  )}
                 </button>
               </div>
             </form>
@@ -576,3 +721,6 @@ export const CaseManagementView: React.FC = () => {
     </div>
   );
 };
+
+
+

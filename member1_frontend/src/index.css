@@ -4,185 +4,68 @@
 
 @layer base {
   :root {
-    --bg-primary: #F0FAFF;
-    --bg-card: #FFFFFF;
-    --primary: #2563EB;
-    --secondary: #7C3AED;
-    --accent: #06B6D4;
-    --text-primary: #1E293B;
-    --text-secondary: #64748B;
-    --border: #E2E8F0;
-    --success: #10B981;
-    --warning: #F59E0B;
-    --danger: #EF4444;
+    --color-navy-950: #0B1220;
+    --color-navy-900: #0F172A;
+    --color-navy-800: #1E293B;
 
-    /* sidebar */
-    --sidebar-bg: #0F1F3D;
-    --sidebar-hover: #111D35;
-    --sidebar-active: #1D4ED8;
-    --sidebar-text: #F8FAFC;
-    --sidebar-text-muted: #94A3B8;
+    --color-primary-700: #1D4ED8;
+    --color-primary-600: #2563EB;
+    --color-primary-500: #3B82F6;
+    --color-primary-100: #DBEAFE;
 
-    /* surfaces */
-    --surface-blue: #EAF4FF;
-    --surface-purple: #F3EEFF;
-    --surface-cyan: #E8FBFF;
+    --color-cyan-600: #0891B2;
+    --color-indigo-600: #4F46E5;
+
+    --color-success-600: #16A35B;
+    --color-success-100: #DCFCE7;
+
+    --color-warning-600: #D97706;
+    --color-warning-100: #FEF3C7;
+
+    --color-danger-600: #DC2626;
+    --color-danger-100: #FEE2E2;
+
+    --color-surface: #FFFFFF;
+    --color-surface-muted: #F8FAFC;
+    --color-border: #E2E8F0;
     
-    /* keep standard shadcn vars just in case */
-    --background: 204 100% 97%;
-    --foreground: 222 47% 11%;
-    --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
-    --primary-foreground: 210 40% 98%;
-    --secondary-foreground: 222 47% 11%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent-foreground: 222 47% 11%;
-    --destructive-foreground: 210 40% 98%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 221.2 83.2% 53.3%;
-    --radius: 0.75rem;
-  }
-}
+    --color-text-primary: #0F172A;
+    --color-text-secondary: #475569;
+    --color-text-muted: #94A3B8;
 
-body {
-  margin: 0;
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  background-color: var(--bg-primary);
-  color: var(--text-primary);
-  overflow-x: hidden;
+    --sidebar-bg: var(--color-navy-950);
+    --sidebar-hover: var(--color-navy-900);
+    --sidebar-active: var(--color-primary-600);
+    --sidebar-text: #FFFFFF;
+    --sidebar-text-muted: var(--color-text-muted);
+
+    --bg-primary: var(--color-surface-muted);
+    --bg-card: var(--color-surface);
+    --bg-body: var(--color-surface-muted);
+    
+    --primary: var(--color-primary-600);
+    --secondary: var(--color-indigo-600);
+    --accent: var(--color-cyan-600);
+    
+    --success: var(--color-success-600);
+    --warning: var(--color-warning-600);
+    --danger: var(--color-danger-600);
+    --critical: var(--color-danger-600);
+    
+    --text-primary: var(--color-text-primary);
+    --text-secondary: var(--color-text-secondary);
+    --border: var(--color-border);
+  }
+  
+  body {
+    @apply font-sans antialiased;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+  }
 }
 
 /* Custom Scrollbars */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-::-webkit-scrollbar-track {
-  background: var(--bg-primary);
-}
-::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 3px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
-}
-
-/* Glassmorphism Classes replaced by card classes in script, 
-   but keeping fallbacks if any were missed */
-.glass-panel {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
-  border-radius: 1rem;
-}
-
-.glass-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-  border-radius: 0.75rem;
-}
-
-.glass-card-hover {
-  transition: all 0.2s ease-in-out;
-}
-.glass-card-hover:hover {
-  border-color: var(--primary);
-  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-  transform: translateY(-1px);
-}
-
-/* Cytoscape container styling */
-.cytoscape-container {
-  width: 100%;
-  height: 100%;
-  background: var(--bg-primary);
-}
-
-/* Scanline / Grid effect for light mode */
-.grid-bg {
-  background-size: 30px 30px;
-  background-image: 
-    linear-gradient(to right, rgba(37, 99, 235, 0.03) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(37, 99, 235, 0.03) 1px, transparent 1px);
-}
-
-/* Discrepancy Alert Banner */
-.discrepancy-pulse {
-  animation: discrepancyGlow 2s infinite alternate;
-}
-@keyframes discrepancyGlow {
-  0% { box-shadow: 0 0 10px rgba(239, 68, 68, 0.2); }
-  100% { box-shadow: 0 0 20px rgba(239, 68, 68, 0.45); }
-}
-
-/* ==========================================================================
-   PRINT MEDIA STYLES FOR CRIME INVESTIGATION DOSSIER
-   Guarantees all pages & sections render without viewport clipping or truncation
-   ========================================================================== */
-@media print {
-  /* Hide application shell, sidebars, headers, toolbars, toasts, floating ribbons */
-  nav,
-  aside,
-  header,
-  .no-print,
-  button,
-  .DemoWalkthroughBar,
-  [role="status"],
-  [aria-live] {
-    display: none !important;
-  }
-
-  /* Break out of root h-screen and overflow-hidden scroll constraints */
-  html,
-  body,
-  #root,
-  .h-screen,
-  .overflow-hidden,
-  .overflow-y-auto,
-  main {
-    overflow: visible !important;
-    height: auto !important;
-    max-height: none !important;
-    min-height: 0 !important;
-    position: static !important;
-    display: block !important;
-    background: #080d1a !important;
-    color: #f1f5f9 !important;
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
-  }
-
-  /* Full width document container */
-  #investigation-report-doc {
-    width: 100% !important;
-    max-width: 100% !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    box-shadow: none !important;
-    border: none !important;
-    background-color: transparent !important;
-  }
-
-  /* Avoid slicing cards or sections across page breaks */
-  .avoid-page-break,
-  .report-card {
-    page-break-inside: avoid !important;
-    break-inside: avoid !important;
-  }
-
-  /* Page break rules between major sections */
-  .page-break-before {
-    page-break-before: always !important;
-    break-before: page !important;
-  }
-
-  @page {
-    size: A4 portrait;
-    margin: 15mm 15mm 15mm 15mm;
-  }
-}
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--bg-primary); }
+::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
