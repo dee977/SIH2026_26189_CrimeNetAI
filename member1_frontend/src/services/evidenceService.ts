@@ -16,6 +16,13 @@ export async function fetchEvidenceList(caseId: string) {
   return { ...res, data: [] as EvidenceRecord[] };
 }
 
+export async function fetchEvidenceById(evidenceId: string) {
+  return apiRequest<EvidenceRecord>(
+    `/evidence/${encodeURIComponent(evidenceId)}`,
+    { method: 'GET' }
+  );
+}
+
 export async function verifyEvidenceSHA256(evidenceId: string) {
   return apiRequest<{
     evidenceId: string;

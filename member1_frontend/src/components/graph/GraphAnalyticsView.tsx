@@ -1,6 +1,12 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useNavigationStore } from '../../store/navigationStore';
+import { useNotificationStore } from '../../store/notificationStore';
 import { apiClient } from '../../services/apiClient';
+import { fetchEntityById } from '../../services/entityService';
+import { AnyEntity } from '../../types/entities';
+import { PersonProfile } from '../entity/PersonProfile';
+import { GenericEntityProfile } from '../entity/GenericEntityProfile';
 import { 
   Network, 
   RefreshCw, 
@@ -10,7 +16,14 @@ import {
   Link,
   Activity,
   Layers,
-  Search
+  Search,
+  FileText,
+  ChevronDown,
+  Loader2,
+  ArrowUpRight,
+  X,
+  AlertCircle,
+  ArrowLeft
 } from 'lucide-react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 
@@ -33,21 +46,38 @@ interface GraphCommunities {
 }
 
 export const GraphAnalyticsView: React.FC<{caseId?: string}> = ({caseId}) => {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { selectEntity, setView, selectedCaseId } = useNavigationStore();
+  const { addToast } = useNotificationStore();
   
+  const effectiveCaseId = caseId || selectedCaseId || searchParams.get('caseId') || 'CASE-2026-HWL-001';
+
   const [stats, setStats] = useState<GraphAnalytics | null>(null);
   const [communities, setCommunities] = useState<GraphCommunities | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchAnalytics = async (caseId: string) => {
+  // BUG 1 Export States
+  const [isExporting, setIsExporting] = useState<boolean>(false);
+  const [isExportDropdownOpen, setIsExportDropdownOpen] = useState<boolean>(false);
+
+  // BUG 2 Dossier Modal States for Key Entities Investigation
+  const [isDossierOpen, setIsDossierOpen] = useState<boolean>(false);
+  const [isDossierLoading, setIsDossierLoading] = useState<boolean>(false);
+  const [dossierError, setDossierError] = useState<string | null>(null);
+  const [dossierEntity, setDossierEntity] = useState<AnyEntity | null>(null);
+  const [activeDossierNode, setActiveDossierNode] = useState<{ id: string; name: string } | null>(null);
+  const [dossierHistory, setDossierHistory] = useState<{ id: string; name: string }[]>([]);
+
+  const fetchAnalytics = async (targetCaseId: string) => {
     setIsLoading(true);
     setError(null);
     try {
       const [statsRes, commRes] = await Promise.all([
-        apiClient.get<GraphAnalytics>(`/graph/analytics?case_id=${encodeURIComponent(caseId)}`),
-        apiClient.get<GraphCommunities>(`/graph/communities?case_id=${encodeURIComponent(caseId)}`)
+        apiClient.get<GraphAnalytics>(`/graph/analytics?case_id=${encodeURIComponent(targetCaseId)}`),
+        apiClient.get<GraphCommunities>(`/graph/communities?case_id=${encodeURIComponent(targetCaseId)}`)
       ]);
 
       if (statsRes.success && statsRes.data) {
@@ -70,31 +100,217 @@ export const GraphAnalyticsView: React.FC<{caseId?: string}> = ({caseId}) => {
   };
 
   useEffect(() => {
-    if (selectedCaseId) {
-      fetchAnalytics(selectedCaseId);
+    if (effectiveCaseId) {
+      fetchAnalytics(effectiveCaseId);
     } else {
       setStats(null);
       setCommunities(null);
       setLastUpdated(null);
     }
-  }, [selectedCaseId]);
+  }, [effectiveCaseId]);
+
+  // Close dossier modal on Escape key
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isDossierOpen) {
+        setIsDossierOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isDossierOpen]);
 
   const handleRefresh = () => {
-    if (selectedCaseId) {
-      fetchAnalytics(selectedCaseId);
+    if (effectiveCaseId) {
+      fetchAnalytics(effectiveCaseId);
     }
   };
 
-  const handleExport = () => {
-    console.log('Exporting graph analytics...', { stats, communities });
+  // Helper to trigger browser download
+  const triggerDownload = (content: string, filename: string, mimeType: string) => {
+    const blob = new Blob([content], { type: `${mimeType};charset=utf-8;` });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', filename);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
-  const handleNodeClick = (id: string) => {
-    selectEntity(id);
-    setView('case-workspace');
+  // BUG 1 FIX: Export analytics data as CSV (Metrics + Top Degree Entities)
+  const exportAsCSV = () => {
+    if (!stats) return;
+    setIsExporting(true);
+    setIsExportDropdownOpen(false);
+
+    try {
+      const now = new Date();
+      const dateStr = now.toISOString().split('T')[0];
+      const filename = `${effectiveCaseId}_analytics_${dateStr}.csv`;
+
+      let csv = `CRIMENET AI - GRAPH ANALYTICS DOSSIER\n`;
+      csv += `Case ID,${effectiveCaseId}\n`;
+      csv += `Export Timestamp,${now.toISOString()}\n`;
+      csv += `Classification,Official Law Enforcement Dossier\n\n`;
+
+      csv += `SECTION 1: GRAPH TOPOLOGICAL METRICS\n`;
+      csv += `Metric,Value\n`;
+      csv += `Total Entities (Nodes),${stats.totalNodes}\n`;
+      csv += `Total Relationships (Edges),${stats.totalEdges}\n`;
+      csv += `Graph Density,${stats.density ? stats.density.toFixed(4) : '0.0000'}\n`;
+      csv += `Connected Components,${stats.connectedComponents}\n`;
+      csv += `Algorithmic Communities,${communities?.clusters?.length || 0}\n\n`;
+
+      csv += `SECTION 2: TOP DEGREE NODES (KEY ANALYTICAL LEADS)\n`;
+      csv += `Rank,Entity ID,Direct Connections (Degree),Network Share (%)\n`;
+      
+      const totalDegreeSum = stats.topDegreeNodes.reduce((acc, curr) => acc + curr.degree, 0) || 1;
+      stats.topDegreeNodes.forEach((node, index) => {
+        const share = ((node.degree / totalDegreeSum) * 100).toFixed(1);
+        csv += `${index + 1},"${node.id}",${node.degree},${share}%\n`;
+      });
+
+      triggerDownload(csv, filename, 'text/csv');
+
+      addToast({
+        type: 'success',
+        title: 'Export Complete',
+        message: `Graph analytics CSV saved as ${filename}`
+      });
+    } catch (err: any) {
+      console.error('Failed to export CSV:', err);
+      addToast({
+        type: 'error',
+        title: 'Export Failed',
+        message: 'Could not generate CSV export.'
+      });
+    } finally {
+      setIsExporting(false);
+    }
   };
 
-  if (!selectedCaseId) {
+  // BUG 1 FIX: Export full analytics data payload as JSON
+  const exportAsJSON = () => {
+    if (!stats) return;
+    setIsExporting(true);
+    setIsExportDropdownOpen(false);
+
+    try {
+      const now = new Date();
+      const dateStr = now.toISOString().split('T')[0];
+      const filename = `${effectiveCaseId}_analytics_${dateStr}.json`;
+
+      const payload = {
+        system: "CrimeNet AI - Criminal Network Analysis System (SIH26189)",
+        classification: "CONFIDENTIAL / LAW ENFORCEMENT DOSSIER",
+        caseId: effectiveCaseId,
+        exportedAt: now.toISOString(),
+        topologicalMetrics: {
+          totalNodes: stats.totalNodes,
+          totalEdges: stats.totalEdges,
+          density: stats.density,
+          connectedComponents: stats.connectedComponents,
+          communityCount: communities?.clusters?.length || 0
+        },
+        topDegreeNodes: stats.topDegreeNodes.map((n, idx) => ({
+          rank: idx + 1,
+          entityId: n.id,
+          degree: n.degree
+        })),
+        communities: communities?.clusters || []
+      };
+
+      triggerDownload(JSON.stringify(payload, null, 2), filename, 'application/json');
+
+      addToast({
+        type: 'success',
+        title: 'Export Complete',
+        message: `Graph analytics JSON saved as ${filename}`
+      });
+    } catch (err: any) {
+      console.error('Failed to export JSON:', err);
+      addToast({
+        type: 'error',
+        title: 'Export Failed',
+        message: 'Could not generate JSON export.'
+      });
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  // BUG 2 FIX: Handler to fetch and open the complete intelligence dossier for any key entity
+  const handleViewDossier = async (nodeId: string, nodeName?: string, resetHistory: boolean = true) => {
+    if (!nodeId || !effectiveCaseId) return;
+    console.log('[GraphAnalyticsView] Opening dossier for entity:', nodeId, nodeName);
+
+    if (resetHistory) {
+      setDossierHistory([]);
+    }
+    setActiveDossierNode({ id: nodeId, name: nodeName || nodeId });
+    setIsDossierOpen(true);
+    setIsDossierLoading(true);
+    setDossierError(null);
+    setDossierEntity(null);
+
+    try {
+      const res = await fetchEntityById(nodeId, effectiveCaseId);
+      console.log('[GraphAnalyticsView] Dossier response for entity:', nodeId, res);
+      if (res.success && res.data) {
+        const raw = res.data as any;
+        const mappedEntity: AnyEntity = {
+          ...raw,
+          type: raw.type || raw.entityType || 'Person',
+          label: raw.label || raw.canonicalName || raw.name || raw.fullName || nodeName || nodeId,
+          fullName: raw.fullName || raw.canonicalName || raw.name || nodeName || nodeId,
+          id: raw.id || raw.entityId || nodeId,
+          source: raw.source || 'Case Intelligence Graph',
+          caseIds: raw.caseIds || (raw.caseId ? [raw.caseId] : [effectiveCaseId]),
+          firstObserved: raw.firstObserved || raw.created_at || 'Registered',
+          lastUpdated: raw.lastUpdated || raw.created_at || 'Active',
+          evidenceCount: raw.evidenceCount || 0
+        };
+        setDossierEntity(mappedEntity);
+      } else {
+        setDossierError('Intelligence dossier not found for this entity in the active case.');
+      }
+    } catch (err: any) {
+      console.error('[GraphAnalyticsView] Error fetching entity dossier:', nodeId, err);
+      setDossierError(err?.message || 'Failed to load entity dossier.');
+    } finally {
+      setIsDossierLoading(false);
+    }
+  };
+
+  // Drilldown to connected entities from within the modal
+  const handleDrilldownDossier = (targetId: string, targetName?: string) => {
+    if (activeDossierNode) {
+      setDossierHistory(prev => [...prev, { id: activeDossierNode.id, name: activeDossierNode.name }]);
+    }
+    handleViewDossier(targetId, targetName || targetId, false);
+  };
+
+  // Step back to previous entity in dossier history
+  const handleBackDossier = () => {
+    if (dossierHistory.length === 0) return;
+    const historyCopy = [...dossierHistory];
+    const previous = historyCopy.pop()!;
+    setDossierHistory(historyCopy);
+    handleViewDossier(previous.id, previous.name, false);
+  };
+
+  // Navigate to full-page entity explorer
+  const handleOpenInEntityExplorer = () => {
+    if (!activeDossierNode) return;
+    selectEntity(activeDossierNode.id);
+    setView('entity');
+    setIsDossierOpen(false);
+    navigate(`/entities?entityId=${encodeURIComponent(activeDossierNode.id)}&caseId=${encodeURIComponent(effectiveCaseId)}`);
+  };
+
+  if (!effectiveCaseId) {
     return (
       <div className="flex flex-col items-center justify-center h-full p-8 text-center text-[var(--text-muted)] animate-in fade-in duration-300">
         <Search className="w-12 h-12 mb-4 text-slate-600" />
@@ -134,7 +350,7 @@ export const GraphAnalyticsView: React.FC<{caseId?: string}> = ({caseId}) => {
             Case Intelligence Dashboard
           </h1>
           <p className="text-xs text-[var(--text-secondary)] mt-1">
-            Analyzing topological structures and centrality metrics for Case {selectedCaseId}
+            Analyzing topological structures and centrality metrics for Case {effectiveCaseId}
           </p>
         </div>
 
@@ -143,18 +359,60 @@ export const GraphAnalyticsView: React.FC<{caseId?: string}> = ({caseId}) => {
             <button
               onClick={handleRefresh}
               disabled={isLoading}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-[var(--bg-card)] border border-[var(--border)] hover:bg-[var(--bg-card)] text-[var(--text-primary)] rounded transition-colors disabled:opacity-50"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-[var(--bg-card)] border border-[var(--border)] hover:bg-slate-800 text-[var(--text-primary)] rounded transition-colors disabled:opacity-50 cursor-pointer"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
               Refresh
             </button>
-            <button
-              onClick={handleExport}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-[var(--primary)] hover:bg-cyan-600 text-slate-900 rounded transition-colors"
-            >
-              <Download className="w-3.5 h-3.5" />
-              Export
-            </button>
+
+            {/* BUG 1 FIX: Working Export Button with CSV & JSON options */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setIsExportDropdownOpen(!isExportDropdownOpen)}
+                disabled={isExporting || !hasData}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-[var(--primary)] hover:bg-cyan-600 text-slate-900 font-semibold rounded transition-colors disabled:opacity-50 cursor-pointer shadow-xs"
+                title="Export Graph Analytics (CSV / JSON)"
+              >
+                {isExporting ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Download className="w-3.5 h-3.5" />
+                )}
+                <span>{isExporting ? 'Exporting...' : 'Export'}</span>
+                <ChevronDown className="w-3 h-3 ml-0.5" />
+              </button>
+
+              {isExportDropdownOpen && (
+                <div 
+                  className="absolute right-0 mt-1 w-52 rounded-xl bg-slate-900 border border-slate-700 shadow-2xl py-1.5 z-30 animate-in fade-in zoom-in-95 duration-150"
+                  onMouseLeave={() => setIsExportDropdownOpen(false)}
+                >
+                  <button
+                    type="button"
+                    onClick={exportAsCSV}
+                    className="w-full text-left px-3.5 py-2.5 text-xs text-slate-200 hover:text-white hover:bg-slate-800 flex items-center gap-2.5 cursor-pointer transition-colors"
+                  >
+                    <FileText className="w-4 h-4 text-emerald-400 shrink-0" />
+                    <div>
+                      <span className="font-semibold block">Export as CSV</span>
+                      <span className="text-[10px] text-slate-400">Metrics & Key Entities Table</span>
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={exportAsJSON}
+                    className="w-full text-left px-3.5 py-2.5 text-xs text-slate-200 hover:text-white hover:bg-slate-800 flex items-center gap-2.5 cursor-pointer transition-colors border-t border-slate-800"
+                  >
+                    <Download className="w-4 h-4 text-cyan-400 shrink-0" />
+                    <div>
+                      <span className="font-semibold block">Export as JSON</span>
+                      <span className="text-[10px] text-slate-400">Full Analytics Payload</span>
+                    </div>
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
           {lastUpdated && (
             <div className="text-[10px] font-mono text-[var(--text-muted)]">
@@ -229,7 +487,7 @@ export const GraphAnalyticsView: React.FC<{caseId?: string}> = ({caseId}) => {
               <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-4 flex items-center justify-between">
                 Top Degree Nodes
                 <span className="text-[10px] font-mono text-[var(--text-secondary)] bg-[var(--bg-card)] px-2 py-0.5 rounded">
-                  Highest Direct Connectivity
+                  Highest Direct Connectivity (Click bar to investigate)
                 </span>
               </h3>
               
@@ -259,7 +517,7 @@ export const GraphAnalyticsView: React.FC<{caseId?: string}> = ({caseId}) => {
                       radius={[0, 4, 4, 0]}
                       onClick={(data) => {
                         if (data && data.id) {
-                          handleNodeClick(data.id);
+                          handleViewDossier(data.id, data.id);
                         }
                       }}
                       className="cursor-pointer hover:opacity-80 transition-opacity"
@@ -289,13 +547,17 @@ export const GraphAnalyticsView: React.FC<{caseId?: string}> = ({caseId}) => {
                     {stats.topDegreeNodes.map((node) => (
                       <tr key={node.id} className="hover:bg-[var(--bg-card)] transition-colors">
                         <td className="py-2.5 px-3 font-medium text-[var(--text-secondary)]">{node.id}</td>
-                        <td className="py-2.5 px-3 text-[var(--primary)]">{node.degree}</td>
+                        <td className="py-2.5 px-3 text-[var(--primary)] font-bold">{node.degree}</td>
                         <td className="py-2.5 px-3 text-right">
+                          {/* BUG 2 FIX: Working Investigate button opening official dossier */}
                           <button
-                            onClick={() => handleNodeClick(node.id)}
-                            className="px-2.5 py-1 rounded bg-[var(--primary)]/10 hover:bg-[var(--primary)]/20 text-[var(--primary)] text-[10px] font-semibold transition-colors border border-[var(--primary)]/20"
+                            type="button"
+                            onClick={() => handleViewDossier(node.id, node.id)}
+                            className="px-2.5 py-1 rounded bg-[var(--primary)]/10 hover:bg-[var(--primary)]/20 text-[var(--primary)] text-[10px] font-semibold transition-colors border border-[var(--primary)]/20 cursor-pointer inline-flex items-center gap-1 active:scale-95"
+                            title={`Investigate intelligence dossier for ${node.id}`}
                           >
-                            Investigate →
+                            <span>Investigate</span>
+                            <span>→</span>
                           </button>
                         </td>
                       </tr>
@@ -307,6 +569,141 @@ export const GraphAnalyticsView: React.FC<{caseId?: string}> = ({caseId}) => {
           )}
         </>
       )}
+
+      {/* BUG 2 FIX: Official Case Dossier Modal */}
+      {isDossierOpen && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 overflow-y-auto"
+          onClick={() => setIsDossierOpen(false)}
+        >
+          <div 
+            className="bg-white border border-slate-200 rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200 text-slate-900"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="px-6 py-4 border-b border-slate-200 bg-slate-50/80 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-700 shadow-xs">
+                  <FileText className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900">Official Case Dossier</h3>
+                  <p className="text-xs text-slate-500 font-medium">
+                    Entity: <span className="text-slate-800 font-semibold">{activeDossierNode?.name || 'Selected Entity'}</span>
+                    {' • '}ID: <span className="font-mono text-slate-600">{activeDossierNode?.id}</span>
+                    {' • '}Case: <span className="font-mono text-blue-700">{effectiveCaseId}</span>
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                {dossierHistory.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleBackDossier}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-100 rounded-lg border border-slate-200 transition-colors cursor-pointer shadow-xs"
+                    title={`Back to ${dossierHistory[dossierHistory.length - 1].name}`}
+                  >
+                    <ArrowLeft className="w-3.5 h-3.5 text-slate-500" />
+                    <span>Back ({dossierHistory[dossierHistory.length - 1].name})</span>
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={handleOpenInEntityExplorer}
+                  className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg border border-blue-200 transition-colors cursor-pointer"
+                  title="Open in full Search & Entity Explorer view"
+                >
+                  <span>Open in Entity Explorer</span>
+                  <ArrowUpRight className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsDossierOpen(false)}
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-200/60 transition-colors cursor-pointer"
+                  title="Close Dossier"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Body */}
+            <div className="flex-1 overflow-y-auto p-6 bg-slate-50/30">
+              {isDossierLoading ? (
+                <div className="flex flex-col items-center justify-center py-20 text-slate-600 space-y-3">
+                  <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
+                  <p className="text-sm font-semibold text-slate-800">
+                    Loading verified dossier for {activeDossierNode?.name || 'entity'}...
+                  </p>
+                  <p className="text-xs text-slate-500">
+                    Aggregating criminal history, cross-references, and graph intelligence
+                  </p>
+                </div>
+              ) : dossierError ? (
+                <div className="bg-red-50 border border-red-200 rounded-xl p-5 text-red-800 space-y-3">
+                  <div className="flex items-center gap-2 font-semibold">
+                    <AlertCircle className="w-5 h-5 text-red-600" />
+                    <span>Failed to Load Dossier</span>
+                  </div>
+                  <p className="text-xs text-red-700">{dossierError}</p>
+                  <button
+                    type="button"
+                    onClick={() => activeDossierNode && handleViewDossier(activeDossierNode.id, activeDossierNode.name, false)}
+                    className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded-lg shadow-xs transition-colors cursor-pointer"
+                  >
+                    Try Again
+                  </button>
+                </div>
+              ) : dossierEntity ? (
+                <div>
+                  {dossierEntity.type === 'Person' ? (
+                    <PersonProfile 
+                      person={dossierEntity as any} 
+                      onSelectLinkedEntity={handleDrilldownDossier}
+                      onCloseModal={() => setIsDossierOpen(false)}
+                      caseId={effectiveCaseId}
+                    />
+                  ) : (
+                    <GenericEntityProfile 
+                      entity={dossierEntity} 
+                      onSelectLinkedEntity={handleDrilldownDossier}
+                      onCloseModal={() => setIsDossierOpen(false)}
+                      caseId={effectiveCaseId}
+                    />
+                  )}
+                </div>
+              ) : (
+                <div className="p-8 text-center text-slate-500">
+                  No intelligence dossier record located for this entity.
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-3 border-t border-slate-200 bg-slate-50 flex items-center justify-between text-xs text-slate-500">
+              <span className="font-mono text-[11px]">BSA Section 63/65B Compliant Forensic Dossier</span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleOpenInEntityExplorer}
+                  className="sm:hidden px-3 py-1.5 bg-blue-50 text-blue-700 font-semibold rounded-md border border-blue-200"
+                >
+                  Full Page
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsDossierOpen(false)}
+                  className="px-3 py-1.5 bg-white border border-slate-200 text-slate-700 font-semibold rounded-md hover:bg-slate-100 transition-colors cursor-pointer"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };

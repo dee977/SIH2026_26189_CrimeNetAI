@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useNavigationStore } from '../../store/navigationStore';
 import { useNotificationStore } from '../../store/notificationStore';
 import { useAuthStore } from '../../store/authStore';
@@ -117,12 +118,19 @@ export const EvidenceView: React.FC<EvidenceViewProps> = ({ caseId }) => {
     }
   }, [targetCase]);
 
-  const [selectedId, setSelectedId] = useState<string>(selectedEvidenceId || '');
+  const [searchParams] = useSearchParams();
+  const urlEvidenceId = searchParams.get('evidenceId');
+
+  const [selectedId, setSelectedId] = useState<string>(urlEvidenceId || selectedEvidenceId || '');
   useEffect(() => {
-    if (!selectedId && evidenceList.length > 0) {
+    if (urlEvidenceId) {
+      setSelectedId(urlEvidenceId);
+    } else if (selectedEvidenceId) {
+      setSelectedId(selectedEvidenceId);
+    } else if (!selectedId && evidenceList.length > 0) {
       setSelectedId(evidenceList[0].id);
     }
-  }, [evidenceList, selectedId]);
+  }, [urlEvidenceId, selectedEvidenceId, evidenceList, selectedId]);
 
   const isUploadModalOpen = useNavigationStore(state => state.isEvidenceUploadModalOpen);
   const [localModalOpen, setLocalModalOpen] = useState(false);
