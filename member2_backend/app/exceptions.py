@@ -31,8 +31,8 @@ class AuthenticationError(AppException):
         super().__init__(message=message, code='AUTHENTICATION_ERROR', status_code=status.HTTP_401_UNAUTHORIZED, details=details)
 
 class AuthorizationError(AppException):
-    def __init__(self, message: str = 'You do not have permission to perform this action', details: Optional[Dict[str, Any]] = None):
-        super().__init__(message=message, code='AUTHORIZATION_ERROR', status_code=status.HTTP_403_FORBIDDEN, details=details)
+    def __init__(self, message: str = 'You do not have permission to perform this action', details: Optional[Dict[str, Any]] = None, code: str = 'AUTHORIZATION_ERROR'):
+        super().__init__(message=message, code=code, status_code=status.HTTP_403_FORBIDDEN, details=details)
 
 class ResourceNotFoundError(AppException):
     def __init__(self, resource_type: str, identifier: str, details: Optional[Dict[str, Any]] = None):

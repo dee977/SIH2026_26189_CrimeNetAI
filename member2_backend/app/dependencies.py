@@ -20,16 +20,31 @@ async def get_current_user(
         raise AuthenticationError('Invalid or expired authorization token')
         
     # BACKEND RBAC SOURCE OF TRUTH
-    from app.models import UserProfileModel
+    from app.models import UserProfileModel, AccessRequestModel
     
     db_profile = db.query(UserProfileModel).filter(UserProfileModel.email.ilike(user.email)).first()
-    if not db_profile:
-        raise AuthenticationError('Your account is pending Admin approval or does not exist.')
+    access_req = db.query(AccessRequestModel).filter(AccessRequestModel.user_email.ilike(user.email)).order_by(AccessRequestModel.created_at.desc()).first()
 
-    if not db_profile.is_active:
-        raise AuthenticationError('Your account is currently suspended or pending Admin approval.')
+    if access_req and (access_req.status or '').lower() == 'rejected':
+        raise AuthorizationError(
+            message='Your enrolment request was rejected by Admin. Contact your supervising officer.',
+            code='PENDING_APPROVAL'
+        )
 
-    user.grantedRole = (db_profile.role.upper() if db_profile else 'INVESTIGATOR')
+    is_approved = (
+        db_profile is not None
+        and db_profile.is_active
+        and (getattr(db_profile, 'status', None) or '').lower() == 'approved'
+        and (access_req is None or (access_req.status or '').lower() == 'approved')
+    )
+
+    if not is_approved:
+        raise AuthorizationError(
+            message='Your enrolment is pending Admin approval. You cannot access CrimeNet AI until clearance is granted.',
+            code='PENDING_APPROVAL'
+        )
+
+    user.grantedRole = (db_profile.role.upper() if db_profile and db_profile.role else 'INVESTIGATOR')
 
         
     # Map strict statutory permissions based on the DB role

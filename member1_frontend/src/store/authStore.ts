@@ -57,36 +57,47 @@ let initialUser: UserProfile | null = null;
 try {
   const storedUser = typeof localStorage !== 'undefined' ? localStorage.getItem('crimenet_user_profile') : null;
   if (storedUser) {
-    initialUser = JSON.parse(storedUser);
+    const parsed = JSON.parse(storedUser);
+    if (parsed && parsed.status !== 'PENDING') {
+      initialUser = parsed;
+    } else {
+      localStorage.removeItem('crimenet_auth_token');
+      localStorage.removeItem('crimenet_user_profile');
+      localStorage.removeItem('crimenet_active_role');
+    }
   }
 } catch (_) {}
 
 export const useAuthStore = create<AuthState>((set) => ({
   user: initialUser,
-  token: initialToken,
-  isAuthenticated: !!initialToken && !!initialUser,
+  token: initialUser ? initialToken : null,
+  isAuthenticated: !!initialToken && !!initialUser && initialUser.status !== 'PENDING',
   isSessionExpired: false,
   pendingOfficers: [],
 
   setSession: (token, user) => {
-    if (token) {
+    if (token && user && user.status !== 'PENDING') {
       try { 
         localStorage.setItem('crimenet_auth_token', token); 
-        if (user) {
-          localStorage.setItem('crimenet_user_profile', JSON.stringify(user));
-        }
+        localStorage.setItem('crimenet_user_profile', JSON.stringify(user));
       } catch (_) {}
+      set({
+        token,
+        user,
+        isAuthenticated: true
+      });
     } else {
       try { 
         localStorage.removeItem('crimenet_auth_token'); 
         localStorage.removeItem('crimenet_user_profile');
+        localStorage.removeItem('crimenet_active_role');
       } catch (_) {}
+      set({
+        token: null,
+        user: null,
+        isAuthenticated: false
+      });
     }
-    set({
-      token,
-      user,
-      isAuthenticated: !!token && !!user
-    });
   },
 
   logout: async () => {

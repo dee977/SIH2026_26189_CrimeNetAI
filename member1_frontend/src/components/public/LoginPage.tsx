@@ -36,44 +36,44 @@ const ROLE_OPTIONS: RoleOption[] = [
     title: 'ADMIN',
     badge: 'Supervisory Control',
     desc: 'Full administrative access, user RBAC promotion, and audit authority.',
-    icon: <ShieldCheck className="w-5 h-5 text-rose-400" />,
-    demoEmail: 'admin123@gov.in',
-    color: 'text-rose-400',
-    activeBorder: 'border-rose-500 shadow-rose-500/20',
-    activeBg: 'bg-rose-500/10'
+    icon: <ShieldCheck className="w-5 h-5 text-rose-600 dark:text-rose-400" />,
+    demoEmail: 'yakshvachhani1108@gmail.com',
+    color: 'text-rose-700 dark:text-rose-400',
+    activeBorder: 'border-rose-600 ring-2 ring-rose-500/50',
+    activeBg: 'bg-rose-50 dark:bg-rose-950/40'
   },
   {
     id: 'INVESTIGATOR',
     title: 'INVESTIGATOR',
     badge: 'Case Operations',
     desc: 'Case file creation, evidence ingestion, and knowledge graph querying.',
-    icon: <Briefcase className="w-5 h-5 text-blue-400" />,
-    demoEmail: 'investigator123@gov.in',
-    color: 'text-blue-400',
-    activeBorder: 'border-blue-500 shadow-blue-500/20',
-    activeBg: 'bg-blue-500/10'
+    icon: <Briefcase className="w-5 h-5 text-blue-600 dark:text-blue-400" />,
+    demoEmail: 'dharmik111207@gmail.com',
+    color: 'text-blue-700 dark:text-blue-400',
+    activeBorder: 'border-blue-600 ring-2 ring-blue-500/50',
+    activeBg: 'bg-blue-50 dark:bg-blue-950/40'
   },
   {
     id: 'ANALYST',
     title: 'ANALYST',
     badge: 'Intelligence & ML',
     desc: 'Louvain community analysis, multi-hop discovery, and report generation.',
-    icon: <BarChart3 className="w-5 h-5 text-cyan-400" />,
-    demoEmail: 'analyst123@gov.in',
-    color: 'text-cyan-400',
-    activeBorder: 'border-cyan-500 shadow-cyan-500/20',
-    activeBg: 'bg-cyan-500/10'
+    icon: <BarChart3 className="w-5 h-5 text-teal-600 dark:text-cyan-400" />,
+    demoEmail: 'archanpatel2007@gmail.com',
+    color: 'text-teal-700 dark:text-cyan-400',
+    activeBorder: 'border-teal-600 dark:border-cyan-500 ring-2 ring-teal-500/50',
+    activeBg: 'bg-teal-50 dark:bg-cyan-950/40'
   },
   {
     id: 'AUDITOR',
     title: 'AUDITOR',
     badge: 'Statutory Review',
     desc: 'BSA §63 compliance, Merkle evidence audit ledger, and reports.',
-    icon: <FileCheck className="w-5 h-5 text-amber-400" />,
-    demoEmail: 'auditor123@gov.in',
-    color: 'text-amber-400',
-    activeBorder: 'border-amber-500 shadow-amber-500/20',
-    activeBg: 'bg-amber-500/10'
+    icon: <FileCheck className="w-5 h-5 text-amber-600 dark:text-amber-400" />,
+    demoEmail: 'don123@gmail.com',
+    color: 'text-amber-700 dark:text-amber-400',
+    activeBorder: 'border-amber-600 ring-2 ring-amber-500/50',
+    activeBg: 'bg-amber-50 dark:bg-amber-950/40'
   }
 ];
 
@@ -81,14 +81,19 @@ export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   const { setSession } = useAuthStore();
 
-  const [selectedRole, setSelectedRole] = useState<UserRole>('INVESTIGATOR');
-  const [identifier, setIdentifier] = useState('');
-  const [password, setPassword] = useState('');
+  const [selectedRole, setSelectedRole] = useState<UserRole>('ADMIN');
+  const [identifier, setIdentifier] = useState('yakshvachhani1108@gmail.com');
+  const [password, setPassword] = useState('123456');
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
   const handleSelectRole = (role: UserRole) => {
     setSelectedRole(role);
+    const match = ROLE_OPTIONS.find(r => r.id === role);
+    if (match) {
+      setIdentifier(match.demoEmail);
+      setPassword('123456');
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -99,8 +104,8 @@ export const LoginPage: React.FC = () => {
     const finalEmail = identifier.trim() || (
       selectedRole === 'ADMIN' ? 'yakshvachhani1108@gmail.com' :
       selectedRole === 'INVESTIGATOR' ? 'dharmik111207@gmail.com' :
-      selectedRole === 'ANALYST' ? 'analyst123@gov.in' :
-      'auditor123@gov.in'
+      selectedRole === 'ANALYST' ? 'archanpatel2007@gmail.com' :
+      'don123@gmail.com'
     );
     const finalPassword = password || '123456';
 
@@ -112,7 +117,6 @@ export const LoginPage: React.FC = () => {
 
       if (error) {
         setErrorMessage(error.message);
-        alert("Login Error: " + error.message); // Force them to see it!
         return;
       }
 
@@ -126,36 +130,66 @@ export const LoginPage: React.FC = () => {
       const isDemoAccount = ['admin123@gov.in', 'investigator123@gov.in', 'analyst123@gov.in', 'auditor123@gov.in'].includes(userEmail);
       
       let effectiveRole: UserRole = selectedRole;
+      let beUserData: any = null;
 
       if (!isDemoAccount) {
-        // Read existing approved role from metadata or backend profile
-        let userStoredRole = (
-          session.user.user_metadata?.role ||
-          session.user.app_metadata?.role
-        );
-
-        // Check backend /auth/me to get the true approved role from PostgreSQL database
+        // Authoritative Check with backend /auth/me to verify status and role
         try {
           const token = session.access_token;
           const meRes = await apiRequest<any>('/auth/me', {
             headers: { Authorization: `Bearer ${token}` }
           });
-          if (meRes.success && meRes.data?.grantedRole) {
-            userStoredRole = meRes.data.grantedRole;
+          if (meRes.success && meRes.data) {
+            beUserData = meRes.data;
           }
-        } catch (meErr) {
-          console.warn('Backend /auth/me lookup notice:', meErr);
-        }
+        } catch (meErr: any) {
+          // Strictly clear session and reject entry
+          await supabase.auth.signOut();
+          try {
+            localStorage.removeItem('crimenet_auth_token');
+            localStorage.removeItem('crimenet_user_profile');
+            localStorage.removeItem('crimenet_active_role');
+          } catch (_) {}
 
-        if (userStoredRole) {
-          const normalizedStoredRole = userStoredRole.toUpperCase();
-          if (normalizedStoredRole !== selectedRole.toUpperCase()) {
-            setErrorMessage(`Access Denied: Your account is provisioned for the ${normalizedStoredRole} role. Please select ${normalizedStoredRole} to login.`);
-            await supabase.auth.signOut();
+          const msg = (meErr.message || meErr.data?.error?.message || '').toLowerCase();
+          const code = meErr.code || meErr.data?.error?.code;
+          const isPending = meErr.status === 403 || code === 'PENDING_APPROVAL' || msg.includes('pending') || msg.includes('clearance') || msg.includes('approval');
+          
+          if (isPending) {
+            setErrorMessage('Your enrolment is pending Admin approval. You cannot access CrimeNet AI until clearance is granted.');
+            return;
+          } else if (msg.includes('rejected')) {
+            setErrorMessage('Your enrolment request was rejected by Admin. Contact your supervising officer.');
+            return;
+          } else {
+            setErrorMessage(meErr.message || 'Access verification failed. Contact administrator.');
             return;
           }
-          effectiveRole = normalizeRole(userStoredRole);
         }
+
+        if (!beUserData || beUserData.isActive === false) {
+          await supabase.auth.signOut();
+          try {
+            localStorage.removeItem('crimenet_auth_token');
+            localStorage.removeItem('crimenet_user_profile');
+            localStorage.removeItem('crimenet_active_role');
+          } catch (_) {}
+          setErrorMessage('Your enrolment is pending Admin approval. You cannot access CrimeNet AI until clearance is granted.');
+          return;
+        }
+
+        const approvedRole = (beUserData.grantedRole || beUserData.role || '').toUpperCase();
+        if (approvedRole && approvedRole !== selectedRole.toUpperCase()) {
+          setErrorMessage(`Access Denied: Your account is provisioned for the ${approvedRole} role. Please select ${approvedRole} to login.`);
+          await supabase.auth.signOut();
+          try {
+            localStorage.removeItem('crimenet_auth_token');
+            localStorage.removeItem('crimenet_user_profile');
+            localStorage.removeItem('crimenet_active_role');
+          } catch (_) {}
+          return;
+        }
+        effectiveRole = normalizeRole(approvedRole || selectedRole);
       } else {
         // For demo accounts, sync the selectedRole
         try {
@@ -174,15 +208,18 @@ export const LoginPage: React.FC = () => {
         localStorage.setItem('crimenet_active_role', effectiveRole);
       } catch (_) {}
 
-      // 3. Update local auth context
-      const permissions = getPermissionsForRole(effectiveRole);
+      // 3. Update local auth context ONLY for approved users
+      const permissions = (beUserData?.permissions && beUserData.permissions.length > 0)
+        ? beUserData.permissions
+        : getPermissionsForRole(effectiveRole);
+
       setSession(session.access_token, {
         id: session.user.id,
-        email: session.user.email || identifier,
-        name: session.user.user_metadata?.name || (identifier.split('@')[0].replace('.', ' ').toUpperCase()),
+        email: beUserData?.email || session.user.email || identifier,
+        name: beUserData?.fullName || session.user.user_metadata?.name || (identifier.split('@')[0].replace('.', ' ').toUpperCase()),
         phone: session.user.user_metadata?.phone || '',
-        officerId: session.user.user_metadata?.officerId || (effectiveRole === 'ADMIN' ? 'ADM-001' : 'LEO-7729'),
-        organization: session.user.user_metadata?.organization || 'CrimeNet State Bureau',
+        officerId: beUserData?.badgeNumber || session.user.user_metadata?.officerId || (effectiveRole === 'ADMIN' ? 'ADM-001' : 'LEO-7729'),
+        organization: beUserData?.agencyUnit || session.user.user_metadata?.organization || 'CrimeNet State Bureau',
         requestedRole: effectiveRole,
         grantedRole: effectiveRole,
         status: 'APPROVED',
@@ -191,12 +228,11 @@ export const LoginPage: React.FC = () => {
         lastLogin: new Date().toISOString()
       });
 
-      // 4. Navigate to dashboard (sidebar and actions will be restricted according to matrix)
+      // 4. Navigate to dashboard
       navigate('/dashboard');
     } catch (err: any) {
-        setErrorMessage(err.message || 'Login failed');
-        alert("Unexpected Login Crash: " + (err.message || 'Login failed'));
-      } finally {
+      setErrorMessage(err.message || 'Login failed');
+    } finally {
       setIsLoading(false);
     }
   };
@@ -248,11 +284,11 @@ export const LoginPage: React.FC = () => {
                   {r.icon}
                   <span className={`text-xs font-bold ${r.color}`}>{r.title}</span>
                 </div>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-black/40 text-slate-300 border border-slate-700">
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-black/60 text-slate-200 border border-slate-700 font-semibold">
                   {r.badge}
                 </span>
               </div>
-              <p className="text-[11px] text-slate-400 mt-1 leading-snug">{r.desc}</p>
+              <p className="text-[11px] text-slate-300 mt-1 leading-snug">{r.desc}</p>
             </div>
           ))}
         </div>
@@ -291,7 +327,7 @@ export const LoginPage: React.FC = () => {
               <label className="block text-xs font-bold text-[var(--text-primary)] mb-2">
                 Step 1: Choose Operational Role
               </label>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                 {ROLE_OPTIONS.map(r => {
                   const isSelected = selectedRole === r.id;
                   return (
@@ -299,39 +335,54 @@ export const LoginPage: React.FC = () => {
                       key={r.id}
                       type="button"
                       onClick={() => handleSelectRole(r.id)}
-                      className={`p-3 rounded-2xl border text-left transition-all relative ${
+                      className={`p-3.5 rounded-2xl border text-left transition-all relative cursor-pointer ${
                         isSelected
                           ? `border-2 ${r.activeBorder} ${r.activeBg} shadow-md`
-                          : 'border-slate-800 bg-[var(--bg-primary)] hover:border-slate-700'
+                          : 'border-slate-300 dark:border-slate-800 bg-white dark:bg-slate-900/60 hover:border-slate-400 dark:hover:border-slate-700'
                       }`}
                     >
                       {isSelected && (
-                        <div className="absolute top-2 right-2">
-                          <CheckCircle2 className="w-3.5 h-3.5 text-blue-400" />
+                        <div className="absolute top-2.5 right-2.5">
+                          <CheckCircle2 className="w-4 h-4 text-blue-600 dark:text-cyan-400" />
                         </div>
                       )}
                       <div className="mb-2">{r.icon}</div>
-                      <div className="font-bold text-xs text-white">{r.title}</div>
-                      <div className="text-[10px] text-slate-400 truncate mt-0.5">{r.badge}</div>
+                      <div className="font-black text-sm text-slate-900 dark:text-white tracking-wide">{r.title}</div>
+                      <div className="text-[11px] font-semibold text-slate-600 dark:text-slate-300 truncate mt-0.5">{r.badge}</div>
                     </button>
                   );
                 })}
               </div>
 
               {/* Selected Role Indicator Badge */}
-              <div className="mt-3 p-2.5 rounded-xl bg-blue-950/40 border border-blue-500/30 flex items-center justify-between text-xs font-mono">
-                <span className="text-slate-300 font-medium">Selected role:</span>
-                <span className="px-2.5 py-0.5 rounded-lg bg-blue-500/20 text-cyan-300 border border-blue-500/40 font-bold uppercase tracking-wider flex items-center gap-1.5">
-                  <Sparkles className="w-3 h-3 text-cyan-400" />
+              <div className="mt-3 p-3 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 flex items-center justify-between text-xs font-mono shadow-sm">
+                <span className="text-slate-800 dark:text-slate-200 font-bold">Selected role:</span>
+                <span className="px-3 py-1 rounded-lg bg-blue-600 text-white font-extrabold uppercase tracking-wider flex items-center gap-1.5 shadow-sm">
+                  <Sparkles className="w-3.5 h-3.5 text-amber-300" />
                   {selectedRole}
                 </span>
               </div>
             </div>
 
             {errorMessage && (
-              <div className="p-3.5 rounded-xl bg-red-500/10 border border-red-500/30 flex items-center gap-2.5 text-xs text-red-400">
-                <AlertCircle className="w-4 h-4 shrink-0" />
-                <span>{errorMessage}</span>
+              <div className={`p-4 rounded-2xl border flex items-start gap-3 text-xs leading-relaxed font-semibold shadow-md ${
+                errorMessage.includes('pending') || errorMessage.includes('clearance')
+                  ? 'bg-amber-500/15 border-amber-500/50 text-amber-950 dark:text-amber-200'
+                  : 'bg-red-500/15 border-red-500/50 text-red-950 dark:text-red-200'
+              }`}>
+                <AlertCircle className={`w-5 h-5 shrink-0 mt-0.5 ${
+                  errorMessage.includes('pending') || errorMessage.includes('clearance')
+                    ? 'text-amber-600 dark:text-amber-400'
+                    : 'text-red-600 dark:text-red-400'
+                }`} />
+                <div>
+                  <div className="font-extrabold text-xs uppercase tracking-wider mb-0.5">
+                    {errorMessage.includes('pending') || errorMessage.includes('clearance')
+                      ? 'Clearance Gate • Action Required'
+                      : 'Authentication Alert'}
+                  </div>
+                  <div className="font-medium">{errorMessage}</div>
+                </div>
               </div>
             )}
 

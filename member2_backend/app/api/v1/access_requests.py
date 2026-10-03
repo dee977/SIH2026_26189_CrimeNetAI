@@ -267,6 +267,27 @@ async def create_access_request(
     )
     
     db.add(new_req)
+
+    # Sync local user profile with pending status
+    db_profile = db.query(UserProfileModel).filter(UserProfileModel.email.ilike(email)).first()
+    if not db_profile:
+        db_profile = UserProfileModel(
+            email=email,
+            role=role_normalized,
+            is_active=False,
+            status='pending',
+            phone_number=phone,
+            officer_name=officer_name,
+            badge_number=badge_number,
+            department=department
+        )
+        db.add(db_profile)
+    else:
+        if (getattr(db_profile, 'status', None) or '').lower() != 'approved':
+            db_profile.is_active = False
+            db_profile.status = 'pending'
+            db_profile.role = role_normalized
+
     db.commit()
     db.refresh(new_req)
     
@@ -305,6 +326,7 @@ async def approve_access_request(
             email=req.user_email,
             role=target_role,
             is_active=True,
+            status='approved',
             phone_number=req.phone_number,
             officer_name=req.officer_name,
             badge_number=req.badge_number,
@@ -314,6 +336,7 @@ async def approve_access_request(
     else:
         db_profile.role = target_role
         db_profile.is_active = True
+        db_profile.status = 'approved'
         db_profile.phone_number = req.phone_number or db_profile.phone_number
         db_profile.officer_name = req.officer_name or db_profile.officer_name
         db_profile.badge_number = req.badge_number or db_profile.badge_number
@@ -329,14 +352,22 @@ async def approve_access_request(
             UPDATE auth.users
             SET 
                 raw_user_meta_data = jsonb_set(
-                    COALESCE(raw_user_meta_data, '{}'::jsonb),
-                    '{role}',
-                    to_jsonb(:role::text)
+                    jsonb_set(
+                        COALESCE(raw_user_meta_data, '{}'::jsonb),
+                        '{role}',
+                        to_jsonb(:role::text)
+                    ),
+                    '{status}',
+                    to_jsonb('approved'::text)
                 ),
                 raw_app_meta_data = jsonb_set(
-                    COALESCE(raw_app_meta_data, '{}'::jsonb),
-                    '{role}',
-                    to_jsonb(:role::text)
+                    jsonb_set(
+                        COALESCE(raw_app_meta_data, '{}'::jsonb),
+                        '{role}',
+                        to_jsonb(:role::text)
+                    ),
+                    '{status}',
+                    to_jsonb('approved'::text)
                 )
             WHERE LOWER(email) = LOWER(:email)
         """), {"role": target_role, "email": req.user_email})
@@ -379,6 +410,11 @@ async def reject_access_request(
     req.reviewed_at = datetime.now(timezone.utc)
     if body and body.reason:
         req.reason = f"{req.reason}\n[Rejection Note: {body.reason}]"
+
+    db_profile = db.query(UserProfileModel).filter(UserProfileModel.email.ilike(req.user_email)).first()
+    if db_profile:
+        db_profile.is_active = False
+        db_profile.status = 'rejected'
         
     db.commit()
     db.refresh(req)

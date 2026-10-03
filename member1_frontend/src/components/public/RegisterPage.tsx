@@ -52,7 +52,8 @@ export const RegisterPage: React.FC = () => {
             phone: formData.phoneNumber,
             officerId: formData.employeeId || 'LEO-NEW',
             organization: formData.organization || 'CrimeNet State Bureau',
-            role: formData.requestedRole
+            role: formData.requestedRole,
+            status: 'PENDING'
           }
         }
       });
@@ -94,6 +95,14 @@ export const RegisterPage: React.FC = () => {
         console.warn('Access request registration notice:', reqErr);
       }
 
+      // 3. Immediately sign out from Supabase client to prevent any auto-login session
+      await supabase.auth.signOut();
+      try {
+        localStorage.removeItem('crimenet_auth_token');
+        localStorage.removeItem('crimenet_user_profile');
+        localStorage.removeItem('crimenet_active_role');
+      } catch (_) {}
+
       setIsSuccess(true);
     } catch (err: any) {
       setError(err.message || 'Registration failed');
@@ -106,12 +115,12 @@ export const RegisterPage: React.FC = () => {
     <div className="min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)] flex items-center justify-center p-4">
       {isSuccess ? (
          <div className="w-full max-w-lg text-center p-8 bg-[var(--bg-card)] shadow-xl border border-[var(--border)] rounded-2xl animate-in zoom-in-95 duration-300">
-            <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center mx-auto mb-4 text-[var(--success)]">
-              <CheckCircle2 className="w-10 h-10" />
+            <div className="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center mx-auto mb-4 text-amber-500">
+              <Shield className="w-10 h-10" />
             </div>
-            <h2 className="text-xl font-bold mb-2 text-[var(--text-primary)]">Officer Enrolment Ticket Queued</h2>
+            <h2 className="text-xl font-bold mb-2 text-[var(--text-primary)]">Enrolment submitted. Wait for Admin approval before signing in.</h2>
             <p className="text-xs text-[var(--text-secondary)] mb-4 leading-relaxed">
-              Your account for <strong className="text-[var(--text-primary)]">{formData.email}</strong> has been registered and an Access Clearance Request ({formData.requestedRole}) has been forwarded to the Administrator console.
+              Your account for <strong className="text-[var(--text-primary)]">{formData.email}</strong> has been registered with status <strong className="text-amber-500">PENDING</strong>. An Access Clearance Request has been submitted to the Administrator console.
             </p>
 
             {createdRequestId && (
@@ -124,14 +133,14 @@ export const RegisterPage: React.FC = () => {
             <div className="p-4 rounded-xl bg-slate-500/10 border border-slate-500/20 text-[11px] text-[var(--text-secondary)] text-left mb-6 space-y-1">
               <div>• <strong>Assigned Jurisdiction:</strong> {formData.organization || 'CrimeNet State Bureau'}</div>
               <div>• <strong>Requested Clearance:</strong> {formData.requestedRole}</div>
-              <div>• <strong>Statutory Process:</strong> Administrator approval promotes your clearance level in the immutable directory.</div>
+              <div>• <strong>Notice:</strong> You cannot sign in until an Administrator approves your operational clearance.</div>
             </div>
 
             <button 
               onClick={() => navigate('/login')} 
-              className="w-full py-2.5 rounded-xl bg-[var(--primary)] text-slate-950 font-bold text-xs uppercase tracking-wider hover:bg-cyan-400 transition-colors shadow-lg shadow-cyan-500/20"
+              className="w-full py-2.5 rounded-xl bg-[var(--primary)] text-slate-950 font-bold text-xs uppercase tracking-wider hover:bg-cyan-400 transition-colors shadow-lg shadow-cyan-500/20 cursor-pointer"
             >
-              Proceed to Sign In
+              Back to Sign In
             </button>
          </div>
       ) : (

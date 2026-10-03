@@ -34,10 +34,10 @@ class UserProfileModel(Base):
     email = Column(String, unique=True, index=True, nullable=False)
     role = Column(String, nullable=False)
     is_active = Column(Boolean, default=True)
+    status = Column(String, default='pending', nullable=True)
     phone_number = Column(String, nullable=True)
     officer_name = Column(String, nullable=True)
     badge_number = Column(String, nullable=True)
-    phone_number = Column(String, nullable=True)
     department = Column(String, nullable=True)
 
 class AccessRequestModel(Base):

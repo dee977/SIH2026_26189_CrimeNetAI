@@ -448,8 +448,9 @@ const AdminDashboardContent: React.FC = () => {
         return r;
       }));
 
-      // Refresh live users manifest so new role is displayed
-      loadUsers();
+      // Refresh live users manifest and requests from server
+      await loadRequests();
+      await loadUsers();
 
       // Show exact success notification requested
       triggerAction(`Role granted: ${targetRole}`);
@@ -476,6 +477,9 @@ const AdminDashboardContent: React.FC = () => {
         }
         return r;
       }));
+
+      await loadRequests();
+      await loadUsers();
 
       triggerAction(`Access Request ${reqId} Rejected. Rejection advisory logged to audit ledger.`);
     } catch (err: any) {
@@ -881,7 +885,7 @@ const AdminDashboardContent: React.FC = () => {
                           <>
                             <button
                               onClick={() => handleApproveRequest(req.id)}
-                              className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-[var(--text-primary)] font-semibold text-xs transition shadow-sm flex items-center gap-1.5"
+                              className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition shadow-sm flex items-center gap-1.5 cursor-pointer"
                             >
                               <Check className="w-3.5 h-3.5" />
                               <span>Approve & Grant Token</span>

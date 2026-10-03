@@ -53,7 +53,7 @@ interface NavigationState {
 export const useNavigationStore = create<NavigationState>((set) => ({
   currentView: 'dashboard',
   selectedEntityId: null,
-  selectedCaseId: null,
+  selectedCaseId: typeof localStorage !== 'undefined' ? (localStorage.getItem('crimenet_selected_case_id') || 'CASE-2026-011') : 'CASE-2026-011',
   selectedEvidenceId: null,
   globalSearchQuery: '',
   isBackendConnected: true,
@@ -65,8 +65,14 @@ export const useNavigationStore = create<NavigationState>((set) => ({
     selectedEntityId: entityId, 
     currentView: entityId ? 'entity' : state.currentView 
   })),
-  selectCase: (caseId) => set({ selectedCaseId: caseId, selectedEntityId: null }),
-  openCase: (caseId: string) => set({ selectedCaseId: caseId, currentView: 'case-workspace', selectedEntityId: null }),
+  selectCase: (caseId) => {
+    try { localStorage.setItem('crimenet_selected_case_id', caseId); } catch (_) {}
+    set({ selectedCaseId: caseId, selectedEntityId: null });
+  },
+  openCase: (caseId: string) => {
+    try { localStorage.setItem('crimenet_selected_case_id', caseId); } catch (_) {}
+    set({ selectedCaseId: caseId, currentView: 'case-workspace', selectedEntityId: null });
+  },
   selectEvidence: (evidenceId) => set({ selectedEvidenceId: evidenceId, currentView: 'evidence' }),
   setGlobalSearchQuery: (query) => set({ globalSearchQuery: query, currentView: 'search' }),
   toggleBackendConnection: () => set(state => ({ isBackendConnected: !state.isBackendConnected })),

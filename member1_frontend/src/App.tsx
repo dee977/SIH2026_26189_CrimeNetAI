@@ -42,24 +42,11 @@ import { CrossVerificationView } from './components/verification/CrossVerificati
 
 async function syncUserWithBackend(session: any, setSession: any) {
   if (!session) return;
+  const userEmail = (session.user.email || '').toLowerCase();
+  const isDemoAccount = ['admin123@gov.in', 'investigator123@gov.in', 'analyst123@gov.in', 'auditor123@gov.in'].includes(userEmail);
   const localActiveRole = typeof localStorage !== 'undefined' ? localStorage.getItem('crimenet_active_role') : null;
   const defaultRole = (localActiveRole || session.user.user_metadata?.role || 'INVESTIGATOR').toUpperCase();
   const defaultPerms = getPermissionsForRole(defaultRole as any);
-
-  setSession(session.access_token, {
-    id: session.user.id,
-    email: session.user.email || '',
-    name: session.user.user_metadata?.name || 'Officer',
-    phone: session.user.user_metadata?.phone || '',
-    officerId: session.user.user_metadata?.officerId || 'LEO-7729',
-    organization: session.user.user_metadata?.organization || 'CrimeNet State Bureau',
-    requestedRole: defaultRole,
-    grantedRole: defaultRole,
-    status: 'APPROVED',
-    permissions: defaultPerms,
-    createdAt: session.user.created_at,
-    lastLogin: new Date().toISOString()
-  });
 
   try {
     const resp = await apiRequest<any>('/auth/me');
@@ -80,15 +67,40 @@ async function syncUserWithBackend(session: any, setSession: any) {
           createdAt: session.user.created_at,
           lastLogin: new Date().toISOString()
        });
+       return;
     }
   } catch (err: any) {
-    console.warn("Backend profile sync error:", err);
-    if (err.message === 'Unauthorized' || err.status === 401) {
-      // If the backend rejects the token (e.g. user not approved), kill the session entirely
-      // to prevent infinite retry loops and secure the frontend.
+    const errMsg = (err.message || '').toLowerCase();
+    const isPending = err.status === 403 || errMsg.includes('pending') || errMsg.includes('clearance') || errMsg.includes('approval');
+    
+    if (isPending || err.status === 401 || err.status === 403) {
       await supabase.auth.signOut();
+      try {
+        localStorage.removeItem('crimenet_auth_token');
+        localStorage.removeItem('crimenet_user_profile');
+        localStorage.removeItem('crimenet_active_role');
+      } catch (_) {}
       setSession(null, null);
+      return;
     }
+  }
+
+  // Fallback for demo accounts
+  if (isDemoAccount) {
+    setSession(session.access_token, {
+      id: session.user.id,
+      email: session.user.email || '',
+      name: session.user.user_metadata?.name || 'Officer',
+      phone: session.user.user_metadata?.phone || '',
+      officerId: session.user.user_metadata?.officerId || 'LEO-7729',
+      organization: session.user.user_metadata?.organization || 'CrimeNet State Bureau',
+      requestedRole: defaultRole,
+      grantedRole: defaultRole,
+      status: 'APPROVED',
+      permissions: defaultPerms,
+      createdAt: session.user.created_at,
+      lastLogin: new Date().toISOString()
+    });
   }
 }
 

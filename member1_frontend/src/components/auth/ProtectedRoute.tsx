@@ -8,6 +8,8 @@ import { ToastContainer } from '../common/ToastContainer';
 import { SessionExpiredModal } from '../common/UIStates';
 import { canAccessView, normalizeRole } from '../../utils/rbac';
 
+import { PendingApprovalView } from './PendingApprovalView';
+
 export const ProtectedRoute: React.FC = () => {
   const { isAuthenticated, isSessionExpired, user } = useAuthStore();
   const [isInitialized, setIsInitialized] = useState(false);
@@ -29,6 +31,11 @@ export const ProtectedRoute: React.FC = () => {
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace state={{ from: location }} />;
+  }
+
+  // Block unapproved users from accessing the app routes
+  if (user?.status === 'PENDING') {
+    return <PendingApprovalView />;
   }
 
   return (
