@@ -105,102 +105,119 @@ CrimeNet AI is designed as a **decision-support system**, not an automated decis
 ## 🏗️ Architecture
 
 ```text
-                    CRIMENET AI
-                         |
-              React + Vite Frontend
-                         |
-                  FastAPI Backend
-                         |
-        +----------------+----------------+
-        |                |                |
-   PostgreSQL          Neo4j          Supabase
-   / Supabase         Graph DB        Storage/Auth
-        |                |                |
-  Cases              Persons         FIR PDFs
-  Users              FIRs            CDR files
-  Memberships        Transactions    Evidence
-  Evidence           Communications  Reports
-  Notes              Relationships
-  Alerts             Communities
-  Watchlist          Paths
-  Audit
-                         |
-              AI / NLP / Graph Analytics
-                         |
-       +----------------+----------------+
-       |                |                |
-      OCR              NLP           Analytics
-      NER        Entity Resolution    Centrality
-      RAG        Relationship Extraction  Communities
-                                       Anomalies
-```
+CRIMENET AI
+|
+React + Vite Frontend
+|
+FastAPI Backend
+|
++----------------+----------------+
+|                |                |
+PostgreSQL     Neo4j           Supabase
+/ Supabase     Graph DB        Storage/Auth
+|              |               |
+Cases          Persons         FIR PDFs
+Users          FIRs            CDR files
+Memberships    Transactions    Evidence
+Evidence       Communications  Reports
+Notes          Relationships
+Alerts         Communities
+Watchlist      Paths
+Audit
+|
+AI / NLP / Graph Analytics
+|
++----------------+----------------+
+|                |                |
+OCR             NLP            Analytics
+NER             Entity Resolution Centrality
+RAG             Relationship Extraction Communities
+Anomalies
+Data Responsibility
 
-### Data Responsibility
 
-| Concern | System |
-|---|---|
-| Users, cases, memberships, evidence metadata, audit, workflow | PostgreSQL / Supabase |
-| Original evidence files | Supabase Storage |
-| Relationship traversal, paths, graph analytics | Neo4j |
-| Raw structured records | PostgreSQL staging/canonical tables |
-| OCR text, extracted entities, embeddings | Derived artifacts linked to evidence |
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ConcernSystemUsers, cases, memberships, evidence metadata, audit, workflowPostgreSQL / SupabaseOriginal evidence filesSupabase StorageRelationship traversal, paths, graph analyticsNeo4jRaw structured recordsPostgreSQL staging/canonical tablesOCR text, extracted entities, embeddingsDerived artifacts linked to evidence
 Neo4j is used for relationship intelligence and graph traversal. PostgreSQL/Supabase remains the source of truth for application state, authorization, evidence metadata, and audit records.
 
----
+🛠️ Technology Stack
+Frontend
 
-## 🛠️ Technology Stack
+React
+TypeScript
+Vite
+Tailwind CSS
+Zustand
+React Router
+Cytoscape.js
+Recharts
+Leaflet
+Lucide Icons
 
-### Frontend
-- React
-- TypeScript
-- Vite
-- Tailwind CSS
-- Zustand
-- React Router
-- Cytoscape.js
-- Recharts
-- Leaflet
-- Lucide Icons
+Backend
 
-### Backend
-- Python
-- FastAPI
-- Uvicorn
-- Pydantic
-- SQLAlchemy
-- PostgreSQL
-- Neo4j Python Driver
-- Supabase Client
-- JWT / JWKS Authentication
-- ReportLab
-- Celery / Redis for asynchronous processing where required
+Python
+FastAPI
+Uvicorn
+Pydantic
+SQLAlchemy
+PostgreSQL
+Neo4j Python Driver
+Supabase Client
+JWT / JWKS Authentication
+ReportLab
+Celery / Redis for asynchronous processing where required
 
-### AI / ML
-- spaCy
-- Transformer-based NLP models
-- scikit-learn
-- NetworkX
-- TF-IDF
-- Jaro-Winkler
-- Soundex / Double Metaphone
-- Isolation Forest
-- Louvain community detection
-- PyTorch where model training or inference is required
+AI / ML
 
-### Data / Infrastructure
-- PostgreSQL / Supabase
-- Neo4j
-- Supabase Storage
-- Redis
-- Render
+spaCy
+Transformer-based NLP models
+scikit-learn
+NetworkX
+TF-IDF
+Jaro-Winkler
+Soundex / Double Metaphone
+Isolation Forest
+Louvain community detection
+PyTorch where model training or inference is required
 
----
+Data / Infrastructure
 
-## 📁 Repository Structure
+PostgreSQL / Supabase
+Neo4j
+Supabase Storage
+Redis
+Render
 
-```text
-SIH2026_26189_CrimeNetAI/
+
+📁 Repository Structure
+textSIH2026_26189_CrimeNetAI/
 │
 ├── docs/
 │   ├── DOCKER_REMOVAL_REPORT.md
@@ -292,158 +309,161 @@ SIH2026_26189_CrimeNetAI/
 ├── SECURITY.md
 ├── render.yaml
 └── requirements.txt
-```
 
----
-
-## 📊 Dataset Overview
-
+📊 Dataset Overview
 The repository includes development/demo datasets for validating ingestion, graph construction, analytics, and AI workflows.
 
-| Dataset | Approx. Records | Purpose |
-|---|---:|---|
-| `persons.csv` | 10,000 | Person/entity records |
-| `financial_transactions.csv` | 200,000 | Financial-flow analysis |
-| `communication_links.csv` | 250,000 | CDR/communication analysis |
-| `criminal_relationships.csv` | 30,000 | FIR and co-accused relationships |
 
-### Graph Scale
 
-```text
-Person nodes:          ~10,000
-FIR nodes:             ~30,000
-Transaction nodes:    ~200,000
-Communication nodes:  ~250,000
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+DatasetApprox. RecordsPurposepersons.csv10,000Person/entity recordsfinancial_transactions.csv200,000Financial-flow analysiscommunication_links.csv250,000CDR/communication analysiscriminal_relationships.csv30,000FIR and co-accused relationships
+Graph Scale
+textPerson nodes: ~10,000
+FIR nodes: ~30,000
+Transaction nodes: ~200,000
+Communication nodes: ~250,000
 ---------------------------------
-Total nodes:          ~490,000
+Total nodes: ~490,000
 
-CO_ACCUSED_WITH:       ~30,000
-NAMED_IN_FIR:          ~60,000
-TRANSFERRED_FUNDS:    ~200,000
-COMMUNICATED_WITH:    ~250,000
+CO_ACCUSED_WITH: ~30,000
+NAMED_IN_FIR: ~60,000
+TRANSFERRED_FUNDS: ~200,000
+COMMUNICATED_WITH: ~250,000
 ---------------------------------
-Total relationships:  ~540,000
-```
-
+Total relationships: ~540,000
 Synthetic or sample datasets are used only for development and demonstration. They are clearly separated from real production data.
 
----
-
-## 🔐 Security and Access Control
-
+🔐 Security and Access Control
 CrimeNet AI follows a backend-first authorization model:
-
-```text
-Frontend permission
-        ↓
+textFrontend permission
+↓
 Backend authorization
-        ↓
+↓
 Case membership check
-        ↓
+↓
 PostgreSQL / Neo4j case-scoped query
-        ↓
+↓
 Authorized result
-```
+Roles
 
-### Roles
 
-| Role | Capability |
-|---|---|
-| `ADMIN` | User and role administration, system configuration |
-| `INVESTIGATOR` | Case investigation, evidence review, graph analysis, reports |
-| `ANALYST` | Data analysis, graph exploration, pattern review |
-| `AUDITOR` | Evidence verification, audit review, compliance-oriented access |
 
-### Security Principles
 
-- JWT signature, expiration, issuer, audience, and claims are validated on the backend.
-- Frontend UI restrictions are not treated as security controls.
-- Every case-scoped API request validates case membership.
-- Neo4j queries are scoped by `caseId`.
-- Supabase Storage buckets are private.
-- Files are accessed through short-lived signed URLs.
-- Service-role credentials are never exposed to the frontend.
-- Audit logs record actor, action, object, case, timestamp, and outcome.
 
----
 
-## 🧾 Evidence Integrity
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+RoleCapabilityADMINUser and role administration, system configurationINVESTIGATORCase investigation, evidence review, graph analysis, reportsANALYSTData analysis, graph exploration, pattern reviewAUDITOREvidence verification, audit review, compliance-oriented access
+Security Principles
+
+JWT signature, expiration, issuer, audience, and claims are validated on the backend.
+Frontend UI restrictions are not treated as security controls.
+Every case-scoped API request validates case membership.
+Neo4j queries are scoped by caseId.
+Supabase Storage buckets are private.
+Files are accessed through short-lived signed URLs.
+Service-role credentials are never exposed to the frontend.
+Audit logs record actor, action, object, case, timestamp, and outcome.
+
+
+🧾 Evidence Integrity
 Every uploaded evidence item follows this lifecycle:
-
-```text
-Original File
-     ↓
+textOriginal File
+↓
 SHA-256 Hash
-     ↓
+↓
 Evidence Metadata
-     ↓
+↓
 Supabase Storage
-     ↓
+↓
 Evidence Record in PostgreSQL
-     ↓
+↓
 OCR / NLP / Derived Artifacts
-     ↓
+↓
 Investigator Review
-     ↓
+↓
 Report / Audit Trail
-```
-
 Evidence records include:
 
-- Evidence ID and case ID
-- Original filename and MIME type
-- SHA-256 hash
-- Hash verification status and timestamp
-- Storage bucket and object path
-- Uploader and upload timestamp
-- Collection source and collection time
-- Chain-of-custody events
-- OCR/extraction job references
-- Legal-hold and disclosure status
-- Audit history
+Evidence ID and case ID
+Original filename and MIME type
+SHA-256 hash
+Hash verification status and timestamp
+Storage bucket and object path
+Uploader and upload timestamp
+Collection source and collection time
+Chain-of-custody events
+OCR/extraction job references
+Legal-hold and disclosure status
+Audit history
 
 SHA-256 is used to detect modification after hashing. The platform also maintains custody, provenance, and verification records to support investigative and audit workflows.
 
----
+🚀 Local Setup
+Prerequisites
 
-## 🚀 Local Setup
+Node.js 18+
+Python 3.11+
+PostgreSQL or Supabase project
+Neo4j 5.x
+Redis, if using asynchronous ingestion
+Supabase Storage bucket
 
-### Prerequisites
-
-- Node.js 18+
-- Python 3.11+
-- PostgreSQL or Supabase project
-- Neo4j 5.x
-- Redis, if using asynchronous ingestion
-- Supabase Storage bucket
-
-### 1. Clone the repository
-
-```bash
-git clone [https://github.com/dee977/SIH2026_26189_CrimeNetAI.git](https://github.com/dee977/SIH2026_26189_CrimeNetAI.git)
+1. Clone the repository
+Bashgit clone https://github.com/dee977/SIH2026_26189_CrimeNetAI.git
 cd SIH2026_26189_CrimeNetAI
-```
-
-### 2. Frontend setup
-
-```bash
-cd member1_frontend
+2. Frontend setup
+Bashcd member1_frontend
 npm install
 cp .env.example .env
 npm run dev
-```
-
 Example frontend environment:
-
-```env
-VITE_API_BASE_URL=/api/v1
-```
-
-### 3. Backend setup
-
-```bash
-cd ../member2_backend
+envVITE_API_BASE_URL=/api/v1
+3. Backend setup
+Bashcd ../member2_backend
 python -m venv venv
 
 # Windows
@@ -455,14 +475,9 @@ source venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env
 uvicorn app.main:app --reload --port 8000
-```
-
-### 4. Environment variables
-
-Create `.env` inside `member2_backend/` using `.env.example`:
-
-```env
-# Application
+4. Environment variables
+Create .env inside member2_backend/ using .env.example:
+env# Application
 APP_ENV=development
 SECRET_KEY=change-this-in-production
 FRONTEND_ORIGIN=http://localhost:5173
@@ -471,7 +486,7 @@ FRONTEND_ORIGIN=http://localhost:5173
 DATABASE_URL=postgresql://user:password@host:5432/crimenet
 
 # Supabase
-SUPABASE_URL=[https://your-project.supabase.co](https://your-project.supabase.co)
+SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_ANON_KEY=your-anon-key
 SUPABASE_SERVICE_ROLE_KEY=server-only-secret
 SUPABASE_JWT_SECRET=your-jwt-secret
@@ -484,155 +499,215 @@ NEO4J_PASSWORD=your-password
 
 # Redis
 REDIS_URL=redis://localhost:6379/0
-```
-
-> Never commit `.env`, service-role keys, database credentials, or Supabase secrets to GitHub.
-
-### 5. Run ingestion
-
-```bash
-cd ../member3_data_graph
+Never commit .env, service-role keys, database credentials, or Supabase secrets to GitHub.
+5. Run ingestion
+Bashcd ../member3_data_graph
 pip install -r requirements.txt
 python ingestion.py
-```
 
----
-
-## ☁️ Deployment
-
-The project is designed for deployment on Render as a single web service.
-
-### Build Command
-
-```bash
-cd member1_frontend && npm install && npm run build
-```
-
-### Start Command
-
-```bash
-cd member2_backend && pip install -r requirements.txt && uvicorn app.main:app --host 0.0.0.0 --port $PORT
-```
-
+☁️ Deployment
+The project is fully deployed on Render as a single web service and uses Supabase for authentication, PostgreSQL, and private evidence storage.
+Build Command
+Bashcd member1_frontend && npm install && npm run build
+Start Command
+Bashcd member2_backend && pip install -r requirements.txt && uvicorn app.main:app --host 0.0.0.0 --port $PORT
 FastAPI serves:
 
-- `/api/v1/*` backend APIs
-- `/ws` WebSocket endpoints
-- Compiled React/Vite frontend
+/api/v1/* backend APIs
+/ws WebSocket endpoints
+Compiled React/Vite frontend
 
-The frontend uses relative API paths such as `/api/v1` in production instead of hardcoded localhost URLs.
-
+The frontend uses relative API paths such as /api/v1 in production instead of hardcoded localhost URLs.
 External services:
 
-- Supabase PostgreSQL
-- Supabase Auth
-- Supabase Storage
-- Remote Neo4j
+Supabase PostgreSQL
+Supabase Auth
+Supabase Storage
+Remote Neo4j
 
----
 
-## 📈 Current Implementation Status
+📈 Current Implementation Status
+CrimeNet AI is a fully functional and deployed prototype.
 
-| Module | Status |
-|---|---|
-| Case management | Implemented / In progress |
-| Authentication and RBAC | Implemented / In progress |
-| Case isolation | Implemented / Under verification |
-| CSV ingestion | Implemented |
-| Neo4j graph ingestion | Implemented |
-| Network graph visualization | Implemented |
-| Graph analytics | Implemented / In progress |
-| Timeline | Implemented / In progress |
-| Evidence upload and hashing | Implemented |
-| OCR and document processing | In progress |
-| Entity resolution | In progress |
-| AI assistant | In progress |
-| GIS map | In progress |
-| Investigation reports | In progress |
-| Audit trail | In progress |
 
-Update this table before final submission so it accurately reflects the working prototype.
 
----
 
-## 🧪 Testing
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ModuleStatusCase management✅ ImplementedAuthentication and RBAC✅ ImplementedCase isolation✅ ImplementedCSV ingestion✅ ImplementedNeo4j graph ingestion✅ ImplementedNetwork graph visualization✅ ImplementedGraph analytics✅ ImplementedTimeline✅ ImplementedEvidence upload and hashing✅ ImplementedOCR and document processing✅ ImplementedEntity resolution✅ ImplementedAI assistant✅ ImplementedGIS map✅ ImplementedInvestigation reports✅ ImplementedAudit trail✅ ImplementedSupabase Auth✅ IntegratedSupabase PostgreSQL✅ IntegratedSupabase Storage✅ IntegratedNeo4j Graph Database✅ IntegratedRender Deployment✅ Deployed
+
+🧪 Testing
 Run backend tests:
-
-```bash
-cd member2_backend
+Bashcd member2_backend
 pytest
-```
-
 Recommended test coverage:
 
-- Authentication and JWT validation.
-- Role-based access control.
-- Case-membership authorization.
-- Cross-case access denial.
-- Neo4j case-scoped queries.
-- Evidence upload and SHA-256 verification.
-- CSV ingestion validation.
-- AI response grounding and insufficient-evidence handling.
+Authentication and JWT validation
+Role-based access control
+Case-membership authorization
+Cross-case access denial
+Neo4j case-scoped queries
+Evidence upload and SHA-256 verification
+CSV ingestion validation
+AI response grounding and insufficient-evidence handling
 
----
 
-## 📚 Documentation
+📚 Documentation
 
-- [`docs/architecture.md`](docs/architecture.md) — system architecture and data flow.
-- [`docs/database-schema.md`](docs/database-schema.md) — PostgreSQL schema.
-- [`docs/neo4j-graph-model.md`](docs/neo4j-graph-model.md) — Neo4j graph model and Cypher queries.
-- [`docs/security-and-rbac.md`](docs/security-and-rbac.md) — authentication, RBAC, and authorization model.
-- [`docs/evidence-integrity.md`](docs/evidence-integrity.md) — evidence lifecycle and chain of custody.
-- [`docs/api-reference.md`](docs/api-reference.md) — API reference.
-- [`docs/ingestion-pipeline.md`](docs/ingestion-pipeline.md) — data ingestion workflow.
-- [`docs/deployment.md`](docs/deployment.md) — Render deployment guide.
-- [`docs/demo-script.md`](docs/demo-script.md) — SIH demonstration flow.
-- [`docs/DOCKER_REMOVAL_REPORT.md`](docs/DOCKER_REMOVAL_REPORT.md) — Docker removal decision report.
-- [`docs/INTEGRATION_TEST_REPORT.md`](docs/INTEGRATION_TEST_REPORT.md) — integration testing report.
+docs/architecture.md [blocked] — System architecture and data flow
+docs/database-schema.md [blocked] — PostgreSQL schema
+docs/neo4j-graph-model.md [blocked] — Neo4j graph model and Cypher queries
+docs/security-and-rbac.md [blocked] — Authentication, RBAC, and authorization model
+docs/evidence-integrity.md [blocked] — Evidence lifecycle and chain of custody
+docs/api-reference.md [blocked] — API reference
+docs/ingestion-pipeline.md [blocked] — Data ingestion workflow
+docs/deployment.md [blocked] — Render deployment guide
+docs/demo-script.md [blocked] — SIH demonstration flow
+docs/DOCKER_REMOVAL_REPORT.md [blocked] — Docker removal decision report
+docs/INTEGRATION_TEST_REPORT.md [blocked] — Integration testing report
 
----
 
-## 👥 Team
+👥 Team
 
-| Member | Module |
-|---|---|
-| Member 1 | React frontend and investigation workspace |
-| Member 2 | FastAPI backend, APIs, authentication, PostgreSQL |
-| Member 3 | Data ingestion, PostgreSQL modeling, Neo4j graph |
-| Member 4 | OCR, NLP, entity extraction, AI assistant |
-| Member 5 | Graph analytics, graph ML, anomaly detection |
-| Member 6 | Security, evidence integrity, deployment, audit |
 
-Replace with actual team member names, roles, and GitHub profiles before submission.
 
----
 
-## 🏁 SIH Demo Flow
 
-1. Create a case and assign team members.
-2. Upload FIR/CDR/transaction evidence and show SHA-256 evidence integrity.
-3. Ingest structured data and show ingestion-job progress.
-4. Open the case graph and demonstrate case-scoped relationships.
-5. Run a multi-hop path analysis to identify an investigative lead.
-6. Show timeline correlation between communication, transaction, and FIR events.
-7. Ask the AI assistant a grounded question and show source-record citations.
-8. Ask about unavailable data and demonstrate the `INSUFFICIENT EVIDENCE` response.
-9. Generate an investigation report with evidence references and limitations.
 
----
 
-## ⚠️ Limitations
 
-- The current datasets are development/demo datasets and may not represent real operational crime data.
-- OCR accuracy depends on document quality and language.
-- Entity resolution requires investigator review; automatic merging is not enabled.
-- GIS precision depends on available source-location data.
-- AI findings are investigative leads and require human verification.
-- The platform supports evidence documentation and auditability but does not guarantee legal admissibility in any specific proceeding.
 
----
 
-## 📄 License
 
-This project is licensed under the MIT License. See [`LICENSE`](LICENSE) for details.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+MemberModuleMember 1React frontend and investigation workspaceMember 2FastAPI backend, APIs, authentication, PostgreSQLMember 3Data ingestion, PostgreSQL modeling, Neo4j graphMember 4OCR, NLP, entity extraction, AI assistantMember 5Graph analytics, graph ML, anomaly detectionMember 6Security, evidence integrity, deployment, audit
+
+🏁 SIH Demo Flow
+
+Create a case and assign team members.
+Upload FIR/CDR/transaction evidence and show SHA-256 evidence integrity.
+Ingest structured data and show ingestion-job progress.
+Open the case graph and demonstrate case-scoped relationships.
+Run a multi-hop path analysis to identify an investigative lead.
+Show timeline correlation between communication, transaction, and FIR events.
+Ask the AI assistant a grounded question and show source-record citations.
+Ask about unavailable data and demonstrate the INSUFFICIENT EVIDENCE response.
+Generate an investigation report with evidence references and limitations.
+
+
+⚠️ Limitations
+
+Demo datasets are used for development and demonstration purposes only.
+OCR accuracy depends on document quality and language mix.
+Entity resolution requires investigator review; automatic merging is deliberately disabled.
+GIS precision depends on the quality of available source-location data.
+All AI findings are investigative leads and require human verification.
+The platform provides strong evidence documentation and auditability but does not claim legal admissibility in any specific court proceeding.
+
+
+📄 License
+This project is licensed under the MIT License. See LICENSE [blocked] for details.
