@@ -23,7 +23,7 @@ CrimeNet AI addresses this by:
 - Providing a secure, case-isolated investigation workspace.
 - Producing evidence-aware and explainable reports.
 
-The official SIH26189 objective focuses on uncovering hidden networks, identifying key influencers, detecting suspicious patterns, and providing actionable intelligence to investigators. [49]
+The official SIH26189 objective focuses on uncovering hidden networks, identifying key influencers, detecting suspicious patterns, and providing actionable intelligence to investigators.
 
 ---
 
@@ -99,8 +99,6 @@ CrimeNet AI is designed as a **decision-support system**, not an automated decis
 - Suspicious patterns are shown as investigative leads.
 - Investigators can accept, reject, annotate, or escalate AI findings.
 - If evidence is missing, the assistant states that evidence is insufficient rather than generating an unsupported answer.
-
-This aligns with responsible-AI expectations around human oversight and managing generative-AI confabulation risks. [31][32]
 
 ---
 
@@ -204,18 +202,39 @@ Neo4j is used for relationship intelligence and graph traversal. PostgreSQL/Supa
 ```text
 SIH2026_26189_CrimeNetAI/
 │
+├── docs/
+│   ├── DOCKER_REMOVAL_REPORT.md
+│   ├── INTEGRATION_TEST_REPORT.md
+│   ├── architecture.md
+│   ├── database-schema.md
+│   ├── neo4j-graph-model.md
+│   ├── security-and-rbac.md
+│   ├── api-reference.md
+│   ├── ingestion-pipeline.md
+│   ├── deployment.md
+│   ├── demo-script.md
+│   └── evidence-integrity.md
+│
 ├── member1_frontend/
 │   ├── src/
 │   ├── components/
 │   ├── services/
 │   ├── store/
-│   ├── App.tsx
-│   ├── main.tsx
+│   ├── public/
+│   ├── .env.example
+│   ├── .gitignore
+│   ├── index.html
+│   ├── package.json
+│   ├── package-lock.json
+│   ├── tsconfig.json
+│   ├── tailwind.config.js
+│   ├── postcss.config.js
 │   └── vite.config.ts
 │
 ├── member2_backend/
 │   ├── app/
-│   │   ├── api/v1/
+│   │   ├── api/
+│   │   │   └── v1/
 │   │   ├── services/
 │   │   ├── schemas/
 │   │   ├── models.py
@@ -224,6 +243,7 @@ SIH2026_26189_CrimeNetAI/
 │   │   ├── config.py
 │   │   └── main.py
 │   ├── tests/
+│   ├── .env.example
 │   └── requirements.txt
 │
 ├── member3_data_graph/
@@ -233,20 +253,45 @@ SIH2026_26189_CrimeNetAI/
 │   │   ├── communication_links.csv
 │   │   └── criminal_relationships.csv
 │   ├── ingestion.py
-│   └── config.py
+│   ├── config.py
+│   └── requirements.txt
 │
 ├── member4_ai_nlp/
-│   └── ...
+│   ├── ocr/
+│   ├── nlp/
+│   ├── entity_resolution/
+│   ├── ai_assistant/
+│   └── requirements.txt
 │
 ├── member5_graph_ml/
-│   └── ...
+│   ├── analytics/
+│   ├── community_detection/
+│   ├── anomaly_detection/
+│   └── requirements.txt
 │
 ├── member6_security_evidence_deployment/
-│   └── ...
+│   ├── security/
+│   ├── evidence/
+│   ├── audit/
+│   ├── deployment/
+│   └── requirements.txt
 │
-├── docs/
+├── scripts/
+│   ├── setup_db.py
+│   ├── seed_data.py
+│   └── create_indexes.py
+│
+├── .env.example
+├── .gitignore
+├── CHANGELOG.md
+├── CODE_OF_CONDUCT.md
+├── CONTRIBUTING.md
+├── LICENSE
 ├── LOCAL_SETUP.md
-└── README.md
+├── README.md
+├── SECURITY.md
+├── render.yaml
+└── requirements.txt
 ```
 
 ---
@@ -320,8 +365,6 @@ Authorized result
 - Service-role credentials are never exposed to the frontend.
 - Audit logs record actor, action, object, case, timestamp, and outcome.
 
-Supabase recommends validating JWT signatures before trusting claims and keeping service-role credentials server-side because they bypass Row Level Security. [3][5][6] OWASP also identifies Broken Object Level Authorization as a critical API risk when object IDs are accepted without server-side authorization checks. [34]
-
 ---
 
 ## 🧾 Evidence Integrity
@@ -378,7 +421,7 @@ SHA-256 is used to detect modification after hashing. The platform also maintain
 ### 1. Clone the repository
 
 ```bash
-git clone [https://github.com/](https://github.com/)<your-username>/SIH2026_26189_CrimeNetAI.git
+git clone [https://github.com/dee977/SIH2026_26189_CrimeNetAI.git](https://github.com/dee977/SIH2026_26189_CrimeNetAI.git)
 cd SIH2026_26189_CrimeNetAI
 ```
 
@@ -416,7 +459,7 @@ uvicorn app.main:app --reload --port 8000
 
 ### 4. Environment variables
 
-Create `.env` inside `member2_backend/`:
+Create `.env` inside `member2_backend/` using `.env.example`:
 
 ```env
 # Application
@@ -536,14 +579,17 @@ Recommended test coverage:
 
 ## 📚 Documentation
 
-- `LOCAL_SETUP.md` — local development instructions.
-- `docs/architecture.md` — system architecture and data flow.
-- `docs/database-schema.md` — PostgreSQL schema.
-- `docs/neo4j-model.md` — graph model and Cypher queries.
-- `docs/security.md` — authentication, RBAC, and authorization model.
-- `docs/evidence-integrity.md` — evidence lifecycle and chain of custody.
-- `docs/api.md` — API reference.
-- `docs/demo-script.md` — SIH demonstration flow.
+- [`docs/architecture.md`](docs/architecture.md) — system architecture and data flow.
+- [`docs/database-schema.md`](docs/database-schema.md) — PostgreSQL schema.
+- [`docs/neo4j-graph-model.md`](docs/neo4j-graph-model.md) — Neo4j graph model and Cypher queries.
+- [`docs/security-and-rbac.md`](docs/security-and-rbac.md) — authentication, RBAC, and authorization model.
+- [`docs/evidence-integrity.md`](docs/evidence-integrity.md) — evidence lifecycle and chain of custody.
+- [`docs/api-reference.md`](docs/api-reference.md) — API reference.
+- [`docs/ingestion-pipeline.md`](docs/ingestion-pipeline.md) — data ingestion workflow.
+- [`docs/deployment.md`](docs/deployment.md) — Render deployment guide.
+- [`docs/demo-script.md`](docs/demo-script.md) — SIH demonstration flow.
+- [`docs/DOCKER_REMOVAL_REPORT.md`](docs/DOCKER_REMOVAL_REPORT.md) — Docker removal decision report.
+- [`docs/INTEGRATION_TEST_REPORT.md`](docs/INTEGRATION_TEST_REPORT.md) — integration testing report.
 
 ---
 
@@ -589,9 +635,4 @@ Replace with actual team member names, roles, and GitHub profiles before submiss
 
 ## 📄 License
 
-This project is developed for Smart India Hackathon 2026.  
-Add your preferred license before making the repository public, for example:
-
-```text
-MIT License
-```
+This project is licensed under the MIT License. See [`LICENSE`](LICENSE) for details.
