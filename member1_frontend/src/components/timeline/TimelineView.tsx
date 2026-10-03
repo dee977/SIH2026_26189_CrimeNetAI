@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useNavigationStore } from '../../store/navigationStore';
 import { TimelineCategory, TimelineEvent } from '../../types/timeline';
 import { apiClient } from '../../services/apiClient';
@@ -24,6 +25,13 @@ import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from 'recha
 
 export const TimelineView: React.FC<{caseId?: string}> = ({caseId}) => {
   const { selectedCaseId, selectEntity, setView, selectEvidence } = useNavigationStore();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const entityParam = searchParams.get('entityId');
+  const [activeEntityFilter, setActiveEntityFilter] = useState<string | null>(entityParam || null);
+
+  useEffect(() => {
+    if (entityParam) setActiveEntityFilter(entityParam);
+  }, [entityParam]);
 
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
@@ -194,7 +202,18 @@ export const TimelineView: React.FC<{caseId?: string}> = ({caseId}) => {
 
   const visibleEvents = events
     .slice(0, playbackIndex + 1)
-    .filter(ev => selectedCategory === 'ALL' || ev.category === selectedCategory);
+    .filter(ev => {
+      if (selectedCategory !== 'ALL' && ev.category !== selectedCategory) return false;
+      if (activeEntityFilter) {
+        const filterLower = activeEntityFilter.toLowerCase();
+        const matchesPrimary = ev.primaryEntity?.id?.toLowerCase() === filterLower || 
+                               ev.primaryEntity?.label?.toLowerCase().includes(filterLower);
+        const matchesSecondary = ev.secondaryEntity?.id?.toLowerCase() === filterLower || 
+                                 ev.secondaryEntity?.label?.toLowerCase().includes(filterLower);
+        return matchesPrimary || matchesSecondary;
+      }
+      return true;
+    });
 
   const getCategoryIcon = (cat: TimelineCategory) => {
     switch (cat) {
@@ -295,6 +314,30 @@ export const TimelineView: React.FC<{caseId?: string}> = ({caseId}) => {
           </ResponsiveContainer>
         </div>
       </div>
+
+      {/* Active Entity Filter Badge */}
+      {activeEntityFilter && (
+        <div className="flex items-center justify-between p-3.5 rounded-xl bg-blue-50 border border-blue-200 text-xs text-blue-900 shadow-xs">
+          <div className="flex items-center gap-2">
+            <Filter className="w-4 h-4 text-blue-600 shrink-0" />
+            <span>
+              Filtered for Subject: <strong className="font-mono bg-blue-100/70 px-1.5 py-0.5 rounded text-blue-800">{activeEntityFilter}</strong>
+              {' '}({visibleEvents.length} chronological event{visibleEvents.length === 1 ? '' : 's'} linked)
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setActiveEntityFilter(null);
+              searchParams.delete('entityId');
+              setSearchParams(searchParams);
+            }}
+            className="text-xs font-semibold text-blue-700 hover:text-blue-900 bg-white hover:bg-blue-50 border border-blue-200 px-2.5 py-1 rounded-md transition-colors cursor-pointer"
+          >
+            Show All Events
+          </button>
+        </div>
+      )}
 
       {/* Category Filter Pills */}
       <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">

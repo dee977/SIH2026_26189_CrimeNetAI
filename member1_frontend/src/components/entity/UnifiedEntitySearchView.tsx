@@ -275,9 +275,17 @@ export const UnifiedEntitySearchView: React.FC = () => {
           ) : liveDetail ? (
             <div>
               {liveDetail.type === 'Person' ? (
-                <PersonProfile person={liveDetail as any} />
+                <PersonProfile 
+                  person={liveDetail as any} 
+                  onSelectLinkedEntity={(id) => selectEntity(id)}
+                  caseId={selectedCaseId || undefined}
+                />
               ) : (
-                <GenericEntityProfile entity={liveDetail} />
+                <GenericEntityProfile 
+                  entity={liveDetail} 
+                  onSelectLinkedEntity={(id) => selectEntity(id)}
+                  caseId={selectedCaseId || undefined}
+                />
               )}
             </div>
           ) : (

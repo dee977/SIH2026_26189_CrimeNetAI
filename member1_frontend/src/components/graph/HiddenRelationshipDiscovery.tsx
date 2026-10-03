@@ -1,7 +1,12 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useNavigationStore } from '../../store/navigationStore';
 import { fetchHiddenPaths, fetchGraphData } from '../../services/graphService';
+import { fetchEntityById } from '../../services/entityService';
 import { HiddenPathResult } from '../../types/graph';
+import { AnyEntity } from '../../types/entities';
+import { PersonProfile } from '../entity/PersonProfile';
+import { GenericEntityProfile } from '../entity/GenericEntityProfile';
 import { 
   GitMerge, 
   User, 
@@ -19,11 +24,16 @@ import {
   ShieldAlert,
   Loader2,
   Sparkles,
-  Info
+  Info,
+  X,
+  AlertCircle,
+  ArrowUpRight,
+  ArrowLeft
 } from 'lucide-react';
 
 export const HiddenRelationshipDiscovery: React.FC = () => {
   const { setView, selectEntity, selectEvidence, selectedCaseId } = useNavigationStore();
+  const navigate = useNavigate();
   
   const [sourceId, setSourceId] = useState<string>('');
   const [targetId, setTargetId] = useState<string>('');
@@ -33,6 +43,14 @@ export const HiddenRelationshipDiscovery: React.FC = () => {
   const [isGraphLoading, setIsGraphLoading] = useState<boolean>(false);
   const [isPathLoading, setIsPathLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Dossier Modal States for multi-hop nodes
+  const [isDossierOpen, setIsDossierOpen] = useState<boolean>(false);
+  const [isDossierLoading, setIsDossierLoading] = useState<boolean>(false);
+  const [dossierError, setDossierError] = useState<string | null>(null);
+  const [dossierEntity, setDossierEntity] = useState<AnyEntity | null>(null);
+  const [activeDossierNode, setActiveDossierNode] = useState<{ id: string; name: string } | null>(null);
+  const [dossierHistory, setDossierHistory] = useState<{ id: string; name: string }[]>([]);
 
   useEffect(() => {
     if (!selectedCaseId) {
@@ -100,6 +118,86 @@ export const HiddenRelationshipDiscovery: React.FC = () => {
     } finally {
       setIsPathLoading(false);
     }
+  };
+
+  // Close dossier modal on Escape key
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isDossierOpen) {
+        setIsDossierOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isDossierOpen]);
+
+  // Handler to fetch and open the complete intelligence dossier for any path node
+  const handleViewDossier = async (nodeId: string, nodeName: string, resetHistory: boolean = true) => {
+    if (!nodeId || !selectedCaseId) return;
+    console.log('[HiddenRelationship] View Dossier triggered for entity ID:', nodeId, nodeName);
+    
+    if (resetHistory) {
+      setDossierHistory([]);
+    }
+    setActiveDossierNode({ id: nodeId, name: nodeName });
+    setIsDossierOpen(true);
+    setIsDossierLoading(true);
+    setDossierError(null);
+    setDossierEntity(null);
+
+    try {
+      const res = await fetchEntityById(nodeId, selectedCaseId);
+      console.log('[HiddenRelationship] Dossier API response for entity ID:', nodeId, res);
+      if (res.success && res.data) {
+        const raw = res.data as any;
+        const mappedEntity: AnyEntity = {
+          ...raw,
+          type: raw.type || raw.entityType || 'Person',
+          label: raw.label || raw.canonicalName || raw.name || raw.fullName || nodeName,
+          fullName: raw.fullName || raw.canonicalName || raw.name || nodeName,
+          id: raw.id || raw.entityId || nodeId,
+          source: raw.source || 'Case Intelligence Graph',
+          caseIds: raw.caseIds || (raw.caseId ? [raw.caseId] : [selectedCaseId]),
+          firstObserved: raw.firstObserved || raw.created_at || 'Registered',
+          lastUpdated: raw.lastUpdated || raw.created_at || 'Active',
+          evidenceCount: raw.evidenceCount || 0
+        };
+        setDossierEntity(mappedEntity);
+      } else {
+        setDossierError('Intelligence dossier not found for this entity in the active case.');
+      }
+    } catch (err: any) {
+      console.error('[HiddenRelationship] Error fetching entity dossier:', nodeId, err);
+      setDossierError(err?.message || 'Failed to load entity dossier.');
+    } finally {
+      setIsDossierLoading(false);
+    }
+  };
+
+  // In-modal drill-down navigation when clicking linked entities inside dossier
+  const handleDrilldownDossier = (targetId: string, targetName?: string) => {
+    if (activeDossierNode) {
+      setDossierHistory(prev => [...prev, { id: activeDossierNode.id, name: activeDossierNode.name }]);
+    }
+    handleViewDossier(targetId, targetName || targetId, false);
+  };
+
+  // In-modal back-navigation returning to previous dossier in the stack
+  const handleBackDossier = () => {
+    if (dossierHistory.length === 0) return;
+    const historyCopy = [...dossierHistory];
+    const previous = historyCopy.pop()!;
+    setDossierHistory(historyCopy);
+    handleViewDossier(previous.id, previous.name, false);
+  };
+
+  // Navigate to full-page entity search with selected entity
+  const handleOpenInEntityExplorer = () => {
+    if (!activeDossierNode) return;
+    selectEntity(activeDossierNode.id);
+    setView('entity');
+    setIsDossierOpen(false);
+    navigate('/entities');
   };
 
   const getStepIcon = (type: string) => {
@@ -201,10 +299,12 @@ export const HiddenRelationshipDiscovery: React.FC = () => {
             Active Case: <span className="text-blue-700 font-bold px-2 py-0.5 rounded bg-blue-50 border border-blue-100">{selectedCaseId}</span>
           </div>
 
+          {/* BUG 1 FIX: Primary blue background matching the app's action buttons */}
           <button
+            type="button"
             onClick={handleExecuteTraversal}
             disabled={isPathLoading || !sourceId || !targetId || sourceId === targetId}
-            className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-[#0f172a] text-[var(--text-primary)] hover:bg-blue-700 font-bold text-xs uppercase tracking-wider transition-colors shadow-sm disabled:opacity-50"
+            className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-bold text-xs uppercase tracking-wider transition-colors shadow-sm disabled:opacity-50 cursor-pointer"
           >
             {isPathLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
             <span>{isPathLoading ? 'Analyzing Path...' : 'Execute Traversal'}</span>
@@ -317,9 +417,12 @@ export const HiddenRelationshipDiscovery: React.FC = () => {
                         </div>
                       </div>
 
+                      {/* BUG 2 FIX: Working View Dossier button that opens entity dossier modal and supports full-page explorer navigation */}
                       <button
-                        onClick={() => { selectEntity(node.id); setView('entity'); }}
-                        className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1.5 font-bold bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg border border-blue-200 transition-colors shrink-0"
+                        type="button"
+                        onClick={() => handleViewDossier(node.id, node.label || (node as any).name || node.id)}
+                        className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1.5 font-bold bg-blue-50 hover:bg-blue-100 active:bg-blue-200 px-3 py-1.5 rounded-lg border border-blue-200 transition-colors shrink-0 cursor-pointer shadow-xs"
+                        title={`View intelligence dossier for ${node.label || (node as any).name || node.id}`}
                       >
                         <span>View Dossier</span>
                         <ExternalLink className="w-3.5 h-3.5" />
@@ -363,6 +466,140 @@ export const HiddenRelationshipDiscovery: React.FC = () => {
 
           </div>
 
+        </div>
+      )}
+
+      {/* Entity Dossier Modal */}
+      {isDossierOpen && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 overflow-y-auto"
+          onClick={() => setIsDossierOpen(false)}
+        >
+          <div 
+            className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/80">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center shadow-xs">
+                  <User className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900">Official Case Dossier</h3>
+                  <p className="text-xs text-slate-500 font-medium">
+                    Entity: <span className="text-slate-800 font-semibold">{activeDossierNode?.name || 'Selected Entity'}</span>
+                    {' • '}ID: <span className="font-mono text-slate-600">{activeDossierNode?.id}</span>
+                    {' • '}Case: <span className="font-mono text-blue-700">{selectedCaseId}</span>
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                {dossierHistory.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleBackDossier}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-100 rounded-lg border border-slate-200 transition-colors cursor-pointer shadow-xs"
+                    title={`Back to ${dossierHistory[dossierHistory.length - 1].name}`}
+                  >
+                    <ArrowLeft className="w-3.5 h-3.5 text-slate-500" />
+                    <span>Back ({dossierHistory[dossierHistory.length - 1].name})</span>
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={handleOpenInEntityExplorer}
+                  className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg border border-blue-200 transition-colors cursor-pointer"
+                  title="Open in full Search & Entity Explorer view"
+                >
+                  <span>Open in Entity Explorer</span>
+                  <ArrowUpRight className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsDossierOpen(false)}
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-200/60 transition-colors cursor-pointer"
+                  title="Close Dossier"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Body */}
+            <div className="flex-1 overflow-y-auto p-6 bg-slate-50/30">
+              {isDossierLoading ? (
+                <div className="flex flex-col items-center justify-center py-20 text-slate-600 space-y-3">
+                  <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
+                  <p className="text-sm font-semibold text-slate-800">
+                    Loading verified dossier for {activeDossierNode?.name || 'entity'}...
+                  </p>
+                  <p className="text-xs text-slate-500">
+                    Aggregating criminal history, cross-references, and graph intelligence
+                  </p>
+                </div>
+              ) : dossierError ? (
+                <div className="bg-red-50 border border-red-200 rounded-xl p-5 text-red-800 space-y-3">
+                  <div className="flex items-center gap-2 font-semibold">
+                    <AlertCircle className="w-5 h-5 text-red-600" />
+                    <span>Failed to Load Dossier</span>
+                  </div>
+                  <p className="text-xs text-red-700">{dossierError}</p>
+                  <button
+                    type="button"
+                    onClick={() => activeDossierNode && handleViewDossier(activeDossierNode.id, activeDossierNode.name, false)}
+                    className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded-lg shadow-xs transition-colors cursor-pointer"
+                  >
+                    Try Again
+                  </button>
+                </div>
+              ) : dossierEntity ? (
+                <div>
+                  {dossierEntity.type === 'Person' ? (
+                    <PersonProfile 
+                      person={dossierEntity as any} 
+                      onSelectLinkedEntity={handleDrilldownDossier}
+                      onCloseModal={() => setIsDossierOpen(false)}
+                      caseId={selectedCaseId || undefined}
+                    />
+                  ) : (
+                    <GenericEntityProfile 
+                      entity={dossierEntity} 
+                      onSelectLinkedEntity={handleDrilldownDossier}
+                      onCloseModal={() => setIsDossierOpen(false)}
+                      caseId={selectedCaseId || undefined}
+                    />
+                  )}
+                </div>
+              ) : (
+                <div className="p-8 text-center text-slate-500">
+                  No intelligence dossier record located for this entity.
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-3 border-t border-slate-200 bg-slate-50 flex items-center justify-between text-xs text-slate-500">
+              <span className="font-mono text-[11px]">BSA Section 63/65B Compliant Forensic Dossier</span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleOpenInEntityExplorer}
+                  className="sm:hidden px-3 py-1.5 bg-blue-50 text-blue-700 font-semibold rounded-md border border-blue-200"
+                >
+                  Full Page
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsDossierOpen(false)}
+                  className="px-3 py-1.5 bg-white border border-slate-200 text-slate-700 font-semibold rounded-md hover:bg-slate-100 transition-colors cursor-pointer"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 

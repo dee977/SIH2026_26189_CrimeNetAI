@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import cytoscape, { Core, EventObject } from 'cytoscape';
 // @ts-ignore
 import fcose from 'cytoscape-fcose';
@@ -38,7 +39,9 @@ export const NetworkGraphView: React.FC<{caseId?: string}> = ({caseId}) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const cyRef = useRef<Core | null>(null);
   
-  const { selectedCaseId } = useNavigationStore();
+  const [searchParams] = useSearchParams();
+  const urlEntityId = searchParams.get('entityId');
+  const { selectedCaseId, selectedEntityId, selectEntity } = useNavigationStore();
   const { cases } = useCaseStore();
   const activeCase = cases.find(c => c.caseId === selectedCaseId);
 
@@ -361,6 +364,37 @@ export const NetworkGraphView: React.FC<{caseId?: string}> = ({caseId}) => {
       padding: 50,
       randomize: true
     } as any).run();
+
+    // Auto-focus and highlight node if arriving from dossier or search parameter
+    const targetEntityId = urlEntityId || selectedEntityId;
+    if (targetEntityId) {
+      setTimeout(() => {
+        if (!cy || cy.destroyed()) return;
+        let targetCyNode: any = cy.$id(targetEntityId);
+        if (!targetCyNode || targetCyNode.length === 0) {
+          const match = cy.nodes().filter((n) => {
+            const raw = n.data('raw');
+            return (
+              n.id() === targetEntityId ||
+              (raw?.entityId && raw.entityId === targetEntityId) ||
+              (raw?.label && raw.label.toLowerCase() === targetEntityId.toLowerCase())
+            );
+          });
+          if (match.length > 0) targetCyNode = match.first();
+        }
+
+        if (targetCyNode && targetCyNode.length > 0) {
+          cy.elements().removeClass('highlighted dimmed');
+          targetCyNode.addClass('highlighted');
+          setSelectedNode(targetCyNode.data('raw'));
+          cy.animate({
+            center: { eles: targetCyNode },
+            zoom: 1.5,
+            duration: 600
+          });
+        }
+      }, 150);
+    }
 
   }, [graphData, filterEntityType, filterRelType, searchQuery]);
 

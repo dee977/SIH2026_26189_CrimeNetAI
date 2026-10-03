@@ -189,11 +189,19 @@ class M3GraphDataClient:
             from app.database import SessionLocal
             from app.models import EntityModel, RelationshipModel
             db = SessionLocal()
-            q = db.query(EntityModel).filter(EntityModel.entity_id == node_id)
+            q = db.query(EntityModel).filter(
+                (EntityModel.entity_id == node_id) | 
+                (EntityModel.canonical_name == node_id)
+            )
             if case_id:
                 ent = q.filter(EntityModel.case_id == case_id).first()
                 if not ent:
                     ent = q.first()
+                if not ent:
+                    ent = db.query(EntityModel).filter(
+                        EntityModel.case_id == case_id,
+                        EntityModel.canonical_name.ilike(f"%{node_id}%")
+                    ).first()
             else:
                 ent = q.first()
             
