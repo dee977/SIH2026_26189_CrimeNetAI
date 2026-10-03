@@ -38,16 +38,24 @@ export const ProtectedRoute: React.FC = () => {
     return <PendingApprovalView />;
   }
 
+  const isFullBleed = location.pathname === '/gis';
+
   return (
     <div className="flex h-screen bg-[var(--bg-primary)] text-[var(--text-primary)] overflow-hidden select-none">
       <Sidebar />
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden transition-all duration-300 ease-in-out">
         <TopNav />
-        <main className="flex-1 overflow-y-auto p-6 relative">
-          <div className="max-w-7xl mx-auto pb-20">
+        {isFullBleed ? (
+          <main className="flex-1 min-h-0 min-w-0 relative overflow-hidden flex flex-col">
             <Outlet />
-          </div>
-        </main>
+          </main>
+        ) : (
+          <main className="flex-1 overflow-y-auto p-6 relative">
+            <div className="max-w-7xl mx-auto pb-20">
+              <Outlet />
+            </div>
+          </main>
+        )}
       </div>
       <ToastContainer />
       {isSessionExpired && <SessionExpiredModal />}
