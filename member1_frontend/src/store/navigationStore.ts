@@ -48,6 +48,7 @@ interface NavigationState {
   toggleBackendConnection: () => void;
   setEvidenceUploadModalOpen: (isOpen: boolean) => void;
   toggleSidebar: () => void;
+  setSidebarCollapsed: (collapsed: boolean) => void;
 }
 
 export const useNavigationStore = create<NavigationState>((set) => ({
@@ -58,7 +59,7 @@ export const useNavigationStore = create<NavigationState>((set) => ({
   globalSearchQuery: '',
   isBackendConnected: true,
   isEvidenceUploadModalOpen: false,
-  isSidebarCollapsed: false,
+  isSidebarCollapsed: typeof localStorage !== 'undefined' ? (localStorage.getItem('crimenet_sidebar_collapsed') === 'true') : false,
 
   setView: (view) => set({ currentView: view }),
   selectEntity: (entityId) => set((state) => ({ 
@@ -77,5 +78,13 @@ export const useNavigationStore = create<NavigationState>((set) => ({
   setGlobalSearchQuery: (query) => set({ globalSearchQuery: query, currentView: 'search' }),
   toggleBackendConnection: () => set(state => ({ isBackendConnected: !state.isBackendConnected })),
   setEvidenceUploadModalOpen: (isOpen) => set({ isEvidenceUploadModalOpen: isOpen }),
-  toggleSidebar: () => set(state => ({ isSidebarCollapsed: !state.isSidebarCollapsed }))
+  toggleSidebar: () => set(state => {
+    const next = !state.isSidebarCollapsed;
+    try { localStorage.setItem('crimenet_sidebar_collapsed', String(next)); } catch (_) {}
+    return { isSidebarCollapsed: next };
+  }),
+  setSidebarCollapsed: (collapsed: boolean) => {
+    try { localStorage.setItem('crimenet_sidebar_collapsed', String(collapsed)); } catch (_) {}
+    set({ isSidebarCollapsed: collapsed });
+  }
 }));

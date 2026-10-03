@@ -23,12 +23,17 @@ if DATABASE_URL and DATABASE_URL.startswith("postgresql://") and not DATABASE_UR
 if not DATABASE_URL:
     raise ValueError("DATABASE_URL is not set")
 
+from sqlalchemy.pool import NullPool
+
+engine_kwargs = {"pool_pre_ping": True}
+if "sqlite" in DATABASE_URL:
+    engine_kwargs["connect_args"] = {"check_same_thread": False}
+else:
+    engine_kwargs["poolclass"] = NullPool
+
 engine = create_engine(
     DATABASE_URL,
-    pool_pre_ping=True,
-    pool_size=10,
-    max_overflow=20,
-    pool_recycle=300
+    **engine_kwargs
 )
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 

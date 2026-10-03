@@ -18,13 +18,9 @@ import {
   Activity, 
   Clock, 
   ArrowRight,
-  TrendingUp,
-  Share2,
   Lock,
-  Layers,
-  Sparkles
+  Layers
 } from 'lucide-react';
-import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip } from 'recharts';
 
 export const InvestigatorDashboard: React.FC = () => {
   const { setView, selectEntity, selectCase, selectEvidence, selectedCaseId } = useNavigationStore();
@@ -132,17 +128,6 @@ export const InvestigatorDashboard: React.FC = () => {
     criticalAlerts: stats?.pendingAlertsCount ?? 0
   };
 
-  // Sparkline data for temporal activity
-  const activityGraphData = [
-    { time: '00:00', events: 14 },
-    { time: '01:00', events: 88 }, // Peak during call & transaction
-    { time: '02:00', events: 45 },
-    { time: '03:00', events: 62 },
-    { time: '04:00', events: 31 },
-    { time: '05:00', events: 19 },
-    { time: '06:00', events: 40 },
-  ];
-
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
       
@@ -153,10 +138,6 @@ export const InvestigatorDashboard: React.FC = () => {
             <span className="text-[11px] font-mono uppercase tracking-wider text-blue-600 font-bold">
               Operational Command Console
             </span>
-            <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-ping" />
-            <span className="text-[10px] font-mono px-2 py-0.5 rounded-full border bg-emerald-50 text-emerald-700 border-emerald-200 font-semibold">
-              LIVE BACKEND (M2)
-            </span>
           </div>
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
             Investigator Workspace • CID Maharashtra
@@ -164,23 +145,6 @@ export const InvestigatorDashboard: React.FC = () => {
           <p className="text-xs text-slate-600 mt-1 max-w-2xl leading-relaxed">
             Monitoring active syndicate movements, indirect remittances, and cryptographic evidence trails across western ports.
           </p>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => setView('assistant')}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-700 shadow-sm hover:border-slate-300 transition-all"
-          >
-            <Sparkles className="w-4 h-4 text-blue-600" />
-            <span>AI Investigator Assistant</span>
-          </button>
-          <button
-            onClick={() => setView('graph')}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[var(--primary)] hover:bg-blue-700 text-[var(--text-primary)] text-xs font-bold uppercase tracking-wider shadow-sm shadow-blue-500/20 transition-all"
-          >
-            <Share2 className="w-4 h-4" />
-            <span>Network Canvas</span>
-          </button>
         </div>
       </div>
 
@@ -411,43 +375,6 @@ export const InvestigatorDashboard: React.FC = () => {
                 </div>
               ))}
             </div>
-          </div>
-
-          {/* Temporal Intercept Activity Burst */}
-          <div className="bg-white shadow-sm border border-slate-200 rounded-2xl p-5">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <TrendingUp className="w-4 h-4 text-blue-600" />
-                <h3 className="text-sm font-semibold text-slate-900">
-                  Critical Locus Activity Bursts (August 14 Operation Window)
-                </h3>
-              </div>
-              <span className="text-[10px] font-mono text-[var(--text-muted)]">
-                Peak: 01:04 AM - 01:18 AM Intercepts
-              </span>
-            </div>
-
-            <div className="h-44 w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={activityGraphData}>
-                  <defs>
-                    <linearGradient id="colorBurst" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#2563eb" stopOpacity={0.35}/>
-                      <stop offset="95%" stopColor="#2563eb" stopOpacity={0.02}/>
-                    </linearGradient>
-                  </defs>
-                  <XAxis dataKey="time" stroke="#94a3b8" fontSize={11} />
-                  <YAxis stroke="#94a3b8" fontSize={11} />
-                  <Tooltip 
-                    contentStyle={{ backgroundColor: '#ffffff', borderColor: '#e2e8f0', borderRadius: '0.5rem', fontSize: '11px', color: '#0f172a', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                  />
-                  <Area type="monotone" dataKey="events" stroke="#2563eb" strokeWidth={2} fillOpacity={1} fill="url(#colorBurst)" />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-            <p className="text-[11px] text-[var(--text-muted)] mt-2 italic text-center">
-              Spike corresponds directly to Vikram Malhotra CDR call (01:04 AM) followed by ₹15L NEFT transfer (01:18 AM).
-            </p>
           </div>
 
         </div>

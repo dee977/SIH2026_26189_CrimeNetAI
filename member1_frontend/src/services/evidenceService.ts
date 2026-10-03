@@ -49,3 +49,36 @@ export async function fetchDiscrepancies(caseId: string) {
   return { ...res, data: [] as CrossVerificationDiscrepancy[] };
 }
 
+export interface EntitySourceDocument {
+  id: string;
+  evidenceId: string;
+  documentId: string;
+  fileName: string;
+  title: string;
+  fileType: string;
+  category: string;
+  description?: string;
+  sha256Hash: string;
+  uploadedAt?: string;
+  uploader?: string;
+  custodian?: string;
+  bsaCertificateId?: string;
+  fileSizeBytes?: number;
+  storageUrl?: string;
+  previewUrl?: string;
+  relationship?: string;
+  confidence?: number;
+  caseId?: string;
+  isFir?: boolean;
+  firDetails?: Record<string, any>;
+}
+
+export async function fetchEntityDocuments(entityId: string, caseId?: string) {
+  const query = caseId ? `?case_id=${encodeURIComponent(caseId)}` : '';
+  return apiRequest<EntitySourceDocument[]>(
+    `/entities/${encodeURIComponent(entityId)}/documents${query}`,
+    { method: 'GET' }
+  );
+}
+
+

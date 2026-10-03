@@ -219,9 +219,40 @@ class M5GraphAnalyticsClient:
         loop = asyncio.get_event_loop()
         def _compute_pg_path():
             G, entities, rels = _get_pg_graph(case_id)
-            if source_id in G and target_id in G:
+            if not G or len(G.nodes) == 0:
+                return {"nodes": [], "edges": [], "distance": 0, "found": False}
+
+            # Resolve source and target by ID, exact name, or partial name
+            actual_src = source_id if source_id in G else None
+            actual_tgt = target_id if target_id in G else None
+
+            if not actual_src:
+                s_lower = source_id.strip().lower()
+                for n, d in G.nodes(data=True):
+                    if (d.get("name") or "").lower() == s_lower or n.lower() == s_lower:
+                        actual_src = n
+                        break
+                if not actual_src:
+                    for n, d in G.nodes(data=True):
+                        if s_lower in (d.get("name") or "").lower() or s_lower in n.lower():
+                            actual_src = n
+                            break
+
+            if not actual_tgt:
+                t_lower = target_id.strip().lower()
+                for n, d in G.nodes(data=True):
+                    if (d.get("name") or "").lower() == t_lower or n.lower() == t_lower:
+                        actual_tgt = n
+                        break
+                if not actual_tgt:
+                    for n, d in G.nodes(data=True):
+                        if t_lower in (d.get("name") or "").lower() or t_lower in n.lower():
+                            actual_tgt = n
+                            break
+
+            if actual_src and actual_tgt:
                 try:
-                    path = nx.shortest_path(G, source=source_id, target=target_id)
+                    path = nx.shortest_path(G, source=actual_src, target=actual_tgt)
                     nodes = []
                     for nid in path:
                         node_data = G.nodes.get(nid, {})

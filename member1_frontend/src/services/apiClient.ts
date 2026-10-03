@@ -70,9 +70,25 @@ export async function apiRequest<T>(
     }
 
     const json = await response.json();
-    const data = (json && typeof json === 'object' && json.success !== undefined && json.data !== undefined) 
-      ? json.data 
-      : json;
+    let data: any = json;
+    if (json && typeof json === 'object') {
+      if (json.data !== undefined) {
+        data = json.data;
+      } else if (json.items !== undefined) {
+        data = json.items;
+      }
+    }
+
+    if (Array.isArray(data)) {
+      try {
+        if (!(data as any).items) {
+          Object.defineProperty(data, 'items', { value: data, enumerable: false, writable: true });
+        }
+        if (!(data as any).data) {
+          Object.defineProperty(data, 'data', { value: data, enumerable: false, writable: true });
+        }
+      } catch (_) {}
+    }
 
     return {
       success: true,

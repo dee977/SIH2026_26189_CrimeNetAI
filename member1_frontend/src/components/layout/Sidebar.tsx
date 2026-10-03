@@ -21,7 +21,8 @@ import {
   Settings,
   Shield,
   Layers,
-  UploadCloud
+  UploadCloud,
+  PanelLeftClose
 } from 'lucide-react';
 
 interface NavItem {
@@ -34,7 +35,7 @@ interface NavItem {
 }
 
 export const Sidebar: React.FC = () => {
-  const { isSidebarCollapsed } = useNavigationStore();
+  const { isSidebarCollapsed, toggleSidebar } = useNavigationStore();
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuthStore();
@@ -73,6 +74,13 @@ export const Sidebar: React.FC = () => {
     return hasPermission(userRole, item.requiredPermission);
   };
 
+  const handleNavClick = (path: string) => {
+    navigate(path);
+    if (typeof window !== 'undefined' && window.innerWidth < 768 && !isSidebarCollapsed) {
+      toggleSidebar();
+    }
+  };
+
   const renderNavSection = (category: 'core' | 'intelligence' | 'governance', title: string) => {
     const accessibleItems = navItems.filter(i => i.category === category && hasAccess(i));
     if (accessibleItems.length === 0) return null;
@@ -88,10 +96,10 @@ export const Sidebar: React.FC = () => {
             return (
               <button
                 key={item.path}
-                onClick={() => navigate(item.path)}
-                className={`w-full flex items-center justify-between px-2.5 py-2 rounded-lg text-xs font-medium transition-all ${
+                onClick={() => handleNavClick(item.path)}
+                className={`w-full flex items-center justify-between px-2.5 py-2 rounded-lg text-xs font-medium transition-all cursor-pointer ${
                   active 
-                    ? 'bg-[var(--primary)] text-white shadow-sm' 
+                    ? 'bg-[var(--primary)] text-white shadow-sm font-semibold' 
                     : 'text-[var(--sidebar-text-muted)] hover:text-white hover:bg-[var(--sidebar-hover)]'
                 }`}
               >
@@ -99,7 +107,6 @@ export const Sidebar: React.FC = () => {
                   {item.icon}
                   <span>{item.label}</span>
                 </div>
-                
               </button>
             );
           })}
@@ -109,49 +116,78 @@ export const Sidebar: React.FC = () => {
   };
 
   return (
-    <aside className={`${isSidebarCollapsed ? "w-0 overflow-hidden opacity-0 border-r-0" : "w-64 border-r opacity-100"} transition-all duration-300 ease-in-out bg-[var(--sidebar-bg)] border-[var(--sidebar-hover)] flex flex-col shrink-0 min-h-screen select-none whitespace-nowrap`}>
-      
-      {/* Brand Header */}
-        <div className="p-4 border-b border-[var(--sidebar-hover)] flex items-center justify-between">
-          <div className="flex flex-col gap-1.5 w-full">
-            <img src="/logo.png" alt="CrimeNet AI" className="h-8 object-contain object-left" style={{ filter: 'invert(1)', mixBlendMode: 'screen' }} />
-            <div className="flex items-center gap-1.5 mt-1">
-              <p className="text-[10px] text-[var(--sidebar-text-muted)] font-mono">SIH26189 Statutory Engine</p>
-              <span className="text-[10px] px-1.5 py-0.2 rounded bg-[var(--primary)]/20 text-[var(--accent)] font-mono font-semibold ml-auto">RBAC</span>
+    <>
+      {/* Mobile Backdrop Overlay */}
+      {!isSidebarCollapsed && (
+        <div
+          className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-30 md:hidden transition-opacity duration-300"
+          onClick={toggleSidebar}
+          aria-hidden="true"
+        />
+      )}
+
+      <aside
+        className={`fixed md:relative inset-y-0 left-0 z-40 md:z-10 flex flex-col shrink-0 min-h-screen bg-[var(--sidebar-bg)] border-[var(--sidebar-hover)] select-none whitespace-nowrap overflow-hidden transition-all duration-300 ease-in-out shadow-2xl md:shadow-none ${
+          isSidebarCollapsed
+            ? 'w-0 -translate-x-full md:translate-x-0 md:w-0 border-r-0 opacity-0 pointer-events-none'
+            : 'w-64 translate-x-0 border-r opacity-100'
+        }`}
+      >
+        {/* Fixed 256px internal wrapper so contents remain aligned without squishing during width transition */}
+        <div className="w-64 flex flex-col h-full min-h-screen">
+          
+          {/* Brand Header */}
+          <div className="p-4 border-b border-[var(--sidebar-hover)] flex items-center justify-between">
+            <div className="flex flex-col gap-1.5 flex-1 min-w-0">
+              <img src="/logo.png" alt="CrimeNet AI" className="h-8 object-contain object-left" style={{ filter: 'invert(1)', mixBlendMode: 'screen' }} />
+              <div className="flex items-center gap-1.5 mt-1">
+                <p className="text-[10px] text-[var(--sidebar-text-muted)] font-mono">SIH26189 Statutory Engine</p>
+                <span className="text-[10px] px-1.5 py-0.2 rounded bg-[var(--primary)]/20 text-[var(--accent)] font-mono font-semibold ml-auto">RBAC</span>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={toggleSidebar}
+              aria-label="Collapse sidebar"
+              title="Collapse sidebar"
+              className="p-1.5 rounded-lg text-[var(--sidebar-text-muted)] hover:text-white hover:bg-[var(--sidebar-hover)] transition-colors cursor-pointer shrink-0 ml-2"
+            >
+              <PanelLeftClose className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Role / Officer Card */}
+          <div className="px-3.5 py-3 bg-[var(--sidebar-hover)]/40 border-b border-[var(--sidebar-hover)]">
+            <div className="flex items-center justify-between">
+              <div className="min-w-0 pr-2">
+                <p className="text-[10px] uppercase tracking-wider text-[var(--sidebar-text-muted)] font-mono font-semibold">Active Clearance</p>
+                <p className="text-xs font-semibold text-[var(--sidebar-text)] truncate">{user?.name || user?.email || 'Authorized Officer'}</p>
+              </div>
+              <span className={`px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold uppercase border shadow-sm ${roleConfig.badgeClass}`}>
+                Role: {userRole}
+              </span>
             </div>
           </div>
-        </div>
 
-        {/* Role / Officer Card */}
-        <div className="px-3.5 py-3 bg-[var(--sidebar-hover)]/40 border-b border-[var(--sidebar-hover)]">
-        <div className="flex items-center justify-between">
-          <div className="min-w-0 pr-2">
-            <p className="text-[10px] uppercase tracking-wider text-[var(--sidebar-text-muted)] font-mono font-semibold">Active Clearance</p>
-            <p className="text-xs font-semibold text-[var(--sidebar-text)] truncate">{user?.name || user?.email || 'Authorized Officer'}</p>
+          {/* Navigation Sections */}
+          <div className="flex-1 overflow-y-auto px-2.5 py-3 space-y-4">
+            {renderNavSection('core', 'Case Operations')}
+            {renderNavSection('intelligence', 'Graph & Intelligence')}
+            {renderNavSection('governance', 'Evidence & Governance')}
           </div>
-          <span className={`px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold uppercase border shadow-sm ${roleConfig.badgeClass}`}>
-            Role: {userRole}
-          </span>
+
+          {/* Security Status Footer */}
+          <div className="p-3 border-t border-[var(--sidebar-hover)] bg-[var(--sidebar-hover)]/20 text-[10px] font-mono text-[var(--sidebar-text-muted)] flex items-center justify-between">
+            <span className="flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              <span>Statutory RBAC Active</span>
+            </span>
+            <span className="text-cyan-400 font-bold uppercase">{userRole}</span>
+          </div>
+
         </div>
-      </div>
-
-      {/* Navigation Sections */}
-      <div className="flex-1 overflow-y-auto px-2.5 py-3 space-y-4">
-        {renderNavSection('core', 'Case Operations')}
-        {renderNavSection('intelligence', 'Graph & Intelligence')}
-        {renderNavSection('governance', 'Evidence & Governance')}
-      </div>
-
-      {/* Security Status Footer */}
-      <div className="p-3 border-t border-[var(--sidebar-hover)] bg-[var(--sidebar-hover)]/20 text-[10px] font-mono text-[var(--sidebar-text-muted)] flex items-center justify-between">
-        <span className="flex items-center gap-1.5">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-          <span>Statutory RBAC Active</span>
-        </span>
-        <span className="text-cyan-400 font-bold uppercase">{userRole}</span>
-      </div>
-
-    </aside>
+      </aside>
+    </>
   );
 };
 

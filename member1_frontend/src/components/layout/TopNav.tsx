@@ -14,7 +14,8 @@ import {
   AlertTriangle,
   Globe,
   CheckCircle2,
-  Clock
+  Clock,
+  Menu
 } from 'lucide-react';
 import { UserRole } from '../../types/auth';
 
@@ -24,7 +25,9 @@ export const TopNav: React.FC = () => {
     setView, 
     setGlobalSearchQuery, 
     selectedCaseId,
-    selectCase
+    selectCase,
+    isSidebarCollapsed,
+    toggleSidebar
   } = useNavigationStore();
 
   const { user, logout, switchRole, triggerSessionExpiry } = useAuthStore();
@@ -52,10 +55,20 @@ export const TopNav: React.FC = () => {
 
 
   return (
-    <header className="h-16 bg-[var(--bg-primary)] border-b border-[var(--border)] px-6 flex items-center justify-between z-30 shrink-0 select-none">
+    <header className="h-16 bg-[var(--bg-primary)] border-b border-[var(--border)] px-4 sm:px-6 flex items-center justify-between z-30 shrink-0 select-none">
       
-      {/* Left: Global Search Quick Bar */}
-      <div className="flex items-center gap-4 flex-1 max-w-xl">
+      {/* Left: Hamburger Toggle + Global Search Quick Bar */}
+      <div className="flex items-center gap-3 sm:gap-4 flex-1 max-w-xl">
+        <button
+          type="button"
+          onClick={toggleSidebar}
+          aria-label={isSidebarCollapsed ? "Open sidebar" : "Collapse sidebar"}
+          title={isSidebarCollapsed ? "Open sidebar" : "Collapse sidebar"}
+          className="p-2 rounded-xl border border-black bg-white hover:bg-slate-100 text-black transition-all shadow-sm flex items-center justify-center shrink-0 cursor-pointer focus:outline-none focus:ring-2 focus:ring-black active:scale-95"
+        >
+          <Menu className="w-5 h-5 text-black" strokeWidth={2.2} />
+        </button>
+
         <form onSubmit={handleSearchSubmit} className="relative w-full">
           <Search className="w-4 h-4 text-[var(--text-secondary)] absolute left-3.5 top-1/2 -translate-y-1/2" />
           <input

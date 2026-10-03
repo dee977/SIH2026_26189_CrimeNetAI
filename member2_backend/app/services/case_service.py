@@ -1,5 +1,6 @@
 import json
 import os
+import time
 from typing import Dict, Any, List, Optional
 from datetime import datetime, timezone
 from neo4j import GraphDatabase
@@ -8,6 +9,13 @@ from sqlalchemy.orm import Session
 from app.database import SessionLocal
 from app.models import CaseModel, EvidenceModel
 from app.services.supabase_service import get_supabase_storage_service
+
+_CASE_COUNTS_CACHE: Dict[str, Dict[str, int]] = {}
+_CASE_COUNTS_CACHE_TIME: float = 0.0
+
+def invalidate_case_counts_cache():
+    global _CASE_COUNTS_CACHE_TIME
+    _CASE_COUNTS_CACHE_TIME = 0.0
 
 class CaseService:
     def __init__(self):
@@ -126,33 +134,47 @@ class CaseService:
             
             cases = query.all()
             case_ids = [c.case_id for c in cases]
-            
-            # Batch fetch counts to avoid N+1 problem
-            counts_map = {cid: {
-                'evidenceCount': 0, 'entityCount': 0, 'relationshipCount': 0,
-                'alertCount': 0, 'noteCount': 0, 'teamCount': 0,
-                'importCount': 0, 'reportCount': 0, 'timelineEventCount': 0
-            } for cid in case_ids}
-            
-            if case_ids:
-                from app.models import EvidenceModel, EntityModel, RelationshipModel, AlertModel, CaseNoteModel, CaseMembershipModel, IngestJobModel
-                from sqlalchemy import func
+            global _CASE_COUNTS_CACHE, _CASE_COUNTS_CACHE_TIME
+            now_ts = time.time()
+            if now_ts - _CASE_COUNTS_CACHE_TIME < 60.0 and _CASE_COUNTS_CACHE:
+                counts_map = {cid: dict(_CASE_COUNTS_CACHE.get(cid, {
+                    'evidenceCount': 0, 'entityCount': 0, 'relationshipCount': 0,
+                    'alertCount': 0, 'noteCount': 0, 'teamCount': 0,
+                    'importCount': 0, 'reportCount': 0, 'timelineEventCount': 0
+                })) for cid in case_ids}
+            else:
+                counts_map = {cid: {
+                    'evidenceCount': 0, 'entityCount': 0, 'relationshipCount': 0,
+                    'alertCount': 0, 'noteCount': 0, 'teamCount': 0,
+                    'importCount': 0, 'reportCount': 0, 'timelineEventCount': 0
+                } for cid in case_ids}
                 
-                def _fill_counts(model, key):
-                    res = db.query(model.case_id, func.count(model.id)).filter(model.case_id.in_(case_ids)).group_by(model.case_id).all()
-                    for r in res:
-                        counts_map[r[0]][key] = r[1]
-                        
-                _fill_counts(EvidenceModel, 'evidenceCount')
-                _fill_counts(EntityModel, 'entityCount')
-                _fill_counts(RelationshipModel, 'relationshipCount')
-                _fill_counts(AlertModel, 'alertCount')
-                _fill_counts(CaseNoteModel, 'noteCount')
-                # For CaseMembershipModel, id might not exist, wait let's just use func.count()
-                res = db.query(CaseMembershipModel.case_id, func.count()).filter(CaseMembershipModel.case_id.in_(case_ids)).group_by(CaseMembershipModel.case_id).all()
-                for r in res: counts_map[r[0]]['teamCount'] = r[1]
+                if case_ids:
+                    from app.models import EvidenceModel, EntityModel, RelationshipModel, AlertModel, CaseNoteModel, CaseMembershipModel, IngestJobModel
+                    from sqlalchemy import func
+                    
+                    def _fill_counts(model, key):
+                        try:
+                            res = db.query(model.case_id, func.count(model.id)).filter(model.case_id.in_(case_ids)).group_by(model.case_id).all()
+                            for r in res:
+                                counts_map[r[0]][key] = r[1]
+                        except Exception:
+                            pass
+                            
+                    _fill_counts(EvidenceModel, 'evidenceCount')
+                    _fill_counts(EntityModel, 'entityCount')
+                    _fill_counts(RelationshipModel, 'relationshipCount')
+                    _fill_counts(AlertModel, 'alertCount')
+                    _fill_counts(CaseNoteModel, 'noteCount')
+                    try:
+                        res = db.query(CaseMembershipModel.case_id, func.count()).filter(CaseMembershipModel.case_id.in_(case_ids)).group_by(CaseMembershipModel.case_id).all()
+                        for r in res: counts_map[r[0]]['teamCount'] = r[1]
+                    except Exception:
+                        pass
+                    _fill_counts(IngestJobModel, 'importCount')
                 
-                _fill_counts(IngestJobModel, 'importCount')
+                _CASE_COUNTS_CACHE = dict(counts_map)
+                _CASE_COUNTS_CACHE_TIME = now_ts
 
             result = []
             for case in cases:

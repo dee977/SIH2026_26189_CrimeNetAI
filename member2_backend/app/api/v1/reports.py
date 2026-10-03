@@ -117,7 +117,12 @@ async def export_report_pdf_get(
     if not case_summary:
         raise ResourceNotFoundError('Case', clean_id)
     
-    pdf_buffer = generate_investigation_report_pdf({'caseId': clean_id, 'caseNumber': case_summary.get('caseNumber', clean_id)})
+    user_data = current_user.model_dump() if hasattr(current_user, 'model_dump') else (current_user.dict() if hasattr(current_user, 'dict') else None)
+    pdf_buffer = generate_investigation_report_pdf({
+        'caseId': case_summary.get('caseId', clean_id),
+        'caseNumber': case_summary.get('caseNumber', clean_id),
+        'user': user_data
+    })
     pdf_bytes = pdf_buffer.getvalue()
 
     filename = f"Investigation_Report_{clean_id}.pdf"

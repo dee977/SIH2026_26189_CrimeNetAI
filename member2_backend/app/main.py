@@ -20,7 +20,8 @@ async def lifespan(app: FastAPI):
     # tables is idempotent and keeps the ACL available after a restart.
     from app.database import Base, engine, SessionLocal
     import app.models  # register models before metadata creation
-    Base.metadata.create_all(bind=engine)
+    if "sqlite" in str(engine.url):
+        Base.metadata.create_all(bind=engine)
 
     # Rehydrate persisted ingestion jobs and extracted entities from database
     try:

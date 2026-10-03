@@ -43,13 +43,16 @@ export const InvestigationWorkspace: React.FC = () => {
   const { cases, closeCase, archiveCase, reactivateCase, fetchMembers, addMember, fetchNotes, createNote } = useCaseStore();
   const { addToast } = useNotificationStore();
 
+  const effectiveCaseId = caseId || selectedCaseId;
+  const activeCase = cases.find(c => c.caseId === effectiveCaseId) || (cases.length > 0 ? cases[0] : null);
+
   useEffect(() => {
     if (caseId && caseId !== selectedCaseId) {
       useNavigationStore.getState().selectCase(caseId);
+    } else if (!caseId && activeCase && activeCase.caseId !== selectedCaseId) {
+      useNavigationStore.getState().selectCase(activeCase.caseId);
     }
-  }, [caseId, selectedCaseId]);
-
-  const activeCase = cases.find(c => c.caseId === caseId);
+  }, [caseId, selectedCaseId, activeCase]);
 
   // Members state
   const [members, setMembers] = useState<CaseMember[]>([]);
