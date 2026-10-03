@@ -44,7 +44,7 @@ class M6SecurityClient:
                 role='ADMIN',
                 grantedRole='ADMIN',
                 isActive=True,
-                permissions=['cases:read', 'cases:write', 'evidence:read', 'evidence:write']
+                permissions=['cases:read', 'cases:write', 'case:read', 'case:write', 'evidence:read', 'evidence:write', 'verification:read', 'report:generate', 'admin:read', 'admin:write']
             )
             
         jwks = self._get_jwks()

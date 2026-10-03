@@ -88,4 +88,30 @@ export async function fetchEntityDocuments(entityId: string, caseId?: string) {
   );
 }
 
+export async function downloadBsaSection63CertificatePdf(caseId: string, discrepancyId?: string, evidenceId?: string): Promise<Blob> {
+  const token = typeof localStorage !== 'undefined' ? localStorage.getItem('crimenet_auth_token') : null;
+
+  const queryParams = new URLSearchParams();
+  if (caseId) queryParams.set('caseId', caseId);
+  if (discrepancyId) queryParams.set('discrepancyId', discrepancyId);
+  if (evidenceId) queryParams.set('evidenceId', evidenceId);
+
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (import.meta.env.PROD ? '/api/v1' : 'http://localhost:8000/api/v1');
+  const baseClean = API_BASE_URL.replace(/\/+$/, '');
+  const targetUrl = `${baseClean}/verification/certificate/pdf?${queryParams.toString()}`;
+
+  const response = await fetch(targetUrl, {
+    method: 'GET',
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {})
+    }
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to generate certificate PDF (${response.status})`);
+  }
+
+  return response.blob();
+}
+
 

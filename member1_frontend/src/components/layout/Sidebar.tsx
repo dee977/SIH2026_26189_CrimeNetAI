@@ -21,8 +21,7 @@ import {
   Settings,
   Shield,
   Layers,
-  UploadCloud,
-  PanelLeftClose
+  UploadCloud
 } from 'lucide-react';
 
 interface NavItem {
@@ -145,15 +144,6 @@ export const Sidebar: React.FC = () => {
                 <span className="text-[10px] px-1.5 py-0.2 rounded bg-[var(--primary)]/20 text-[var(--accent)] font-mono font-semibold ml-auto">RBAC</span>
               </div>
             </div>
-            <button
-              type="button"
-              onClick={toggleSidebar}
-              aria-label="Collapse sidebar"
-              title="Collapse sidebar"
-              className="p-1.5 rounded-lg text-[var(--sidebar-text-muted)] hover:text-white hover:bg-[var(--sidebar-hover)] transition-colors cursor-pointer shrink-0 ml-2"
-            >
-              <PanelLeftClose className="w-4 h-4" />
-            </button>
           </div>
 
           {/* Role / Officer Card */}

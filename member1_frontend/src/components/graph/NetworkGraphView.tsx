@@ -50,7 +50,7 @@ export const NetworkGraphView: React.FC<{caseId?: string}> = ({caseId}) => {
   
   // UI States
   const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || searchParams.get('q') || '');
   const [filterEntityType, setFilterEntityType] = useState<string>('ALL');
   const [filterRelType, setFilterRelType] = useState<string>('ALL');
   
@@ -365,19 +365,25 @@ export const NetworkGraphView: React.FC<{caseId?: string}> = ({caseId}) => {
       randomize: true
     } as any).run();
 
-    // Auto-focus and highlight node if arriving from dossier or search parameter
-    const targetEntityId = urlEntityId || selectedEntityId;
+    // Auto-focus and highlight node if arriving from dossier, cross-verification, or search parameter
+    const targetEntityId = urlEntityId || searchParams.get('target') || selectedEntityId || searchParams.get('search') || searchParams.get('q');
     if (targetEntityId) {
       setTimeout(() => {
         if (!cy || cy.destroyed()) return;
         let targetCyNode: any = cy.$id(targetEntityId);
         if (!targetCyNode || targetCyNode.length === 0) {
+          const qLower = targetEntityId.toLowerCase();
           const match = cy.nodes().filter((n) => {
             const raw = n.data('raw');
+            const nid = (n.id() || '').toLowerCase();
+            const nlabel = (n.data('label') || raw?.label || '').toLowerCase();
+            const nEntityId = (raw?.entityId || '').toLowerCase();
             return (
-              n.id() === targetEntityId ||
-              (raw?.entityId && raw.entityId === targetEntityId) ||
-              (raw?.label && raw.label.toLowerCase() === targetEntityId.toLowerCase())
+              nid === qLower ||
+              nEntityId === qLower ||
+              nlabel === qLower ||
+              nlabel.includes(qLower) ||
+              qLower.includes(nlabel)
             );
           });
           if (match.length > 0) targetCyNode = match.first();
@@ -386,7 +392,10 @@ export const NetworkGraphView: React.FC<{caseId?: string}> = ({caseId}) => {
         if (targetCyNode && targetCyNode.length > 0) {
           cy.elements().removeClass('highlighted dimmed');
           targetCyNode.addClass('highlighted');
-          setSelectedNode(targetCyNode.data('raw'));
+          const neighborhood = targetCyNode.neighborhood();
+          neighborhood.addClass('highlighted');
+          cy.elements().not(targetCyNode).not(neighborhood).addClass('dimmed');
+          setSelectedNode(targetCyNode.data('raw') || targetCyNode.data());
           cy.animate({
             center: { eles: targetCyNode },
             zoom: 1.5,

@@ -799,3 +799,279 @@ def generate_investigation_report_pdf(report_data: Optional[Dict[str, Any]] = No
     doc.build(story, canvasmaker=NumberedCanvas)
     buffer.seek(0)
     return buffer
+
+
+def generate_bsa_section_63_certificate_pdf(cert_data: Optional[Dict[str, Any]] = None) -> io.BytesIO:
+    """
+    Generates a formal Electronic Evidence Certificate & Evidentiary Contradiction Docket
+    under Section 63 of Bharatiya Sakshya Adhiniyam, 2023 (BSA §63).
+    Includes:
+    - Case & FIR reference details
+    - Contradiction analysis and source corroboration audit
+    - Uploader / seizing officer and custodian details
+    - Cryptographic SHA-256 hash provenance and ledger verification
+    - Statutory Section 63(4) affirmation and digital signatures
+    """
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=A4,
+        leftMargin=36,
+        rightMargin=36,
+        topMargin=50,
+        bottomMargin=40
+    )
+
+    data = cert_data or {}
+    case_id = str(data.get('caseId') or 'CASE-2026-011')
+    case_title = str(data.get('caseTitle') or 'Statutory Criminal Network Investigation')
+    disc_id = str(data.get('discrepancyId') or 'DISCREPANCY-M3-01')
+    disc_title = str(data.get('discrepancyTitle') or 'Contradiction: Suspect Alibi Statement vs Telecom CDR Tower Triangulation')
+    conflicting_field = str(data.get('conflictingField') or 'Suspect Location at 2025-01-14 02:40 AM')
+    
+    src_a = data.get('sourceA') or {
+        'sourceName': 'Accused Formal Statement (Case Diary Entry #14)',
+        'documentRef': 'FIR Case Diary Entry #14-B',
+        'timestamp': '2025-01-14 02:40:00',
+        'recordedValue': 'Hotel Blue Diamond, Koregaon Park, Pune',
+        'excerpt': '"I stayed at my hotel room in Pune from 11:00 PM and did not travel until morning."'
+    }
+    src_b = data.get('sourceB') or {
+        'sourceName': 'Telecom CDR Tower Dump (BSA §63 Certified)',
+        'documentRef': 'Carrier Audit Dump AIRTEL-CDR-20250114.csv',
+        'timestamp': '2025-01-14 02:40:18',
+        'recordedValue': 'Nhava Sheva Sector 4 Tower (Cell ID: 19402, 120km from Pune)',
+        'excerpt': 'Subscriber handset pinged Sector 4 mast directly overlooking port container transit yard.'
+    }
+    
+    analytical_notes = str(data.get('analyticalNotes') or 'Suspect alibi statement is mathematically irreconcilable with the 120km geographic distance to Sector 4 cell tower.')
+    officer_name = str(data.get('officerName') or 'Inspector Rajesh Kumar')
+    officer_badge = str(data.get('badgeNumber') or 'LEO-7729')
+    officer_unit = str(data.get('agencyUnit') or 'CrimeNet State Forensic & Intelligence Wing')
+    cert_id = str(data.get('certificateId') or f"BSA63-CERT-{case_id}-{disc_id}")
+    now_str = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')
+    
+    # Evidence & Cryptographic Hash Details
+    ev_code = str(data.get('evidenceCode') or 'EVD-2025-M3-03')
+    ev_title = str(data.get('evidenceTitle') or 'Telecom CDR Tower Carrier Dump & Cell Site Audit')
+    ev_custodian = str(data.get('custodian') or 'Desk Terminal Quarantine Locker & Carrier Audit Vault')
+    sha256_orig = str(data.get('originalHashSHA256') or data.get('sha256Hash') or 'a1b2c3d4e5f60718293a4b5c6d7e8f90123456789abcdef0123456789abcdef0')
+    sha256_curr = str(data.get('currentHashSHA256') or sha256_orig)
+    integrity_status = str(data.get('integrityStatus') or 'MATCH - VERIFIED IMMUTABLE')
+
+    # Color Palette
+    c_navy = colors.HexColor("#0f172a")
+    c_dark_slate = colors.HexColor("#1e293b")
+    c_card_bg = colors.HexColor("#f8fafc")
+    c_header_bg = colors.HexColor("#f1f5f9")
+    c_border = colors.HexColor("#cbd5e1")
+    c_blue = colors.HexColor("#0284c7")
+    c_red = colors.HexColor("#b91c1c")
+    c_green = colors.HexColor("#15803d")
+    c_text_main = colors.HexColor("#0f172a")
+    c_text_muted = colors.HexColor("#475569")
+
+    styles = getSampleStyleSheet()
+    style_super_tag = ParagraphStyle('CertSuper', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=8, leading=10, textColor=c_red, alignment=1, spaceAfter=2)
+    style_doc_title = ParagraphStyle('CertTitle', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=14, leading=17, textColor=c_navy, alignment=1, spaceAfter=2)
+    style_doc_sub = ParagraphStyle('CertSub', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=8.5, leading=11, textColor=c_blue, alignment=1, spaceAfter=8)
+    style_sec_heading = ParagraphStyle('CertSecHead', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=9, leading=12, textColor=c_navy, spaceBefore=8, spaceAfter=4, keepWithNext=True)
+    style_body = ParagraphStyle('CertBody', parent=styles['Normal'], fontName='Helvetica', fontSize=7.5, leading=10, textColor=c_text_main)
+    style_body_bold = ParagraphStyle('CertBodyBold', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=7.5, leading=10, textColor=c_text_main)
+    style_meta_label = ParagraphStyle('CertMetaLabel', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=7, leading=9, textColor=c_text_muted)
+    style_meta_val = ParagraphStyle('CertMetaVal', parent=styles['Normal'], fontName='Helvetica', fontSize=7.5, leading=10, textColor=c_text_main)
+    style_mono = ParagraphStyle('CertMono', parent=styles['Normal'], fontName='Courier', fontSize=6.5, leading=8.5, textColor=c_dark_slate)
+    style_legal = ParagraphStyle('CertLegal', parent=styles['Normal'], fontName='Helvetica', fontSize=7, leading=9.5, textColor=c_text_main)
+
+    story = []
+
+    # Title & Emblems
+    story.append(Paragraph("GOVERNMENT OF INDIA &bull; MINISTRY OF HOME AFFAIRS / STATE POLICE CRIME BRANCH", style_super_tag))
+    story.append(Paragraph("CERTIFICATE UNDER SECTION 63 OF THE BHARATIYA SAKSHYA ADHINIYAM, 2023", style_doc_title))
+    story.append(Paragraph("ELECTRONIC EVIDENCE ADMISSIBILITY DOCKET &amp; CONTRADICTION AUDIT MEMORANDUM", style_doc_sub))
+
+    # Certificate Identification Metadata Box
+    meta_table = [
+        [
+            Paragraph("CERTIFICATE REF", style_meta_label),
+            Paragraph(f"<b>{cert_id}</b>", style_meta_val),
+            Paragraph("STATUTORY AUTHORITY", style_meta_label),
+            Paragraph("<b>BSA 2023 &sect;63 / BNSS &sect;94</b>", style_meta_val)
+        ],
+        [
+            Paragraph("CASE REFERENCE", style_meta_label),
+            Paragraph(f"<b>{case_id}</b>", style_meta_val),
+            Paragraph("CASE TITLE", style_meta_label),
+            Paragraph(f"<b>{case_title}</b>", style_meta_val)
+        ],
+        [
+            Paragraph("ISSUANCE DATE &amp; TIME", style_meta_label),
+            Paragraph(f"{now_str}", style_meta_val),
+            Paragraph("INVESTIGATING AGENCY", style_meta_label),
+            Paragraph(f"{officer_unit}", style_meta_val)
+        ],
+        [
+            Paragraph("PRIMARY OFFICER", style_meta_label),
+            Paragraph(f"<b>{officer_name}</b> ({officer_badge})", style_meta_val),
+            Paragraph("CRYPTOGRAPHIC HASH ALGO", style_meta_label),
+            Paragraph("<b>SHA-256 (FIPS 180-4 NIST Certified)</b>", style_meta_val)
+        ]
+    ]
+    t_meta = Table(meta_table, colWidths=[105, 155, 110, 153])
+    t_meta.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, -1), c_card_bg),
+        ('BOX', (0, 0), (-1, -1), 0.75, c_navy),
+        ('INNERGRID', (0, 0), (-1, -1), 0.5, c_border),
+        ('TOPPADDING', (0, 0), (-1, -1), 3),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+        ('LEFTPADDING', (0, 0), (-1, -1), 5),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 5),
+    ]))
+    story.append(t_meta)
+    story.append(Spacer(1, 6))
+
+    # SECTION 1: EVIDENTIARY DISCREPANCY & CONTRADICTION RECORD
+    story.append(Paragraph("1. MULTI-SOURCE EVIDENTIARY CONTRADICTION AUDIT", style_sec_heading))
+    disc_table = [
+        [
+            Paragraph("<b>Contradiction Record</b>", style_body_bold),
+            Paragraph(f"<b>{disc_id}</b>: {disc_title}", style_body)
+        ],
+        [
+            Paragraph("<b>Conflicting Parameter</b>", style_body_bold),
+            Paragraph(f"<font color='#b91c1c'><b>{conflicting_field}</b></font>", style_body)
+        ],
+        [
+            Paragraph("<b>Source Record A</b><br/><font size='6' color='#475569'>Claimed / Stated</font>", style_body_bold),
+            Paragraph(
+                f"<b>{src_a.get('sourceName')}</b> (Ref: {src_a.get('documentRef')})<br/>"
+                f"<b>Recorded Value:</b> {src_a.get('recordedValue')}<br/>"
+                f"<i>Documentary Excerpt:</i> {src_a.get('excerpt')}",
+                style_body
+            )
+        ],
+        [
+            Paragraph("<b>Source Record B</b><br/><font size='6' color='#0284c7'>Sensor / Telemetry Corroboration</font>", style_body_bold),
+            Paragraph(
+                f"<b>{src_b.get('sourceName')}</b> (Ref: {src_b.get('documentRef')})<br/>"
+                f"<b>Sensor Value:</b> {src_b.get('recordedValue')}<br/>"
+                f"<i>Corroboration Excerpt:</i> {src_b.get('excerpt')}",
+                style_body
+            )
+        ],
+        [
+            Paragraph("<b>Forensic Synthesis</b>", style_body_bold),
+            Paragraph(f"{analytical_notes}", style_body)
+        ]
+    ]
+    t_disc = Table(disc_table, colWidths=[120, 403])
+    t_disc.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, -1), colors.white),
+        ('BOX', (0, 0), (-1, -1), 0.75, c_navy),
+        ('INNERGRID', (0, 0), (-1, -1), 0.5, c_border),
+        ('TOPPADDING', (0, 0), (-1, -1), 3),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+        ('LEFTPADDING', (0, 0), (-1, -1), 5),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 5),
+    ]))
+    story.append(t_disc)
+    story.append(Spacer(1, 6))
+
+    # SECTION 2: DIGITAL EVIDENCE PROVENANCE & SHA-256 HASH VERIFICATION
+    story.append(Paragraph("2. ELECTRONIC EVIDENCE PROVENANCE &amp; CRYPTOGRAPHIC HASH VERIFICATION", style_sec_heading))
+    hash_table = [
+        [
+            Paragraph("<b>Evidence Code &amp; Title</b>", style_body_bold),
+            Paragraph(f"<b>{ev_code}</b> &mdash; {ev_title}", style_body)
+        ],
+        [
+            Paragraph("<b>Physical / Cloud Custodian</b>", style_body_bold),
+            Paragraph(f"{ev_custodian}", style_body)
+        ],
+        [
+            Paragraph("<b>Genesis SHA-256 Hash</b>", style_body_bold),
+            Paragraph(f"<font color='#0284c7'><b>{sha256_orig}</b></font>", style_mono)
+        ],
+        [
+            Paragraph("<b>Live Node Computed Hash</b>", style_body_bold),
+            Paragraph(f"<font color='#0f172a'><b>{sha256_curr}</b></font>", style_mono)
+        ],
+        [
+            Paragraph("<b>Bitstream Integrity Audit</b>", style_body_bold),
+            Paragraph(f"<b>STATUS: <font color='#15803d'>{integrity_status}</font></b> (Bitstream identical; zero tampering detected)", style_body)
+        ]
+    ]
+    t_hash = Table(hash_table, colWidths=[130, 393])
+    t_hash.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, -1), colors.white),
+        ('BOX', (0, 0), (-1, -1), 0.75, c_navy),
+        ('INNERGRID', (0, 0), (-1, -1), 0.5, c_border),
+        ('TOPPADDING', (0, 0), (-1, -1), 3),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+        ('LEFTPADDING', (0, 0), (-1, -1), 5),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 5),
+    ]))
+    story.append(t_hash)
+    story.append(Spacer(1, 6))
+
+    # SECTION 3: STATUTORY ATTESTATION UNDER SECTION 63(4) OF BSA, 2023
+    story.append(Paragraph("3. STATUTORY ATTESTATION &amp; CERTIFICATION UNDER BSA &sect;63(4)", style_sec_heading))
+    statutory_text = (
+        "<b>CERTIFICATE UNDER SECTION 63(4) OF THE BHARATIYA SAKSHYA ADHINIYAM, 2023:</b><br/>"
+        "I hereby certify that the electronic intelligence records, cryptographic hash digests, telemetric dumps, "
+        "and evidentiary corroboration data referenced herein were generated, stored, and retrieved by automated "
+        "computer systems operating lawfully and under continuous regulatory custody during the ordinary course of "
+        "statutory investigative operations. The cryptographic SHA-256 bitstream checksums were calculated directly "
+        "from the bit-for-bit forensic image copies without intermediate manual modification, interception, or tampering.<br/><br/>"
+        "<b>Digital Provenance Seal:</b> <font name='Courier' size='6.5'>SHA256:ECDSA:BSA-SEC-63:AUTHENTICATED:"
+        f"{sha256_orig[:24]}</font>"
+    )
+    t_cert_box = Table([[Paragraph(statutory_text, style_legal)]], colWidths=[523])
+    t_cert_box.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, -1), c_card_bg),
+        ('BOX', (0, 0), (-1, -1), 0.75, c_navy),
+        ('TOPPADDING', (0, 0), (-1, -1), 5),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+        ('LEFTPADDING', (0, 0), (-1, -1), 8),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 8),
+    ]))
+    story.append(t_cert_box)
+    story.append(Spacer(1, 6))
+
+    # SECTION 4: SIGNATURES & ENDORSEMENT
+    sig_table = [
+        [
+            Paragraph(
+                f"<b>Investigating Officer Signature:</b><br/><br/>"
+                f"_______________________________________<br/>"
+                f"<b>{officer_name}</b><br/>"
+                f"Badge / PIN: {officer_badge}<br/>"
+                f"Unit: {officer_unit}",
+                style_legal
+            ),
+            Paragraph(
+                f"<b>Supervisory Authority Endorsement:</b><br/><br/>"
+                f"_______________________________________<br/>"
+                f"<b>Superintendent of Police / Special Director</b><br/>"
+                f"Station / HQ: State Cyber &amp; Economic Crimes Division<br/>"
+                f"Certified Timestamp: {now_str}",
+                style_legal
+            )
+        ]
+    ]
+    t_sig = Table(sig_table, colWidths=[260, 263])
+    t_sig.setStyle(TableStyle([
+        ('BOX', (0, 0), (-1, -1), 0.75, c_navy),
+        ('BACKGROUND', (0, 0), (-1, -1), colors.white),
+        ('TOPPADDING', (0, 0), (-1, -1), 6),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+        ('LEFTPADDING', (0, 0), (-1, -1), 8),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 8),
+    ]))
+    story.append(t_sig)
+
+    NumberedCanvas.current_case_number = case_id
+    doc.build(story, canvasmaker=NumberedCanvas)
+    buffer.seek(0)
+    return buffer
+

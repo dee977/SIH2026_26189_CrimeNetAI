@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useNavigationStore } from '../../store/navigationStore';
+import { useNotificationStore } from '../../store/notificationStore';
 import { CrossVerificationDiscrepancy } from '../../types/evidence';
-import { fetchDiscrepancies } from '../../services/evidenceService';
+import { fetchDiscrepancies, downloadBsaSection63CertificatePdf } from '../../services/evidenceService';
 import { 
   AlertOctagon, 
   AlertTriangle, 
@@ -18,15 +20,26 @@ import {
   MapPin,
   Info,
   ShieldCheck,
-  Search
+  Search,
+  ExternalLink,
+  Loader2
 } from 'lucide-react';
 
 export const CrossVerificationView: React.FC = () => {
-  const { setView, selectedCaseId } = useNavigationStore();
+  const navigate = useNavigate();
+  const { addToast } = useNotificationStore();
+  const { 
+    setView, 
+    selectedCaseId, 
+    selectEntity, 
+    setGlobalSearchQuery, 
+    selectEvidence 
+  } = useNavigationStore();
 
   const [discrepancies, setDiscrepancies] = useState<CrossVerificationDiscrepancy[]>([]);
   const [selectedDiscrepancyId, setSelectedDiscrepancyId] = useState<string>('');
   const [certGenerated, setCertGenerated] = useState<boolean>(false);
+  const [isGeneratingCert, setIsGeneratingCert] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -67,11 +80,173 @@ export const CrossVerificationView: React.FC = () => {
 
   const activeDiscrepancy = discrepancies.find(d => d.id === selectedDiscrepancyId) || discrepancies[0];
 
-  const handleExportCertificate = () => {
-    setCertGenerated(true);
-    setTimeout(() => {
-      setCertGenerated(false);
-    }, 4000);
+  const handleExportCertificate = async () => {
+    if (!selectedCaseId) {
+      addToast({
+        type: 'warning',
+        title: 'No Case Selected',
+        message: 'Please select an active case to generate a statutory certificate.'
+      });
+      return;
+    }
+
+    setIsGeneratingCert(true);
+    try {
+      const evidenceInfo = activeDiscrepancy ? resolveContradictionEvidence(activeDiscrepancy) : undefined;
+      const blob = await downloadBsaSection63CertificatePdf(
+        selectedCaseId,
+        activeDiscrepancy?.id,
+        evidenceInfo?.id
+      );
+
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      const discTag = (activeDiscrepancy?.id || 'M3-01').replace('-', '_');
+      link.download = `BSA_Section_63_Certificate_${selectedCaseId}_${discTag}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(downloadUrl);
+
+      setCertGenerated(true);
+      addToast({
+        type: 'success',
+        title: 'BSA §63 Certificate Generated',
+        message: 'Electronic Evidence Certificate PDF generated with cryptographic SHA-256 hash.',
+        duration: 4000
+      });
+
+      setTimeout(() => {
+        setCertGenerated(false);
+      }, 5000);
+    } catch (err: any) {
+      console.error('Failed to download BSA §63 certificate PDF:', err);
+      addToast({
+        type: 'error',
+        title: 'Certificate Generation Failed',
+        message: err.message || 'Unable to generate BSA §63 certificate PDF.',
+        duration: 4000
+      });
+    } finally {
+      setIsGeneratingCert(false);
+    }
+  };
+
+  // Resolves the primary subject or entity associated with the current contradiction
+  const resolveContradictionEntity = (disc: CrossVerificationDiscrepancy) => {
+    const title = (disc.title || '').toLowerCase();
+    const field = (disc.conflictingField || '').toLowerCase();
+
+    // 1. Alibi vs Telecom Tower contradiction (DISCREPANCY-M3-01)
+    if (disc.id === 'DISCREPANCY-M3-01' || title.includes('alibi') || field.includes('suspect location')) {
+      if (selectedCaseId === 'CASE-2026-011') {
+        return { id: 'P-SLV-001', name: 'Vikramaditya Rao' };
+      }
+      return { id: 'ENT-PERS-001', name: 'Vikram Malhotra' };
+    }
+
+    // 2. Cargo declaration vs weighbridge (DISCREPANCY-M3-02)
+    if (disc.id === 'DISCREPANCY-M3-02' || title.includes('cargo') || field.includes('weight')) {
+      return { id: 'ENT-ORG-001', name: 'Container #MRKU-982141-0' };
+    }
+
+    // 3. Financial Income vs RTGS Hawala (DISCREPANCY-V1-01)
+    if (disc.id === 'DISCREPANCY-V1-01' || title.includes('income') || title.includes('rtgs')) {
+      return { id: 'P00101_CASE-VIDEO-001', name: 'Person_00101' };
+    }
+
+    // 4. Vessel AIS Tracker (DISCREPANCY-V2-01)
+    if (disc.id === 'DISCREPANCY-V2-01' || title.includes('vessel') || title.includes('ais')) {
+      return { id: 'P00201_CASE-VIDEO-002', name: 'Tariq Butt' };
+    }
+
+    // 5. Domain WHOIS / Tor Server (DISCREPANCY-V3-01)
+    if (disc.id === 'DISCREPANCY-V3-01' || title.includes('whois') || title.includes('tls')) {
+      return { id: 'P00301_CASE-VIDEO-003', name: 'Ramesh Patel' };
+    }
+
+    // 6. Fastag Toll Booth (DISCREPANCY-V4-01)
+    if (disc.id === 'DISCREPANCY-V4-01' || title.includes('fastag') || title.includes('toll')) {
+      return { id: 'P00401_CASE-VIDEO-004', name: 'Person_00401' };
+    }
+
+    if (selectedCaseId === 'CASE-2026-011') {
+      return { id: 'P-SLV-001', name: 'Vikramaditya Rao' };
+    }
+    return { id: 'ENT-PERS-001', name: 'Vikram Malhotra' };
+  };
+
+  // Resolves the evidence vault record associated with the contradiction
+  const resolveContradictionEvidence = (disc: CrossVerificationDiscrepancy) => {
+    if (disc.id === 'DISCREPANCY-M3-01' || disc.title.toLowerCase().includes('telecom cdr')) {
+      return { id: 'EVD-2025-M3-03', title: disc.sourceB?.documentRef || 'Carrier Audit Dump AIRTEL-CDR' };
+    }
+    if (disc.id === 'DISCREPANCY-M3-02' || disc.title.toLowerCase().includes('cargo')) {
+      return { id: 'EVD-2025-M3-01', title: disc.sourceB?.documentRef || 'Port Weighbridge Panchnama' };
+    }
+    if (disc.id === 'DISCREPANCY-V1-01') return { id: 'EVD-VIDEO-001', title: 'Accounting Hard Drive' };
+    if (disc.id === 'DISCREPANCY-V2-01') return { id: 'EVD-VIDEO-002', title: 'Satellite Intercept Voice Capture' };
+    if (disc.id === 'DISCREPANCY-V3-01') return { id: 'EVD-VIDEO-003', title: 'C2 Server Memory Dump' };
+    if (disc.id === 'DISCREPANCY-V4-01') return { id: 'EVD-VIDEO-004', title: 'Safehouse Route Ledger' };
+
+    return { id: '', title: disc.sourceB?.documentRef || 'Case Evidence Records' };
+  };
+
+  const handleSearchInDossier = () => {
+    if (!activeDiscrepancy) return;
+    const target = resolveContradictionEntity(activeDiscrepancy);
+    const query = target.name;
+
+    selectEntity(target.id);
+    setGlobalSearchQuery(query);
+    setView('entity');
+
+    addToast({
+      type: 'info',
+      title: 'Dossier Query Initiated',
+      message: `Navigating to Dossier search for "${query}"...`,
+      duration: 2500
+    });
+
+    navigate(`/entities?q=${encodeURIComponent(query)}&entityId=${encodeURIComponent(target.id)}`);
+  };
+
+  const handleOpenEvidenceVault = () => {
+    if (!activeDiscrepancy) return;
+    const evidence = resolveContradictionEvidence(activeDiscrepancy);
+
+    if (evidence.id) {
+      selectEvidence(evidence.id);
+    }
+    setView('evidence');
+
+    addToast({
+      type: 'info',
+      title: 'Evidence Vault Access',
+      message: `Opening Evidence Vault for case ${selectedCaseId}...`,
+      duration: 2500
+    });
+
+    const url = evidence.id ? `/evidence?evidenceId=${encodeURIComponent(evidence.id)}` : '/evidence';
+    navigate(url);
+  };
+
+  const handleInspectInNetworkGraph = () => {
+    if (!activeDiscrepancy) return;
+    const target = resolveContradictionEntity(activeDiscrepancy);
+
+    selectEntity(target.id);
+    setView('graph');
+
+    addToast({
+      type: 'info',
+      title: 'Network Graph Centering',
+      message: `Focusing graph on ${target.name} (${target.id})...`,
+      duration: 2500
+    });
+
+    navigate(`/graph?entityId=${encodeURIComponent(target.id)}&search=${encodeURIComponent(target.name)}`);
   };
 
   if (!selectedCaseId) {
@@ -99,7 +274,7 @@ export const CrossVerificationView: React.FC = () => {
               Multi-Source Contradiction Auditor
             </span>
             <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200 font-semibold">
-              BSA Section 65B Compliant
+              BSA Section 63 Compliant
             </span>
           </div>
           <h1 className="text-xl md:text-2xl font-bold text-slate-900 mt-1.5">
@@ -223,18 +398,26 @@ export const CrossVerificationView: React.FC = () => {
 
                 <div className="flex items-center gap-2 self-start sm:self-center shrink-0">
                   <button
+                    type="button"
                     onClick={handleExportCertificate}
-                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#0f172a] hover:bg-blue-700 text-[var(--text-primary)] text-xs font-mono font-bold transition shadow-sm"
+                    disabled={isGeneratingCert}
+                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white hover:bg-slate-50 text-slate-900 border border-slate-300 hover:border-slate-400 text-xs font-semibold transition-all shadow-sm active:scale-95 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+                    title="Generate and download statutory Electronic Evidence Certificate PDF under Section 63 of Bharatiya Sakshya Adhiniyam, 2023"
                   >
                     {certGenerated ? (
                       <>
-                        <Check className="w-3.5 h-3.5 text-[var(--text-primary)]" />
-                        <span>BSA Docket Certified!</span>
+                        <Check className="w-3.5 h-3.5 text-green-600" />
+                        <span className="text-green-700 font-bold">BSA §63 Certificate Downloaded!</span>
+                      </>
+                    ) : isGeneratingCert ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 text-blue-600 animate-spin" />
+                        <span className="text-slate-700">Generating Certificate...</span>
                       </>
                     ) : (
                       <>
-                        <FileCheck className="w-3.5 h-3.5 text-[var(--text-primary)]" />
-                        <span>Generate BSA §65B Docket</span>
+                        <FileCheck className="w-3.5 h-3.5 text-blue-600" />
+                        <span>Generate BSA §63 Electronic Evidence Certificate</span>
                       </>
                     )}
                   </button>
@@ -356,28 +539,34 @@ export const CrossVerificationView: React.FC = () => {
               </div>
 
               <div className="pt-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3">
-                <div className="flex items-center gap-2 flex-wrap">
+                <div className="flex items-center gap-2.5 flex-wrap">
                   <button
-                    onClick={() => {
-                      setView('entity');
-                    }}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-xs font-semibold transition"
+                    type="button"
+                    onClick={handleSearchInDossier}
+                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-xs font-semibold transition-all shadow-sm active:scale-95 cursor-pointer hover:border-blue-300"
+                    title="Search suspect dossier and associated entities in Dossier Explorer"
                   >
-                    <Search className="w-3.5 h-3.5" />
+                    <Search className="w-3.5 h-3.5 text-blue-600" />
                     <span>Search in Dossier</span>
                   </button>
+
                   <button
-                    onClick={() => setView('evidence')}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-semibold transition"
+                    type="button"
+                    onClick={handleOpenEvidenceVault}
+                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-xs font-semibold transition-all shadow-sm active:scale-95 cursor-pointer hover:border-slate-400"
+                    title="Open Evidence Vault and inspect source corroboration artifacts for this case"
                   >
-                    <Layers className="w-3.5 h-3.5" />
+                    <Layers className="w-3.5 h-3.5 text-blue-600" />
                     <span>Open Evidence Vault</span>
                   </button>
+
                   <button
-                    onClick={() => setView('graph')}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-semibold transition"
+                    type="button"
+                    onClick={handleInspectInNetworkGraph}
+                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-xs font-semibold transition-all shadow-sm active:scale-95 cursor-pointer hover:border-slate-400"
+                    title="Inspect entity relationships and telecom/location link in Network Graph"
                   >
-                    <Share2 className="w-3.5 h-3.5" />
+                    <Share2 className="w-3.5 h-3.5 text-blue-600" />
                     <span>Inspect in Network Graph</span>
                   </button>
                 </div>

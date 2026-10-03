@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useNavigationStore } from '../../store/navigationStore';
 import { EntityType, AnyEntity } from '../../types/entities';
 import { searchEntities, fetchEntityById, fetchEntities } from '../../services/entityService';
@@ -23,14 +24,30 @@ import {
 } from 'lucide-react';
 
 export const UnifiedEntitySearchView: React.FC = () => {
-  const { selectedEntityId, selectEntity, selectedCaseId, setView } = useNavigationStore();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const { selectedEntityId, selectEntity, selectedCaseId, setView, globalSearchQuery, setGlobalSearchQuery } = useNavigationStore();
   
   const [activeTab, setActiveTab] = useState<EntityType | 'ALL'>('ALL');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || globalSearchQuery || '');
   const [liveEntities, setLiveEntities] = useState<AnyEntity[]>([]);
   const [liveDetail, setLiveDetail] = useState<AnyEntity | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Sync searchQuery and selectedEntityId when URL params change
+  useEffect(() => {
+    const qParam = searchParams.get('q');
+    if (qParam !== null) {
+      setSearchQuery(qParam);
+    } else if (globalSearchQuery) {
+      setSearchQuery(globalSearchQuery);
+    }
+
+    const entId = searchParams.get('entityId');
+    if (entId) {
+      selectEntity(entId);
+    }
+  }, [searchParams, globalSearchQuery, selectEntity]);
 
   // Fetch results when search query, active tab, or case ID changes
   useEffect(() => {
@@ -49,17 +66,34 @@ export const UnifiedEntitySearchView: React.FC = () => {
         if (isMounted) {
           if (res.success && res.data && res.data.length > 0) {
             setLiveEntities(res.data);
-            if (!selectedEntityId) {
+            if (!selectedEntityId || !res.data.some((e: AnyEntity) => e.id === selectedEntityId)) {
               selectEntity(res.data[0].id);
             }
           } else {
-            // Direct query fallback
+            // Direct query fallback with client-side case-insensitive partial matching
             fetchEntities(activeCase, filter)
               .then(entRes => {
-                if (isMounted && entRes.success && entRes.data && entRes.data.length > 0) {
-                  setLiveEntities(entRes.data);
-                  if (!selectedEntityId) {
-                    selectEntity(entRes.data[0].id);
+                if (isMounted && entRes.success && entRes.data) {
+                  let results = entRes.data;
+                  if (q) {
+                    const lq = q.toLowerCase();
+                    results = results.filter((e: unknown) => {
+                      const ent = e as Record<string, unknown>;
+                      const name = String(ent.canonicalName || ent.label || ent.fullName || ent.name || ent.locationName || '').toLowerCase();
+                      const id = String(ent.id || ent.entityId || '').toLowerCase();
+                      const type = String(ent.entityType || ent.type || '').toLowerCase();
+                      const propsStr = JSON.stringify(ent.properties || {}).toLowerCase();
+                      const metaStr = JSON.stringify(ent.metadata || {}).toLowerCase();
+                      return name.includes(lq) || id.includes(lq) || type.includes(lq) || propsStr.includes(lq) || metaStr.includes(lq);
+                    });
+                  }
+                  setLiveEntities(results);
+                  if (results.length > 0) {
+                    if (!selectedEntityId || !results.some((e: AnyEntity) => e.id === selectedEntityId)) {
+                      selectEntity(results[0].id);
+                    }
+                  } else {
+                    setLiveDetail(null);
                   }
                 } else if (isMounted) {
                   setLiveEntities(res.data || []);
@@ -71,14 +105,31 @@ export const UnifiedEntitySearchView: React.FC = () => {
           }
         }
       })
-      .catch((err) => {
+      .catch(() => {
         if (isMounted) {
           fetchEntities(activeCase, filter)
             .then(entRes => {
-              if (isMounted && entRes.success && entRes.data && entRes.data.length > 0) {
-                setLiveEntities(entRes.data);
-                if (!selectedEntityId) {
-                  selectEntity(entRes.data[0].id);
+              if (isMounted && entRes.success && entRes.data) {
+                let results = entRes.data;
+                if (q) {
+                  const lq = q.toLowerCase();
+                  results = results.filter((e: unknown) => {
+                    const ent = e as Record<string, unknown>;
+                    const name = String(ent.canonicalName || ent.label || ent.fullName || ent.name || ent.locationName || '').toLowerCase();
+                    const id = String(ent.id || ent.entityId || '').toLowerCase();
+                    const type = String(ent.entityType || ent.type || '').toLowerCase();
+                    const propsStr = JSON.stringify(ent.properties || {}).toLowerCase();
+                    const metaStr = JSON.stringify(ent.metadata || {}).toLowerCase();
+                    return name.includes(lq) || id.includes(lq) || type.includes(lq) || propsStr.includes(lq) || metaStr.includes(lq);
+                  });
+                }
+                setLiveEntities(results);
+                if (results.length > 0) {
+                  if (!selectedEntityId || !results.some((e: AnyEntity) => e.id === selectedEntityId)) {
+                    selectEntity(results[0].id);
+                  }
+                } else {
+                  setLiveDetail(null);
                 }
               } else if (isMounted) {
                 setLiveEntities([]);
@@ -162,14 +213,24 @@ export const UnifiedEntitySearchView: React.FC = () => {
           <input
             type="text"
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => {
+              const val = e.target.value;
+              setSearchQuery(val);
+              setGlobalSearchQuery(val);
+              setSearchParams(val.trim() ? { q: val } : {});
+            }}
             placeholder="Search entities by name, ID, location, or metadata..."
             className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-11 pr-4 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all"
           />
           {searchQuery && (
             <button
-              onClick={() => setSearchQuery('')}
-              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs text-[var(--text-secondary)] hover:text-slate-600 font-medium"
+              type="button"
+              onClick={() => {
+                setSearchQuery('');
+                setGlobalSearchQuery('');
+                setSearchParams({});
+              }}
+              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs text-[var(--text-secondary)] hover:text-slate-600 font-medium cursor-pointer"
             >
               Clear
             </button>

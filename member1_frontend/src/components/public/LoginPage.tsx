@@ -24,7 +24,6 @@ interface RoleOption {
   badge: string;
   desc: string;
   icon: React.ReactNode;
-  demoEmail: string;
   color: string;
   activeBorder: string;
   activeBg: string;
@@ -36,44 +35,40 @@ const ROLE_OPTIONS: RoleOption[] = [
     title: 'ADMIN',
     badge: 'Supervisory Control',
     desc: 'Full administrative access, user RBAC promotion, and audit authority.',
-    icon: <ShieldCheck className="w-5 h-5 text-rose-600 dark:text-rose-400" />,
-    demoEmail: 'yakshvachhani1108@gmail.com',
-    color: 'text-rose-700 dark:text-rose-400',
-    activeBorder: 'border-rose-600 ring-2 ring-rose-500/50',
-    activeBg: 'bg-rose-50 dark:bg-rose-950/40'
+    icon: <ShieldCheck className="w-5 h-5 text-rose-500 dark:text-rose-400" />,
+    color: 'text-rose-600 dark:text-rose-400',
+    activeBorder: 'border-rose-500 ring-2 ring-rose-500/60',
+    activeBg: 'bg-rose-50 dark:bg-slate-800'
   },
   {
     id: 'INVESTIGATOR',
     title: 'INVESTIGATOR',
     badge: 'Case Operations',
     desc: 'Case file creation, evidence ingestion, and knowledge graph querying.',
-    icon: <Briefcase className="w-5 h-5 text-blue-600 dark:text-blue-400" />,
-    demoEmail: 'dharmik111207@gmail.com',
-    color: 'text-blue-700 dark:text-blue-400',
-    activeBorder: 'border-blue-600 ring-2 ring-blue-500/50',
-    activeBg: 'bg-blue-50 dark:bg-blue-950/40'
+    icon: <Briefcase className="w-5 h-5 text-blue-500 dark:text-blue-400" />,
+    color: 'text-blue-600 dark:text-blue-400',
+    activeBorder: 'border-blue-500 ring-2 ring-blue-500/60',
+    activeBg: 'bg-blue-50 dark:bg-slate-800'
   },
   {
     id: 'ANALYST',
     title: 'ANALYST',
     badge: 'Intelligence & ML',
     desc: 'Louvain community analysis, multi-hop discovery, and report generation.',
-    icon: <BarChart3 className="w-5 h-5 text-teal-600 dark:text-cyan-400" />,
-    demoEmail: 'archanpatel2007@gmail.com',
-    color: 'text-teal-700 dark:text-cyan-400',
-    activeBorder: 'border-teal-600 dark:border-cyan-500 ring-2 ring-teal-500/50',
-    activeBg: 'bg-teal-50 dark:bg-cyan-950/40'
+    icon: <BarChart3 className="w-5 h-5 text-teal-500 dark:text-cyan-400" />,
+    color: 'text-teal-600 dark:text-cyan-400',
+    activeBorder: 'border-teal-500 dark:border-cyan-400 ring-2 ring-teal-500/60 dark:ring-cyan-400/60',
+    activeBg: 'bg-teal-50 dark:bg-slate-800'
   },
   {
     id: 'AUDITOR',
     title: 'AUDITOR',
     badge: 'Statutory Review',
     desc: 'BSA §63 compliance, Merkle evidence audit ledger, and reports.',
-    icon: <FileCheck className="w-5 h-5 text-amber-600 dark:text-amber-400" />,
-    demoEmail: 'don123@gmail.com',
-    color: 'text-amber-700 dark:text-amber-400',
-    activeBorder: 'border-amber-600 ring-2 ring-amber-500/50',
-    activeBg: 'bg-amber-50 dark:bg-amber-950/40'
+    icon: <FileCheck className="w-5 h-5 text-amber-500 dark:text-amber-400" />,
+    color: 'text-amber-600 dark:text-amber-400',
+    activeBorder: 'border-amber-500 ring-2 ring-amber-500/60',
+    activeBg: 'bg-amber-50 dark:bg-slate-800'
   }
 ];
 
@@ -82,18 +77,13 @@ export const LoginPage: React.FC = () => {
   const { setSession } = useAuthStore();
 
   const [selectedRole, setSelectedRole] = useState<UserRole>('ADMIN');
-  const [identifier, setIdentifier] = useState('yakshvachhani1108@gmail.com');
-  const [password, setPassword] = useState('123456');
+  const [identifier, setIdentifier] = useState('');
+  const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
   const handleSelectRole = (role: UserRole) => {
     setSelectedRole(role);
-    const match = ROLE_OPTIONS.find(r => r.id === role);
-    if (match) {
-      setIdentifier(match.demoEmail);
-      setPassword('123456');
-    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -101,13 +91,14 @@ export const LoginPage: React.FC = () => {
     setIsLoading(true);
     setErrorMessage('');
     
-    const finalEmail = identifier.trim() || (
-      selectedRole === 'ADMIN' ? 'yakshvachhani1108@gmail.com' :
-      selectedRole === 'INVESTIGATOR' ? 'dharmik111207@gmail.com' :
-      selectedRole === 'ANALYST' ? 'archanpatel2007@gmail.com' :
-      'don123@gmail.com'
-    );
-    const finalPassword = password || '123456';
+    const finalEmail = identifier.trim();
+    const finalPassword = password;
+
+    if (!finalEmail || !finalPassword) {
+      setErrorMessage('Please enter both Officer Email Address and Access Password.');
+      setIsLoading(false);
+      return;
+    }
 
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -335,10 +326,10 @@ export const LoginPage: React.FC = () => {
                       key={r.id}
                       type="button"
                       onClick={() => handleSelectRole(r.id)}
-                      className={`p-3.5 rounded-2xl border text-left transition-all relative cursor-pointer ${
+                      className={`p-3 sm:p-3.5 rounded-2xl border text-left transition-all relative cursor-pointer min-w-0 flex flex-col justify-between min-h-[108px] ${
                         isSelected
-                          ? `border-2 ${r.activeBorder} ${r.activeBg} shadow-md`
-                          : 'border-slate-300 dark:border-slate-800 bg-white dark:bg-slate-900/60 hover:border-slate-400 dark:hover:border-slate-700'
+                          ? `border-2 ${r.activeBorder} ${r.activeBg} shadow-lg shadow-black/20`
+                          : 'border-slate-300 dark:border-slate-700/80 bg-white dark:bg-slate-800/70 hover:border-slate-400 dark:hover:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800'
                       }`}
                     >
                       {isSelected && (
@@ -346,9 +337,19 @@ export const LoginPage: React.FC = () => {
                           <CheckCircle2 className="w-4 h-4 text-blue-600 dark:text-cyan-400" />
                         </div>
                       )}
-                      <div className="mb-2">{r.icon}</div>
-                      <div className="font-black text-sm text-slate-900 dark:text-white tracking-wide">{r.title}</div>
-                      <div className="text-[11px] font-semibold text-slate-600 dark:text-slate-300 truncate mt-0.5">{r.badge}</div>
+                      <div>
+                        <div className="mb-2">{r.icon}</div>
+                        <div className="font-black text-xs sm:text-[13px] text-slate-900 dark:text-white tracking-tight">
+                          {r.title}
+                        </div>
+                      </div>
+                      <div className={`text-[11px] font-semibold mt-1.5 leading-snug ${
+                        isSelected
+                          ? 'text-slate-900 dark:text-slate-100'
+                          : 'text-slate-600 dark:text-slate-300'
+                      }`}>
+                        {r.badge}
+                      </div>
                     </button>
                   );
                 })}
@@ -387,7 +388,7 @@ export const LoginPage: React.FC = () => {
             )}
 
             {/* Step 2: Credentials Form */}
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} autoComplete="off" className="space-y-4">
               <div>
                 <label className="block text-xs font-semibold text-[var(--text-primary)] mb-1">
                   Step 2: Officer Email Address
@@ -398,8 +399,10 @@ export const LoginPage: React.FC = () => {
                     type="email"
                     value={identifier}
                     onChange={(e) => setIdentifier(e.target.value)}
+                    autoComplete="off"
+                    required
                     className="w-full bg-[var(--bg-primary)] border border-[var(--border)] rounded-xl pl-10 pr-4 py-2.5 text-xs text-[var(--text-primary)] placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-all font-mono"
-                    placeholder="email id"
+                    placeholder="Enter officer email address"
                   />
                 </div>
               </div>
@@ -414,8 +417,10 @@ export const LoginPage: React.FC = () => {
                     type="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
+                    autoComplete="new-password"
+                    required
                     className="w-full bg-[var(--bg-primary)] border border-[var(--border)] rounded-xl pl-10 pr-4 py-2.5 text-xs text-[var(--text-primary)] placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-all font-mono"
-                    placeholder="password"
+                    placeholder="Enter access password"
                   />
                 </div>
               </div>

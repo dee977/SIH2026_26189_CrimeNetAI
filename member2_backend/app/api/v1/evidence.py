@@ -1,5 +1,5 @@
 from typing import Optional, List, Dict, Any
-from fastapi import APIRouter, Depends, Query, Path, HTTPException, UploadFile, File, Form, status
+from fastapi import APIRouter, Depends, Query, Path, HTTPException, UploadFile, File, Form, status, Response
 import hashlib
 import uuid
 import json
@@ -377,6 +377,4 @@ async def get_verification_discrepancies(
     from app.services.demo_data import get_case_discrepancies
     discrepancies = get_case_discrepancies(target_case_id)
     return ResponseEnvelope(data=discrepancies)
-
-
 
