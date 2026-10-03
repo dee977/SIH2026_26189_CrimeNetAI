@@ -32,7 +32,17 @@ export async function apiRequest<T>(
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 20000);
 
-    let response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    const baseClean = API_BASE_URL.replace(/\/+$/, '');
+    let normalizedEndpoint = endpoint;
+    if (normalizedEndpoint.startsWith('/api/v1') && baseClean.endsWith('/api/v1')) {
+      normalizedEndpoint = normalizedEndpoint.substring('/api/v1'.length);
+    }
+    if (!normalizedEndpoint.startsWith('/') && !normalizedEndpoint.startsWith('?')) {
+      normalizedEndpoint = '/' + normalizedEndpoint;
+    }
+    const targetUrl = `${baseClean}${normalizedEndpoint}`;
+
+    let response = await fetch(targetUrl, {
       ...options,
       headers,
       signal: controller.signal

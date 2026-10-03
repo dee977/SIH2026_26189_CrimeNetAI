@@ -451,6 +451,35 @@ def _fetch_neo4j_timeline(case_id: str, entity_id: str = None, event_type: str =
     return events
 
 
+def _fetch_db_timeline(db: Session, case_id: str, entity_id: str = None, event_type: str = None, limit: int = 200) -> List[TimelineEvent]:
+    from app.models import TimelineEventModel
+    query = db.query(TimelineEventModel).filter(TimelineEventModel.case_id == case_id)
+    if entity_id:
+        query = query.filter((TimelineEventModel.primary_entity_id == entity_id) | (TimelineEventModel.secondary_entity_id == entity_id))
+    if event_type:
+        query = query.filter(TimelineEventModel.event_type == event_type)
+    rows = query.order_by(TimelineEventModel.timestamp.desc()).limit(limit).all()
+    events = []
+    for r in rows:
+        events.append(TimelineEvent(
+            eventId=r.event_id,
+            caseId=r.case_id,
+            timestamp=r.timestamp,
+            eventType=r.event_type,
+            title=r.title,
+            description=r.description or "",
+            primaryEntityId=r.primary_entity_id,
+            primaryEntityName=r.primary_entity_name,
+            secondaryEntityId=r.secondary_entity_id,
+            secondaryEntityName=r.secondary_entity_name,
+            location=r.location or "Operational Perimeter",
+            sourceDocument=r.source_document or f"{case_id}_evidence.pdf",
+            evidenceId=r.evidence_id,
+            metadata=r.metadata_json or {}
+        ))
+    return events
+
+
 @router.get('', response_model=PaginatedResponse[TimelineEvent], summary='Query Investigation Timeline')
 async def get_timeline(
     case_id: Optional[str] = Query(None, description="Case ID"),
@@ -469,8 +498,17 @@ async def get_timeline(
         from fastapi import HTTPException
         raise HTTPException(status_code=400, detail='caseId is required')
     assert_case_access(db, current_user, target_case)
-    loop = asyncio.get_event_loop()
-    real_events = await loop.run_in_executor(None, _fetch_neo4j_timeline, target_case, entityId, eventType, pageSize * 2)
+
+    # 1. First fetch live database events
+    db_events = _fetch_db_timeline(db, target_case, entityId, eventType, pageSize * 4)
+
+    # 2. If no events in DB or want fallback, fetch neo4j/predefined
+    if db_events:
+        real_events = db_events
+    else:
+        loop = asyncio.get_event_loop()
+        real_events = await loop.run_in_executor(None, _fetch_neo4j_timeline, target_case, entityId, eventType, pageSize * 2)
+
     start = (page - 1) * pageSize
     paginated = real_events[start:start + pageSize]
     total = len(real_events)
@@ -492,8 +530,11 @@ async def get_timeline_playback(
         from fastapi import HTTPException
         raise HTTPException(status_code=400, detail='caseId is required')
     assert_case_access(db, current_user, target_case)
-    loop = asyncio.get_event_loop()
-    events = await loop.run_in_executor(None, _fetch_neo4j_timeline, target_case, None, None, 40)
+
+    events = _fetch_db_timeline(db, target_case, None, None, 100)
+    if not events:
+        loop = asyncio.get_event_loop()
+        events = await loop.run_in_executor(None, _fetch_neo4j_timeline, target_case, None, None, 40)
     
     sorted_events = sorted(events, key=lambda x: x.timestamp)
     frames = []

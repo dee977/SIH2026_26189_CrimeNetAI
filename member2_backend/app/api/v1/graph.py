@@ -18,7 +18,7 @@ router = APIRouter(prefix='/graph', tags=['Graph Intelligence Orchestration'])
 @router.get('/case/{case_id}', summary='Get Central Network Graph by Case')
 async def get_graph_view(
     case_id: Optional[str] = None,
-    limit: int = Query(60, ge=10, le=500),
+    limit: int = Query(500, ge=10, le=2000),
     m3_client: M3GraphDataClient = Depends(get_m3_client),
     current_user: UserProfile = Depends(require_permission('graph:read')),
     db = Depends(get_db)
@@ -41,6 +41,7 @@ async def get_graph_view(
     })
 
 @router.get('/hidden-path', summary='Find Hidden Shortest Path between Entities')
+@router.get('/shortest-path', summary='Find Shortest Path between Entities')
 async def get_hidden_path(
     source: str = Query(...),
     target: str = Query(...),

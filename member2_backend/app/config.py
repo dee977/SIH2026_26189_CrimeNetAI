@@ -63,11 +63,13 @@ class Settings(BaseSettings):
     # Ingestion & File Storage Configuration
     UPLOAD_DIR: str = './uploads'
     MAX_UPLOAD_SIZE_BYTES: int = 50 * 1024 * 1024  # 50 MB
-    ALLOWED_EXTENSIONS: List[str] = ['.csv', '.pdf', '.png', '.jpg', '.jpeg', '.tiff']
+    ALLOWED_EXTENSIONS: List[str] = ['.csv', '.xlsx', '.xls', '.pdf', '.json', '.png', '.jpg', '.jpeg', '.tiff']
     ALLOWED_MIME_TYPES: List[str] = [
         'text/csv',
         'text/plain',
+        'application/json',
         'application/vnd.ms-excel',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         'application/pdf',
         'image/png',
         'image/jpeg',

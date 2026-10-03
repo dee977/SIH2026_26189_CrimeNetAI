@@ -1,4 +1,4 @@
-﻿from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional
 import httpx
 from app.config import settings
 from app.schemas.ai import AIQuestionResponse, SupportingEntity, SupportingEvidence, SupportingGraphPath
@@ -81,7 +81,7 @@ class M4AiNlpClient:
             if evidence:
                 ans_lines.append("**Key Evidence:**")
                 for ev in evidence:
-                    ans_lines.append(f"- {ev.title} (Hash: {ev.sha256_hash[:16] if ev.sha256_hash else 'verified'}...)")
+                    ans_lines.append(f"- {ev.canonical_name} (Hash: {ev.sha256_hash[:16] if ev.sha256_hash else 'verified'}...)")
                 ans_lines.append("")
                 
             if entities:

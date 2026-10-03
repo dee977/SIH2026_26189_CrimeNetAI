@@ -43,6 +43,21 @@ def _safe_vehicle(r: dict) -> VehicleEntity:
 def _safe_location(r: dict) -> LocationEntity:
     c = dict(r)
     c.setdefault('locationName', c.get('locationName') or c.get('location') or c.get('canonicalName', 'Unknown Location'))
+    props = c.get('properties') or {}
+    if c.get('latitude') is None:
+        c['latitude'] = props.get('latitude') or props.get('lat')
+    if c.get('longitude') is None:
+        c['longitude'] = props.get('longitude') or props.get('lng')
+    if isinstance(c.get('latitude'), str):
+        try:
+            c['latitude'] = float(c['latitude'])
+        except (ValueError, TypeError):
+            c['latitude'] = None
+    if isinstance(c.get('longitude'), str):
+        try:
+            c['longitude'] = float(c['longitude'])
+        except (ValueError, TypeError):
+            c['longitude'] = None
     return LocationEntity(**c)
 
 def _safe_org(r: dict) -> OrganizationEntity:
@@ -102,7 +117,7 @@ async def get_all_entities(
     case_id: Optional[str] = Query(None),
     caseId: Optional[str] = Query(None),
     page: int = Query(1, ge=1),
-    pageSize: int = Query(50, ge=1, le=500),
+    pageSize: int = Query(500, ge=1, le=2000),
     m3_client: M3GraphDataClient = Depends(get_m3_client)
 ):
     target_case = case_id or caseId or None

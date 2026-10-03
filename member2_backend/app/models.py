@@ -23,6 +23,8 @@ class CaseModel(Base):
     closed_at = Column(DateTime(timezone=True), nullable=True)
     archived_at = Column(DateTime(timezone=True), nullable=True)
     closure_reason = Column(Text, nullable=True)
+    assigned_analyst_id = Column(String, nullable=True)
+    assigned_analyst_name = Column(String, nullable=True)
 
 from sqlalchemy import Boolean
 class UserProfileModel(Base):
@@ -128,6 +130,38 @@ class EvidenceModel(Base):
     sha256_hash = Column(String, nullable=False, index=True)
     bsa_certificate_id = Column(String, nullable=True)
     confidence = Column(String, default='1.0')
+    metadata_json = Column(JSON, default=dict, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    @property
+    def file_name(self):
+        return self.canonical_name
+
+    @file_name.setter
+    def file_name(self, value):
+        self.canonical_name = value
+
+    @property
+    def title(self):
+        return self.canonical_name
+
+class TimelineEventModel(Base):
+    __tablename__ = 'timeline_events'
+    __table_args__ = {'extend_existing': True}
+    id = Column(Integer, primary_key=True, index=True)
+    event_id = Column(String, unique=True, nullable=False, index=True)
+    case_id = Column(String, ForeignKey('cases.case_id'), nullable=False, index=True)
+    timestamp = Column(String, nullable=False, index=True)
+    event_type = Column(String, nullable=False, index=True)
+    title = Column(String, nullable=False)
+    description = Column(Text, nullable=True)
+    primary_entity_id = Column(String, nullable=False, index=True)
+    primary_entity_name = Column(String, nullable=False)
+    secondary_entity_id = Column(String, nullable=True, index=True)
+    secondary_entity_name = Column(String, nullable=True)
+    location = Column(String, nullable=True)
+    source_document = Column(String, nullable=True)
+    evidence_id = Column(String, nullable=True)
     metadata_json = Column(JSON, default=dict, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 

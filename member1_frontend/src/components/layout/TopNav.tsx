@@ -71,18 +71,18 @@ export const TopNav: React.FC = () => {
         </form>
 
         {/* Active Case Selector */}
-        <div className="hidden xl:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white border border-[var(--border)] text-xs text-[var(--text-primary)] shadow-sm">
-          <Briefcase className="w-3.5 h-3.5 text-[var(--primary)]" />
-          <span className="text-[11px] text-[var(--text-secondary)]">Case:</span>
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white border border-[var(--border)] text-xs text-[var(--text-primary)] shadow-sm shrink-0">
+          <Briefcase className="w-3.5 h-3.5 text-[var(--primary)] shrink-0" />
+          <span className="hidden sm:inline text-[11px] text-[var(--text-secondary)]">Case:</span>
           <select
             value={selectedCaseId || ''}
             onChange={(e) => selectCase(e.target.value)}
-            className="bg-transparent text-xs font-semibold text-[var(--primary)] focus:outline-none cursor-pointer"
+            className="bg-transparent text-xs font-semibold text-[var(--primary)] focus:outline-none cursor-pointer max-w-[140px] sm:max-w-[220px] md:max-w-[280px] truncate"
           >
             <option value="" disabled className="bg-white text-[var(--text-secondary)]">Select Active Case...</option>
             {cases.map((c) => (
               <option key={c.caseId} value={c.caseId} className="bg-white text-[var(--text-primary)]">
-                {c.caseNumber} ({c.title})
+                {c.caseNumber} - {c.title}
               </option>
             ))}
           </select>

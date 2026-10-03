@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { apiClient } from '../services/apiClient';
+import { useNavigationStore } from './navigationStore';
 
 export interface CaseItem {
   caseId: string;
@@ -120,6 +121,13 @@ export const useCaseStore = create<CaseState>((set, get) => ({
           updatedAt: c.updatedAt || '',
         }));
         set({ cases: mapped, isLoading: false, lastFetchedAt: now, fetchPromise: null });
+        if (mapped.length > 0) {
+          const currentNavCase = useNavigationStore.getState().selectedCaseId;
+          const caseIds = mapped.map(m => m.caseId);
+          if (!currentNavCase || !caseIds.includes(currentNavCase)) {
+            useNavigationStore.getState().selectCase(mapped[0].caseId);
+          }
+        }
       } else {
         set({ isLoading: false, error: res.error || 'Failed to load cases', fetchPromise: null });
       }

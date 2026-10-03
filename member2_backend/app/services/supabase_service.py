@@ -1,6 +1,11 @@
 import os
 from typing import Optional
-from supabase import create_client, Client
+try:
+    from supabase import create_client, Client
+except ImportError:
+    create_client = None
+    Client = None
+
 from app.config import settings
 import logging
 
@@ -11,14 +16,14 @@ class SupabaseStorageService:
         self.supabase_url = settings.SUPABASE_URL or os.environ.get("SUPABASE_URL")
         self.supabase_key = settings.SUPABASE_SERVICE_ROLE_KEY or settings.SUPABASE_KEY or os.environ.get("SUPABASE_SERVICE_ROLE_KEY") or os.environ.get("SUPABASE_KEY")
         
-        self.client: Optional[Client] = None
-        if self.supabase_url and self.supabase_key:
+        self.client = None
+        if create_client and self.supabase_url and self.supabase_key:
             try:
                 self.client = create_client(self.supabase_url, self.supabase_key)
             except Exception as e:
                 logger.error(f"Failed to initialize Supabase client: {e}")
         else:
-            logger.warning("Supabase credentials not found. Supabase storage will be disabled.")
+            logger.warning("Supabase credentials not found or supabase package not installed. Supabase storage will be disabled.")
             
         self.bucket_name = "case-documents"
 

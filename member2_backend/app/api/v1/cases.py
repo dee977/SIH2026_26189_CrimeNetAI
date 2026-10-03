@@ -551,6 +551,36 @@ async def create_case_note(
         'createdAt': note.created_at.isoformat() if note.created_at else None
     })
 
+@router.post('/{case_id}/import', response_model=ResponseEnvelope[Dict[str, Any]], status_code=status.HTTP_202_ACCEPTED, summary='Import Dataset or File Directly into Case')
+async def import_into_case(
+    case_id: str,
+    file: UploadFile = File(...),
+    current_user: UserProfile = Depends(require_permission('ingest:upload')),
+    db = Depends(get_db)
+):
+    assert_case_access(db, current_user, case_id)
+    from app.services.ingestion_service import get_ingestion_service
+    ingest_svc = get_ingestion_service()
+    content = await file.read()
+    job_status = await ingest_svc.process_file_upload(
+        file_bytes=content,
+        filename=file.filename,
+        case_id=case_id,
+        uploader=current_user.fullName,
+        content_type=file.content_type
+    )
+    return ResponseEnvelope(data={
+        'jobId': job_status.jobId,
+        'caseId': case_id,
+        'fileName': file.filename,
+        'status': job_status.status,
+        'recordsProcessed': job_status.recordsProcessed,
+        'entitiesExtracted': job_status.entitiesExtracted,
+        'relationshipsExtracted': job_status.relationshipsExtracted,
+        'evidenceId': job_status.evidenceId,
+        'sha256Hash': job_status.sha256Hash
+    })
+
 
 
 

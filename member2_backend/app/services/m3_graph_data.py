@@ -108,9 +108,15 @@ class M3GraphDataClient:
         
         self.driver = None
         try:
-            d = GraphDatabase.driver(uri, auth=(user, pwd), connection_timeout=0.2, max_connection_lifetime=10)
-            d.verify_connectivity()
-            self.driver = d
+            import socket
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(0.2)
+            check_port = sock.connect_ex(('127.0.0.1', 7687))
+            sock.close()
+            if check_port == 0:
+                d = GraphDatabase.driver(uri, auth=(user, pwd), connection_timeout=0.2, max_connection_lifetime=10)
+                d.verify_connectivity()
+                self.driver = d
         except Exception:
             self.driver = None
 
@@ -185,17 +191,27 @@ class M3GraphDataClient:
             db = SessionLocal()
             q = db.query(EntityModel).filter(EntityModel.entity_id == node_id)
             if case_id:
-                q = q.filter((EntityModel.case_id == case_id) | (EntityModel.case_id == None))
+                ent = q.filter(EntityModel.case_id == case_id).first()
+                if not ent:
+                    ent = q.first()
+            else:
+                ent = q.first()
             
-            ent = q.first()
             if ent:
-                d = dict(ent.properties or {})
+                props = dict(ent.properties or {})
+                d = dict(props)
                 d.setdefault('id', ent.entity_id)
                 d.setdefault('name', ent.canonical_name)
                 d.setdefault('canonicalName', ent.canonical_name)
+                d.setdefault('label', ent.canonical_name)
                 d.setdefault('entityType', ent.entity_type)
+                d.setdefault('type', ent.entity_type)
                 d.setdefault('caseId', ent.case_id)
                 d.setdefault('confidence', float(ent.confidence or 0.95))
+                if 'latitude' in props and props['latitude'] is not None:
+                    d['latitude'] = props['latitude']
+                if 'longitude' in props and props['longitude'] is not None:
+                    d['longitude'] = props['longitude']
                 db.close()
                 return d
             db.close()
@@ -252,21 +268,35 @@ class M3GraphDataClient:
             if entity_type and entity_type.upper() != 'ALL':
                 q = q.filter(EntityModel.entity_type.ilike(entity_type))
             if case_id:
-                q = q.filter((EntityModel.case_id == case_id) | (EntityModel.case_id == None))
+                case_q = q.filter(EntityModel.case_id == case_id)
+                db_ents = case_q.limit(limit).all()
+                if not db_ents:
+                    # Fallback to general or demo if no case-specific entities found
+                    db_ents = q.filter(EntityModel.case_id.is_(None)).limit(limit).all()
+            else:
+                db_ents = q.limit(limit).all()
+
             if query:
                 q_str = f"%{query}%"
-                q = q.filter(EntityModel.canonical_name.ilike(q_str) | EntityModel.entity_id.ilike(q_str))
-            db_ents = q.limit(limit).all()
+                db_ents = [e for e in db_ents if q_str.lower().strip('%') in (e.canonical_name or '').lower() or q_str.lower().strip('%') in (e.entity_id or '').lower()]
+
             if db_ents:
                 res = []
                 for ent in db_ents:
-                    d = dict(ent.properties or {})
+                    props = dict(ent.properties or {})
+                    d = dict(props)
                     d.setdefault('id', ent.entity_id)
                     d.setdefault('name', ent.canonical_name)
                     d.setdefault('canonicalName', ent.canonical_name)
+                    d.setdefault('label', ent.canonical_name)
                     d.setdefault('entityType', ent.entity_type)
+                    d.setdefault('type', ent.entity_type)
                     d.setdefault('caseId', ent.case_id)
                     d.setdefault('confidence', float(ent.confidence or 0.95))
+                    if 'latitude' in props and props['latitude'] is not None:
+                        d['latitude'] = props['latitude']
+                    if 'longitude' in props and props['longitude'] is not None:
+                        d['longitude'] = props['longitude']
                     res.append(d)
                 db.close()
                 return res
@@ -494,8 +524,12 @@ class M3GraphDataClient:
             db = SessionLocal()
             query = db.query(EntityModel)
             if case_id:
-                query = query.filter((EntityModel.case_id == case_id) | (EntityModel.case_id == None))
-            db_entities = query.limit(limit).all()
+                case_query = query.filter(EntityModel.case_id == case_id)
+                db_entities = case_query.limit(limit).all()
+                if not db_entities:
+                    db_entities = query.filter(EntityModel.case_id.is_(None)).limit(limit).all()
+            else:
+                db_entities = query.limit(limit).all()
 
             if db_entities:
                 nodes = []
@@ -522,8 +556,12 @@ class M3GraphDataClient:
                 # Fetch relationships
                 rel_query = db.query(RelationshipModel)
                 if case_id:
-                    rel_query = rel_query.filter((RelationshipModel.case_id == case_id) | (RelationshipModel.case_id == None))
-                db_rels = rel_query.limit(limit).all()
+                    case_rel_query = rel_query.filter(RelationshipModel.case_id == case_id)
+                    db_rels = case_rel_query.limit(limit).all()
+                    if not db_rels:
+                        db_rels = rel_query.filter(RelationshipModel.case_id.is_(None)).limit(limit).all()
+                else:
+                    db_rels = rel_query.limit(limit).all()
                 edges = []
                 for r in db_rels:
                     if r.source_id in node_ids and r.target_id in node_ids:

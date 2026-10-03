@@ -27,7 +27,7 @@ import {
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip } from 'recharts';
 
 export const InvestigatorDashboard: React.FC = () => {
-  const { setView, selectEntity, selectCase, selectEvidence } = useNavigationStore();
+  const { setView, selectEntity, selectCase, selectEvidence, selectedCaseId } = useNavigationStore();
   const { user } = useAuthStore();
   const [stats, setStats] = useState<any>(null);
   
@@ -37,8 +37,10 @@ export const InvestigatorDashboard: React.FC = () => {
   const [evidence, setEvidence] = useState<any[]>([]);
 
   useEffect(() => {
+    const caseParam = selectedCaseId ? `?case_id=${encodeURIComponent(selectedCaseId)}` : '';
+
     // 1. Fetch real stats
-    apiRequest<any>('/dashboard/stats').then(res => {
+    apiRequest<any>(`/dashboard/stats${caseParam}`).then(res => {
       if (res.success && res.data) {
         setStats(res.data);
       }
@@ -57,7 +59,7 @@ export const InvestigatorDashboard: React.FC = () => {
             leadInvestigator: c.assignedInvestigator || 'Lead Investigator',
             priority: c.priority ? (c.priority.charAt(0).toUpperCase() + c.priority.slice(1)) : 'High',
             status: c.status ? (c.status.charAt(0).toUpperCase() + c.status.slice(1)) : 'Active',
-            lastUpdated: c.updatedAt ? c.updatedAt.slice(0, 10) : '2025-03-26',
+            lastUpdated: c.updatedAt ? c.updatedAt.slice(0, 10) : '2026-02-28',
             entityCount: c.entityCount || 0,
             evidenceCount: c.evidenceCount || 0,
             alertCount: c.alertCount || 0
@@ -67,43 +69,40 @@ export const InvestigatorDashboard: React.FC = () => {
     }).catch(() => {});
 
     // 3. Fetch real alerts
-    apiRequest<any>('/alerts').then(res => {
+    apiRequest<any>(`/alerts${caseParam}`).then(res => {
       if (res.success && res.data) {
         const items = Array.isArray(res.data) ? res.data : (res.data.items || []);
-        if (items.length > 0) {
-          setAlerts(items.map((a: any) => ({
-            id: a.alertId || a.id,
-            category: a.alertType || a.category || 'SYSTEM_ALERT',
-            severity: a.severity || 'HIGH',
-            title: a.title,
-            explanation: a.description || a.explanation || '',
-            timestamp: a.triggeredAt || a.timestamp || new Date().toISOString()
-          })));
-        }
+        setAlerts(items.map((a: any) => ({
+          id: a.alertId || a.id,
+          category: a.alertType || a.category || 'SYSTEM_ALERT',
+          severity: a.severity || 'HIGH',
+          title: a.title,
+          explanation: a.description || a.explanation || '',
+          timestamp: a.triggeredAt || a.timestamp || new Date().toISOString()
+        })));
       }
     }).catch(() => {});
 
     // 4. Fetch real watchlist
-    apiRequest<any>('/watchlist').then(res => {
+    apiRequest<any>(`/watchlist${caseParam}`).then(res => {
       if (res.success && res.data) {
         const items = Array.isArray(res.data) ? res.data : (res.data.items || []);
-        if (items.length > 0) {
-          setWatchlist(items.map((w: any) => ({
-            id: w.watchId || w.id,
-            targetName: w.canonicalName || w.identifierValue,
-            value: w.identifierValue,
-            entryType: w.entityType,
-            matchCount: w.matchCount || 0
-          })));
-        }
+        setWatchlist(items.map((w: any) => ({
+          id: w.watchId || w.id,
+          targetName: w.canonicalName || w.identifierValue,
+          value: w.identifierValue,
+          entryType: w.entityType,
+          matchCount: w.matchCount || 0
+        })));
       }
     }).catch(() => {});
 
     // 5. Fetch real evidence
-    apiRequest<any>('/evidence').then(res => {
-      if (res.success && res.data) {
-        const items = Array.isArray(res.data) ? res.data : (res.data.items || []);
-        if (items.length > 0) {
+    const evTarget = selectedCaseId || (activeCases[0]?.id);
+    if (evTarget) {
+      apiRequest<any>(`/evidence?case_id=${encodeURIComponent(evTarget)}`).then(res => {
+        if (res.success && res.data) {
+          const items = Array.isArray(res.data) ? res.data : (res.data.items || []);
           setEvidence(items.map((e: any) => ({
             id: e.evidenceId || e.id,
             title: e.canonicalName || e.title || 'Evidence Item',
@@ -111,9 +110,9 @@ export const InvestigatorDashboard: React.FC = () => {
             currentHashSHA256: (e.sha256Hash || e.sha256_hash || '').slice(0, 24) + '...'
           })));
         }
-      }
-    }).catch(() => {});
-  }, []);
+      }).catch(() => {});
+    }
+  }, [selectedCaseId]);
 
   // Metrics computation from real backend stats or fallback data
   const counts = {

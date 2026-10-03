@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigationStore } from '../../store/navigationStore';
 import { useNotificationStore } from '../../store/notificationStore';
+import { useCaseStore } from '../../store/caseStore';
 import {
   UploadCloud,
   FileSpreadsheet,
@@ -101,12 +102,13 @@ export const ImportCenterView: React.FC = () => {
   const { selectedCaseId, selectCase, setView } = useNavigationStore();
   const { addToast } = useNotificationStore();
 
-  const [activeCase, setActiveCase] = useState<string>(selectedCaseId || 'CASE-2025-M3-DATASET');
+  const [activeCase, setActiveCase] = useState<string>(selectedCaseId || 'CASE-2026-HWL-001');
   useEffect(() => {
     if (selectedCaseId) {
       setActiveCase(selectedCaseId);
     } else {
-      selectCase('CASE-2025-M3-DATASET');
+      const firstCase = useCaseStore.getState().cases[0]?.caseId || 'CASE-2026-HWL-001';
+      selectCase(firstCase);
     }
   }, [selectedCaseId]);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -174,9 +176,10 @@ export const ImportCenterView: React.FC = () => {
             addToast({
               type: 'success',
               title: 'Ingestion Completed Successfully',
-              message: `Processed ${job.recordsProcessed || job.entitiesExtracted} items from ${job.fileName}. Graph and indices updated.`
+              message: `Extracted ${job.entitiesExtracted || 0} nodes and ${job.relationshipsExtracted || 0} links from ${job.fileName}. Graph, timeline, GIS, and watchlist updated.`
             });
             fetchRecentJobs();
+            useCaseStore.getState().fetchCases();
           } else if (normalizedStatus === 'FAILED') {
             clearInterval(pollTimerRef.current);
             setIsUploading(false);
@@ -220,12 +223,12 @@ export const ImportCenterView: React.FC = () => {
 
   const handleFileSelected = (file: File) => {
     const ext = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
-    const allowed = ['.csv', '.pdf', '.png', '.jpg', '.jpeg', '.tiff'];
+    const allowed = ['.csv', '.xlsx', '.xls', '.json', '.pdf', '.png', '.jpg', '.jpeg', '.tiff'];
     if (!allowed.includes(ext)) {
       addToast({
         type: 'error',
         title: 'Unsupported File Format',
-        message: `File format '${ext}' is not supported. Please select a CSV (.csv), PDF (.pdf), or Image file.`
+        message: `File format '${ext}' is not supported. Please select a CSV (.csv), Excel (.xlsx, .xls), JSON (.json), PDF (.pdf), or Image file.`
       });
       return;
     }
@@ -242,8 +245,8 @@ export const ImportCenterView: React.FC = () => {
     setSelectedFile(file);
     setCsvValidation(null);
 
-    // If CSV, automatically run pre-upload validation
-    if (ext === '.csv') {
+    // If CSV or Excel, automatically run pre-upload validation
+    if (['.csv', '.xlsx', '.xls'].includes(ext)) {
       validateCsv(file);
     }
   };
@@ -275,14 +278,14 @@ export const ImportCenterView: React.FC = () => {
   const handleUpload = async () => {
     if (!selectedFile) return;
 
-    const targetCase = (activeCase && activeCase.trim()) || (selectedCaseId && selectedCaseId.trim()) || 'CASE-2025-M3-DATASET';
+    const targetCase = (activeCase && activeCase.trim()) || (selectedCaseId && selectedCaseId.trim()) || useCaseStore.getState().cases[0]?.caseId || 'CASE-2026-HWL-001';
 
     setIsUploading(true);
     setCurrentJob({
       jobId: 'INITIALIZING...',
       fileId: '',
       fileName: selectedFile.name,
-      docType: selectedFile.name.match(/\.(png|jpg|jpeg|tiff|webp)$/i) ? 'IMAGE_EVIDENCE' : (selectedFile.name.endsWith('.csv') ? 'CSV' : 'PDF'),
+      docType: selectedFile.name.match(/\.(png|jpg|jpeg|tiff|webp)$/i) ? 'IMAGE_EVIDENCE' : (selectedFile.name.match(/\.(csv|xlsx|xls)$/i) ? 'CSV' : (selectedFile.name.endsWith('.json') ? 'JSON' : 'PDF')),
       caseId: targetCase,
       status: 'VALIDATING',
       stage: 'VALIDATING',
@@ -315,6 +318,7 @@ export const ImportCenterView: React.FC = () => {
         } else {
           setIsUploading(false);
           fetchRecentJobs();
+          useCaseStore.getState().fetchCases();
           addToast({
             type: 'success',
             title: 'Ingestion Completed',
@@ -386,7 +390,7 @@ export const ImportCenterView: React.FC = () => {
               type="file"
               ref={fileInputRef}
               onChange={handleFileChange}
-              accept=".csv,.pdf,.png,.jpg,.jpeg,.tiff"
+              accept=".csv,.xlsx,.xls,.json,.pdf,.png,.jpg,.jpeg,.tiff"
               className="hidden"
             />
             <div className="w-16 h-16 rounded-full bg-blue-50 flex items-center justify-center text-[var(--primary)] mb-4">
@@ -396,7 +400,7 @@ export const ImportCenterView: React.FC = () => {
               Select or Drop Evidence File Here
             </h3>
             <p className="text-sm text-[var(--text-secondary)] mb-6 max-w-md">
-              Supports <span className="font-semibold text-slate-700">CSV</span>, <span className="font-semibold text-slate-700">PDF</span>, and <span className="font-semibold text-slate-700">Images</span> (PNG, JPG, TIFF).
+              Supports <span className="font-semibold text-slate-700">CSV</span>, <span className="font-semibold text-slate-700">Excel (XLSX/XLS)</span>, <span className="font-semibold text-slate-700">JSON</span>, <span className="font-semibold text-slate-700">PDF</span>, and <span className="font-semibold text-slate-700">Images</span> (PNG, JPG, TIFF).
             </p>
             <div className="flex items-center gap-2 text-xs font-medium text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-full border border-emerald-200">
               <ShieldCheck className="w-4 h-4" />

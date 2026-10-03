@@ -222,11 +222,17 @@ async def list_watchlist(
 
     from app.models import EntityModel, CaseMembershipModel
     watchlist_items = rows.all()
+    if not watchlist_items:
+        return PaginatedResponse(
+            items=[],
+            pagination=PaginationMeta(page=page, pageSize=pageSize, totalRecords=0, totalPages=1)
+        )
+
     search_names = list(set([w.identifier_value for w in watchlist_items] + [w.canonical_name for w in watchlist_items]))
 
     entity_cases = db.query(EntityModel.canonical_name, EntityModel.case_id).filter(
         EntityModel.canonical_name.in_(search_names)
-    ).distinct().all()
+    ).distinct().all() if search_names else []
 
     entity_case_map = {}
     for name, cid in entity_cases:
