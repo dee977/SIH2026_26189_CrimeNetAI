@@ -34,7 +34,7 @@ export const ProtectedRoute: React.FC = () => {
   }
 
   // Block unapproved users from accessing the app routes
-  if (user?.status === 'PENDING') {
+  if (user?.status === 'PENDING' || user?.status === 'PENDING_APPROVAL') {
     return <PendingApprovalView />;
   }
 

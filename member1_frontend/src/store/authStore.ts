@@ -58,7 +58,7 @@ try {
   const storedUser = typeof localStorage !== 'undefined' ? localStorage.getItem('crimenet_user_profile') : null;
   if (storedUser) {
     const parsed = JSON.parse(storedUser);
-    if (parsed && parsed.status !== 'PENDING') {
+    if (parsed && parsed.status !== 'PENDING' && parsed.status !== 'PENDING_APPROVAL') {
       initialUser = parsed;
     } else {
       localStorage.removeItem('crimenet_auth_token');
@@ -71,12 +71,12 @@ try {
 export const useAuthStore = create<AuthState>((set) => ({
   user: initialUser,
   token: initialUser ? initialToken : null,
-  isAuthenticated: !!initialToken && !!initialUser && initialUser.status !== 'PENDING',
+  isAuthenticated: !!initialToken && !!initialUser && initialUser.status !== 'PENDING' && initialUser.status !== 'PENDING_APPROVAL',
   isSessionExpired: false,
   pendingOfficers: [],
 
   setSession: (token, user) => {
-    if (token && user && user.status !== 'PENDING') {
+    if (token && user && user.status !== 'PENDING' && user.status !== 'PENDING_APPROVAL') {
       try { 
         localStorage.setItem('crimenet_auth_token', token); 
         localStorage.setItem('crimenet_user_profile', JSON.stringify(user));

@@ -5,7 +5,7 @@ export type UserRole =
   | 'AUDITOR'
   | 'RESTRICTED';
 
-export type UserStatus = 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED' | 'SUSPENDED';
+export type UserStatus = 'PENDING' | 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED' | 'SUSPENDED';
 
 export interface UserPermission {
   id: string;
