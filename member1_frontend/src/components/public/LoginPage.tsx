@@ -35,40 +35,40 @@ const ROLE_OPTIONS: RoleOption[] = [
     title: 'ADMIN',
     badge: 'Supervisory Control',
     desc: 'Full administrative access, user RBAC promotion, and audit authority.',
-    icon: <ShieldCheck className="w-5 h-5 text-rose-500 dark:text-rose-400" />,
-    color: 'text-rose-600 dark:text-rose-400',
+    icon: <ShieldCheck className="w-5 h-5 text-rose-500" />,
+    color: 'text-rose-600',
     activeBorder: 'border-rose-500 ring-2 ring-rose-500/60',
-    activeBg: 'bg-rose-50 dark:bg-slate-800'
+    activeBg: 'bg-rose-50'
   },
   {
     id: 'INVESTIGATOR',
     title: 'INVESTIGATOR',
     badge: 'Case Operations',
     desc: 'Case file creation, evidence ingestion, and knowledge graph querying.',
-    icon: <Briefcase className="w-5 h-5 text-blue-500 dark:text-blue-400" />,
-    color: 'text-blue-600 dark:text-blue-400',
+    icon: <Briefcase className="w-5 h-5 text-blue-500" />,
+    color: 'text-blue-600',
     activeBorder: 'border-blue-500 ring-2 ring-blue-500/60',
-    activeBg: 'bg-blue-50 dark:bg-slate-800'
+    activeBg: 'bg-blue-50'
   },
   {
     id: 'ANALYST',
     title: 'ANALYST',
     badge: 'Intelligence & ML',
     desc: 'Louvain community analysis, multi-hop discovery, and report generation.',
-    icon: <BarChart3 className="w-5 h-5 text-teal-500 dark:text-cyan-400" />,
-    color: 'text-teal-600 dark:text-cyan-400',
-    activeBorder: 'border-teal-500 dark:border-cyan-400 ring-2 ring-teal-500/60 dark:ring-cyan-400/60',
-    activeBg: 'bg-teal-50 dark:bg-slate-800'
+    icon: <BarChart3 className="w-5 h-5 text-teal-500" />,
+    color: 'text-teal-600',
+    activeBorder: 'border-teal-500 ring-2 ring-teal-500/60',
+    activeBg: 'bg-teal-50'
   },
   {
     id: 'AUDITOR',
     title: 'AUDITOR',
     badge: 'Statutory Review',
     desc: 'BSA §63 compliance, Merkle evidence audit ledger, and reports.',
-    icon: <FileCheck className="w-5 h-5 text-amber-500 dark:text-amber-400" />,
-    color: 'text-amber-600 dark:text-amber-400',
+    icon: <FileCheck className="w-5 h-5 text-amber-500" />,
+    color: 'text-amber-600',
     activeBorder: 'border-amber-500 ring-2 ring-amber-500/60',
-    activeBg: 'bg-amber-50 dark:bg-slate-800'
+    activeBg: 'bg-amber-50'
   }
 ];
 
@@ -279,7 +279,7 @@ export const LoginPage: React.FC = () => {
                   {r.badge}
                 </span>
               </div>
-              <p className="text-[11px] text-slate-300 mt-1 leading-snug">{r.desc}</p>
+              <p className={`text-[11px] mt-1 leading-snug ${selectedRole === r.id ? 'text-slate-700 font-medium' : 'text-slate-300'}`}>{r.desc}</p>
             </div>
           ))}
         </div>
@@ -305,7 +305,7 @@ export const LoginPage: React.FC = () => {
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-bold text-[var(--text-primary)]">Sign In with Statutory Role</h2>
                 <span className="text-[10px] font-mono px-2.5 py-1 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20 font-semibold">
-                  M6 RBAC Clearance
+                   RBAC Clearance
                 </span>
               </div>
               <p className="text-xs text-[var(--text-secondary)] mt-1">
@@ -329,24 +329,24 @@ export const LoginPage: React.FC = () => {
                       className={`p-3 sm:p-3.5 rounded-2xl border text-left transition-all relative cursor-pointer min-w-0 flex flex-col justify-between min-h-[108px] ${
                         isSelected
                           ? `border-2 ${r.activeBorder} ${r.activeBg} shadow-lg shadow-black/20`
-                          : 'border-slate-300 dark:border-slate-700/80 bg-white dark:bg-slate-800/70 hover:border-slate-400 dark:hover:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800'
+                          : 'border-slate-300 bg-white hover:border-slate-400 hover:bg-slate-50'
                       }`}
                     >
                       {isSelected && (
                         <div className="absolute top-2.5 right-2.5">
-                          <CheckCircle2 className="w-4 h-4 text-blue-600 dark:text-cyan-400" />
+                          <CheckCircle2 className="w-4 h-4 text-blue-600" />
                         </div>
                       )}
                       <div>
                         <div className="mb-2">{r.icon}</div>
-                        <div className="font-black text-xs sm:text-[13px] text-slate-900 dark:text-white tracking-tight">
+                        <div className="font-black text-xs sm:text-[13px] text-slate-900 tracking-tight">
                           {r.title}
                         </div>
                       </div>
                       <div className={`text-[11px] font-semibold mt-1.5 leading-snug ${
                         isSelected
-                          ? 'text-slate-900 dark:text-slate-100'
-                          : 'text-slate-600 dark:text-slate-300'
+                          ? 'text-slate-900'
+                          : 'text-slate-600'
                       }`}>
                         {r.badge}
                       </div>
@@ -356,8 +356,8 @@ export const LoginPage: React.FC = () => {
               </div>
 
               {/* Selected Role Indicator Badge */}
-              <div className="mt-3 p-3 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 flex items-center justify-between text-xs font-mono shadow-sm">
-                <span className="text-slate-800 dark:text-slate-200 font-bold">Selected role:</span>
+              <div className="mt-3 p-3 rounded-xl bg-slate-100 border border-slate-300 flex items-center justify-between text-xs font-mono shadow-sm">
+                <span className="text-slate-800 font-bold">Selected role:</span>
                 <span className="px-3 py-1 rounded-lg bg-blue-600 text-white font-extrabold uppercase tracking-wider flex items-center gap-1.5 shadow-sm">
                   <Sparkles className="w-3.5 h-3.5 text-amber-300" />
                   {selectedRole}
@@ -368,13 +368,13 @@ export const LoginPage: React.FC = () => {
             {errorMessage && (
               <div className={`p-4 rounded-2xl border flex items-start gap-3 text-xs leading-relaxed font-semibold shadow-md ${
                 errorMessage.includes('pending') || errorMessage.includes('clearance')
-                  ? 'bg-amber-500/15 border-amber-500/50 text-amber-950 dark:text-amber-200'
-                  : 'bg-red-500/15 border-red-500/50 text-red-950 dark:text-red-200'
+                  ? 'bg-amber-500/15 border-amber-500/50 text-amber-950'
+                  : 'bg-red-500/15 border-red-500/50 text-red-950'
               }`}>
                 <AlertCircle className={`w-5 h-5 shrink-0 mt-0.5 ${
                   errorMessage.includes('pending') || errorMessage.includes('clearance')
-                    ? 'text-amber-600 dark:text-amber-400'
-                    : 'text-red-600 dark:text-red-400'
+                    ? 'text-amber-600'
+                    : 'text-red-600'
                 }`} />
                 <div>
                   <div className="font-extrabold text-xs uppercase tracking-wider mb-0.5">

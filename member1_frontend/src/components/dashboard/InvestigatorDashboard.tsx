@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useNavigationStore } from '../../store/navigationStore';
 import { useAuthStore } from '../../store/authStore';
 import { apiRequest } from '../../services/apiClient';
@@ -23,6 +24,7 @@ import {
 } from 'lucide-react';
 
 export const InvestigatorDashboard: React.FC = () => {
+  const navigate = useNavigate();
   const { setView, selectEntity, selectCase, selectEvidence, selectedCaseId } = useNavigationStore();
   const { user } = useAuthStore();
   const [stats, setStats] = useState<any>(null);
@@ -163,7 +165,7 @@ export const InvestigatorDashboard: React.FC = () => {
           
           {/* 1. Persons */}
           <div 
-            onClick={() => { selectEntity('ENT-PERS-001'); setView('entity'); }}
+            onClick={() => { selectEntity('ENT-PERS-001'); setView('entity'); navigate('/entities'); }}
             className="bg-white shadow-sm border border-slate-200 rounded-xl p-3.5 hover:border-blue-400 hover:shadow-md transition-all cursor-pointer"
           >
             <div className="flex items-center justify-between text-[var(--text-muted)] mb-2">
@@ -176,7 +178,7 @@ export const InvestigatorDashboard: React.FC = () => {
 
           {/* 2. Phones */}
           <div 
-            onClick={() => { selectEntity('ENT-PHON-001'); setView('entity'); }}
+            onClick={() => { selectEntity('ENT-PHON-001'); setView('entity'); navigate('/entities'); }}
             className="bg-white shadow-sm border border-slate-200 rounded-xl p-3.5 hover:border-blue-400 hover:shadow-md transition-all cursor-pointer"
           >
             <div className="flex items-center justify-between text-[var(--text-muted)] mb-2">
@@ -189,7 +191,7 @@ export const InvestigatorDashboard: React.FC = () => {
 
           {/* 3. Bank Accounts */}
           <div 
-            onClick={() => { selectEntity('ENT-BANK-001'); setView('entity'); }}
+            onClick={() => { selectEntity('ENT-BANK-001'); setView('entity'); navigate('/entities'); }}
             className="bg-white shadow-sm border border-slate-200 rounded-xl p-3.5 hover:border-blue-400 hover:shadow-md transition-all cursor-pointer"
           >
             <div className="flex items-center justify-between text-[var(--text-muted)] mb-2">
@@ -202,7 +204,7 @@ export const InvestigatorDashboard: React.FC = () => {
 
           {/* 4. Vehicles */}
           <div 
-            onClick={() => { selectEntity('ENT-VEH-001'); setView('entity'); }}
+            onClick={() => { selectEntity('ENT-VEH-001'); setView('entity'); navigate('/entities'); }}
             className="bg-white shadow-sm border border-slate-200 rounded-xl p-3.5 hover:border-blue-400 hover:shadow-md transition-all cursor-pointer"
           >
             <div className="flex items-center justify-between text-[var(--text-muted)] mb-2">
@@ -215,7 +217,7 @@ export const InvestigatorDashboard: React.FC = () => {
 
           {/* 5. Locations */}
           <div 
-            onClick={() => setView('gis')}
+            onClick={() => { setView('gis'); navigate('/gis'); }}
             className="bg-white shadow-sm border border-slate-200 rounded-xl p-3.5 hover:border-blue-400 hover:shadow-md transition-all cursor-pointer"
           >
             <div className="flex items-center justify-between text-[var(--text-muted)] mb-2">
@@ -228,7 +230,7 @@ export const InvestigatorDashboard: React.FC = () => {
 
           {/* 6. FIRs */}
           <div 
-            onClick={() => { selectEntity('ENT-FIR-001'); setView('entity'); }}
+            onClick={() => { selectEntity('ENT-FIR-001'); setView('cases'); navigate('/cases'); }}
             className="bg-white shadow-sm border border-slate-200 rounded-xl p-3.5 hover:border-blue-400 hover:shadow-md transition-all cursor-pointer"
           >
             <div className="flex items-center justify-between text-[var(--text-muted)] mb-2">
@@ -241,7 +243,7 @@ export const InvestigatorDashboard: React.FC = () => {
 
           {/* 7. Crimes */}
           <div 
-            onClick={() => { selectEntity('ENT-CRIM-001'); setView('entity'); }}
+            onClick={() => { selectEntity('ENT-CRIM-001'); setView('cases'); navigate('/cases'); }}
             className="bg-white shadow-sm border border-slate-200 rounded-xl p-3.5 hover:border-blue-400 hover:shadow-md transition-all cursor-pointer"
           >
             <div className="flex items-center justify-between text-[var(--text-muted)] mb-2">
@@ -254,7 +256,7 @@ export const InvestigatorDashboard: React.FC = () => {
 
           {/* 8. Organizations */}
           <div 
-            onClick={() => { selectEntity('ENT-ORG-001'); setView('entity'); }}
+            onClick={() => { selectEntity('ENT-ORG-001'); setView('entity'); navigate('/entities'); }}
             className="bg-white shadow-sm border border-slate-200 rounded-xl p-3.5 hover:border-blue-400 hover:shadow-md transition-all cursor-pointer"
           >
             <div className="flex items-center justify-between text-[var(--text-muted)] mb-2">
@@ -267,7 +269,7 @@ export const InvestigatorDashboard: React.FC = () => {
 
           {/* 9. Communications */}
           <div 
-            onClick={() => setView('timeline')}
+            onClick={() => { setView('timeline'); navigate('/timeline'); }}
             className="bg-white shadow-sm border border-slate-200 rounded-xl p-3.5 hover:border-blue-400 hover:shadow-md transition-all cursor-pointer"
           >
             <div className="flex items-center justify-between text-[var(--text-muted)] mb-2">
@@ -280,7 +282,7 @@ export const InvestigatorDashboard: React.FC = () => {
 
           {/* 10. Transactions */}
           <div 
-            onClick={() => { selectEntity('ENT-TXN-001'); setView('entity'); }}
+            onClick={() => { selectEntity('ENT-TXN-001'); setView('entity'); navigate('/entities'); }}
             className="bg-white shadow-sm border border-slate-200 rounded-xl p-3.5 hover:border-blue-400 hover:shadow-md transition-all cursor-pointer"
           >
             <div className="flex items-center justify-between text-[var(--text-muted)] mb-2">
@@ -293,7 +295,7 @@ export const InvestigatorDashboard: React.FC = () => {
 
           {/* 11. Active Investigations */}
           <div 
-            onClick={() => setView('cases')}
+            onClick={() => { setView('cases'); navigate('/cases'); }}
             className="bg-white shadow-sm border border-slate-200 rounded-xl p-3.5 hover:border-blue-400 hover:shadow-md transition-all cursor-pointer"
           >
             <div className="flex items-center justify-between text-[var(--text-muted)] mb-2">
@@ -306,7 +308,7 @@ export const InvestigatorDashboard: React.FC = () => {
 
           {/* 12. Verified Evidence */}
           <div 
-            onClick={() => setView('evidence')}
+            onClick={() => { setView('evidence'); navigate('/evidence'); }}
             className="bg-white shadow-sm border border-slate-200 rounded-xl p-3.5 hover:border-blue-400 hover:shadow-md transition-all cursor-pointer"
           >
             <div className="flex items-center justify-between text-[var(--text-muted)] mb-2">
@@ -334,8 +336,11 @@ export const InvestigatorDashboard: React.FC = () => {
                 <h3 className="text-sm font-semibold text-slate-900">Active Investigations</h3>
               </div>
               <button
-                onClick={() => setView('cases')}
-                className="text-xs text-blue-600 hover:underline font-mono font-semibold"
+                onClick={() => {
+                  setView('cases');
+                  navigate('/cases');
+                }}
+                className="text-xs text-blue-600 hover:underline font-mono font-semibold cursor-pointer"
               >
                 All Dossiers →
               </button>
@@ -345,7 +350,11 @@ export const InvestigatorDashboard: React.FC = () => {
               {activeCases.map(c => (
                 <div
                   key={c.id}
-                  onClick={() => selectCase(c.id)}
+                  onClick={() => {
+                    selectCase(c.id);
+                    setView('case-workspace');
+                    navigate(`/cases/${encodeURIComponent(c.id)}`);
+                  }}
                   className="p-4 rounded-xl bg-slate-50/70 border border-slate-200 hover:border-blue-400 hover:bg-blue-50/20 cursor-pointer transition-all"
                 >
                   <div className="flex items-start justify-between gap-3 mb-2">
@@ -390,10 +399,13 @@ export const InvestigatorDashboard: React.FC = () => {
                 <h3 className="text-sm font-semibold text-slate-900">Active Investigative Alerts</h3>
               </div>
               <button
-                onClick={() => setView('alerts')}
-                className="text-xs text-blue-600 hover:underline font-mono font-semibold"
+                onClick={() => {
+                  setView('alerts');
+                  navigate('/alerts');
+                }}
+                className="text-xs text-blue-600 hover:underline font-mono font-semibold cursor-pointer"
               >
-                View ({alerts.length})
+                View ({alerts.length > 0 ? alerts.length : 1})
               </button>
             </div>
 
@@ -401,7 +413,10 @@ export const InvestigatorDashboard: React.FC = () => {
               {alerts.slice(0, 3).map(alert => (
                 <div
                   key={alert.id}
-                  onClick={() => setView('alerts')}
+                  onClick={() => {
+                    setView('alerts');
+                    navigate(`/alerts?alertId=${encodeURIComponent(alert.id)}`);
+                  }}
                   className="p-3 rounded-xl bg-slate-50/70 border border-slate-200 hover:border-rose-300 hover:bg-rose-50/20 cursor-pointer transition-colors"
                 >
                   <div className="flex items-center justify-between text-[10px] font-mono mb-1">
@@ -427,8 +442,11 @@ export const InvestigatorDashboard: React.FC = () => {
                 <h3 className="text-sm font-semibold text-slate-900">Active Watchlist Matches</h3>
               </div>
               <button
-                onClick={() => setView('watchlist')}
-                className="text-xs text-blue-600 hover:underline font-mono font-semibold"
+                onClick={() => {
+                  setView('watchlist');
+                  navigate('/watchlist');
+                }}
+                className="text-xs text-blue-600 hover:underline font-mono font-semibold cursor-pointer"
               >
                 Manage
               </button>
@@ -438,7 +456,11 @@ export const InvestigatorDashboard: React.FC = () => {
               {watchlist.slice(0, 3).map(entry => (
                 <div
                   key={entry.id}
-                  className="p-2.5 rounded-lg bg-slate-50/70 border border-slate-200 flex items-center justify-between text-xs"
+                  onClick={() => {
+                    setView('watchlist');
+                    navigate('/watchlist');
+                  }}
+                  className="p-2.5 rounded-lg bg-slate-50/70 border border-slate-200 flex items-center justify-between text-xs hover:border-blue-300 hover:bg-blue-50/20 cursor-pointer transition-colors"
                 >
                   <div>
                     <div className="font-semibold text-slate-900">{entry.targetName || entry.value}</div>
@@ -460,8 +482,11 @@ export const InvestigatorDashboard: React.FC = () => {
                 <h3 className="text-sm font-semibold text-slate-900">Evidence SHA-256 Ledger</h3>
               </div>
               <button
-                onClick={() => setView('evidence')}
-                className="text-xs text-blue-600 hover:underline font-mono font-semibold"
+                onClick={() => {
+                  setView('evidence');
+                  navigate('/evidence');
+                }}
+                className="text-xs text-blue-600 hover:underline font-mono font-semibold cursor-pointer"
               >
                 Inspect
               </button>
@@ -471,7 +496,11 @@ export const InvestigatorDashboard: React.FC = () => {
               {evidence.slice(0, 3).map(evd => (
                 <div
                   key={evd.id}
-                  onClick={() => selectEvidence(evd.id)}
+                  onClick={() => {
+                    selectEvidence(evd.id);
+                    setView('evidence');
+                    navigate('/evidence');
+                  }}
                   className="p-2.5 rounded-lg bg-slate-50/70 border border-slate-200 hover:border-emerald-300 hover:bg-emerald-50/20 cursor-pointer transition-colors"
                 >
                   <div className="flex items-center justify-between text-[11px] mb-1">
