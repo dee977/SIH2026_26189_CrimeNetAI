@@ -119,7 +119,7 @@ export const Sidebar: React.FC = () => {
       {/* Mobile Backdrop Overlay */}
       {!isSidebarCollapsed && (
         <div
-          className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-30 md:hidden transition-opacity duration-300"
+          className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-30 md:hidden transition-opacity duration-300 print:hidden"
           onClick={toggleSidebar}
           aria-hidden="true"
         />

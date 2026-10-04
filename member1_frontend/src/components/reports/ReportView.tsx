@@ -209,7 +209,7 @@ export const ReportView: React.FC = () => {
   }
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6 pb-20 animate-in fade-in duration-300 text-slate-900">
+    <div className="max-w-5xl mx-auto space-y-6 pb-20 animate-in fade-in duration-300 text-slate-900 print:max-w-full print:m-0 print:p-0 print:space-y-0 print:pb-0">
       
       {/* Header Actions & Case Switcher (Hidden in Print) */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 p-4 bg-white rounded-xl border border-slate-200 shadow-sm print:hidden">
@@ -262,14 +262,14 @@ export const ReportView: React.FC = () => {
       </div>
 
       {/* Official Report Document Container */}
-      <div className="bg-white text-slate-900 shadow-xl border border-slate-300 rounded-sm p-8 sm:p-12 font-sans print:shadow-none print:border-none print:p-0">
+      <div id="investigation-report-document" className="printable-report bg-white text-slate-900 shadow-xl border border-slate-300 rounded-sm p-8 sm:p-12 font-sans print:shadow-none print:border-none print:p-0 print:w-full print:m-0 print:mt-0 print:pt-0">
         
         {/* ============================================================== */}
         {/* OFFICIAL CASE DOSSIER HEADER (Single clean line, zero overlap) */}
         {/* ============================================================== */}
         <div className="border-b-2 border-slate-900 pb-4 mb-6">
           {/* Classification Banner - Single clean line, not overlapping title */}
-          <div className="bg-slate-900 text-white text-[11px] font-mono font-bold tracking-widest uppercase px-4 py-1.5 rounded-sm flex items-center justify-between mb-4">
+          <div className="classification-banner bg-slate-900 text-white text-[11px] font-mono font-bold tracking-widest uppercase px-4 py-1.5 rounded-sm flex items-center justify-between mb-4 border border-slate-900">
             <div className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse print:hidden"></span>
               <span>CONFIDENTIAL // CLASSIFIED</span>
@@ -344,7 +344,7 @@ export const ReportView: React.FC = () => {
         {/* ============================================================== */}
         {/* 1. INCIDENT SUMMARY */}
         {/* ============================================================== */}
-        <section className="mb-8 break-inside-avoid">
+        <section className="mb-8 print:mb-6">
           <h2 className="text-sm font-black text-slate-900 uppercase tracking-wider border-b-2 border-slate-300 pb-1.5 mb-3 flex items-center gap-2">
             <FileText className="w-4 h-4 text-blue-700" /> 1. INCIDENT SUMMARY
           </h2>
@@ -366,7 +366,7 @@ export const ReportView: React.FC = () => {
         {/* ============================================================== */}
         {/* 2. EVIDENTIARY ASSETS & CHAIN OF CUSTODY (BSA §65B COMPLIANT) */}
         {/* ============================================================== */}
-        <section className="mb-8 break-inside-avoid">
+        <section className="mb-8 print:mb-6">
           <div className="border-b-2 border-slate-300 pb-1.5 mb-3 flex items-center justify-between">
             <h2 className="text-sm font-black text-slate-900 uppercase tracking-wider flex items-center gap-2">
               <Lock className="w-4 h-4 text-emerald-700" /> 2. EVIDENTIARY ASSETS & CHAIN OF CUSTODY (BSA §65B COMPLIANT)
@@ -427,7 +427,7 @@ export const ReportView: React.FC = () => {
         {/* ============================================================== */}
         {/* 3. KEY ENTITIES */}
         {/* ============================================================== */}
-        <section className="mb-8 break-inside-avoid">
+        <section className="mb-8 print:mb-6">
           <div className="border-b-2 border-slate-300 pb-1.5 mb-3 flex items-center justify-between">
             <h2 className="text-sm font-black text-slate-900 uppercase tracking-wider flex items-center gap-2">
               <User className="w-4 h-4 text-blue-700" /> 3. KEY ENTITIES
@@ -536,7 +536,7 @@ export const ReportView: React.FC = () => {
         {/* ============================================================== */}
         {/* 4. NETWORK & RELATIONSHIP SUMMARY */}
         {/* ============================================================== */}
-        <section className="mb-8 break-inside-avoid">
+        <section className="mb-8 print:mb-6">
           <div className="border-b-2 border-slate-300 pb-1.5 mb-3 flex items-center justify-between">
             <h2 className="text-sm font-black text-slate-900 uppercase tracking-wider flex items-center gap-2">
               <GitMerge className="w-4 h-4 text-indigo-700" /> 4. NETWORK & RELATIONSHIP SUMMARY
@@ -580,7 +580,7 @@ export const ReportView: React.FC = () => {
           )}
 
           {relationships.length > 0 ? (
-            <div className="overflow-x-auto border border-slate-300 rounded max-h-60 overflow-y-auto">
+            <div className="overflow-x-auto border border-slate-300 rounded max-h-60 overflow-y-auto print:max-h-none print:overflow-visible">
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
                   <tr className="bg-slate-100 text-slate-700 text-[10px] font-bold uppercase border-b border-slate-300">
@@ -616,7 +616,7 @@ export const ReportView: React.FC = () => {
         {/* ============================================================== */}
         {/* 5. CHRONOLOGY / TIMELINE */}
         {/* ============================================================== */}
-        <section className="mb-8 break-inside-avoid">
+        <section className="mb-8 print:mb-6">
           <div className="border-b-2 border-slate-300 pb-1.5 mb-3 flex items-center justify-between">
             <h2 className="text-sm font-black text-slate-900 uppercase tracking-wider flex items-center gap-2">
               <Calendar className="w-4 h-4 text-blue-700" /> 5. CHRONOLOGY / TIMELINE
@@ -657,7 +657,7 @@ export const ReportView: React.FC = () => {
         {/* ============================================================== */}
         {/* 6. ALERTS & ANOMALIES */}
         {/* ============================================================== */}
-        <section className="mb-8 break-inside-avoid">
+        <section className="mb-8 print:mb-6">
           <div className="border-b-2 border-slate-300 pb-1.5 mb-3 flex items-center justify-between">
             <h2 className="text-sm font-black text-slate-900 uppercase tracking-wider flex items-center gap-2">
               <ShieldAlert className="w-4 h-4 text-red-700" /> 6. ALERTS & ANOMALIES
@@ -702,7 +702,7 @@ export const ReportView: React.FC = () => {
         {/* ============================================================== */}
         {/* 7. ANALYTICAL FINDINGS */}
         {/* ============================================================== */}
-        <section className="mb-8 break-inside-avoid">
+        <section className="mb-8 print:mb-6">
           <h2 className="text-sm font-black text-slate-900 uppercase tracking-wider border-b-2 border-slate-300 pb-1.5 mb-3 flex items-center gap-2">
             <Scale className="w-4 h-4 text-slate-800" /> 7. ANALYTICAL FINDINGS
           </h2>
@@ -734,7 +734,7 @@ export const ReportView: React.FC = () => {
         {/* ============================================================== */}
         {/* 8. CERTIFICATION / FOOTER */}
         {/* ============================================================== */}
-        <section className="mb-4 break-inside-avoid">
+        <section className="mb-4 break-inside-avoid print:mb-0 print:break-inside-avoid">
           <h2 className="text-sm font-black text-slate-900 uppercase tracking-wider border-b-2 border-slate-300 pb-1.5 mb-3 flex items-center gap-2">
             <Award className="w-4 h-4 text-emerald-800" /> 8. CERTIFICATION / FOOTER
           </h2>

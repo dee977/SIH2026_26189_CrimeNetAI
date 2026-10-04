@@ -74,55 +74,211 @@
 @media print {
   @page {
     size: A4 portrait;
-    margin: 12mm 15mm 15mm 15mm;
+    margin: 12mm 12mm 15mm 12mm;
   }
   
-  html, body, #root, .h-screen, main, [class*="overflow-"] {
-    height: auto !important;
-    min-height: auto !important;
-    overflow: visible !important;
-    background: white !important;
-    color: #0f172a !important;
-    padding: 0 !important;
-    margin: 0 !important;
-  }
-
-  aside, nav, header, .print\:hidden {
-    display: none !important;
-  }
-
-  .print\:p-0 {
-    padding: 0 !important;
-  }
-
-  .print\:border-none {
-    border: none !important;
-  }
-
-  .print\:shadow-none {
+  /* Universal print resets: disable animations, ensure exact color & contrast */
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+    transform: none !important;
+    filter: none !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
     box-shadow: none !important;
+    text-shadow: none !important;
   }
 
-  .break-inside-avoid {
+  /* Document root and body resets:
+     CRITICAL: min-height must be 0 and height auto to prevent Chromium paged media
+     from reserving 100% height and pushing report content to Page 2 */
+  html,
+  body {
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+    background: #ffffff !important;
+    color: #0f172a !important;
+    font-size: 11pt !important;
+    line-height: 1.4 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    user-select: auto !important;
+    -webkit-user-select: auto !important;
+  }
+
+  /* CRITICAL FIX FOR CHROMIUM FLEX PRINTING BUG:
+     All ancestor wrappers must be standard blocks with visible overflow and static positioning */
+  #root,
+  #root > div,
+  #root > div > div,
+  main,
+  main > div,
+  .h-screen,
+  [class*="overflow-"],
+  [class*="select-"] {
+    display: block !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+    position: static !important;
+    float: none !important;
+    flex: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    user-select: auto !important;
+    -webkit-user-select: auto !important;
+    break-before: avoid !important;
+    page-break-before: avoid !important;
+  }
+
+  /* Hide screen navigation, sidebars, headers, floating widgets, and action bars */
+  aside,
+  nav,
+  header,
+  footer,
+  .print\:hidden,
+  [aria-label="Investigative Alerts"],
+  .Toastify,
+  [class*="Toast"] {
+    display: none !important;
+    visibility: hidden !important;
+    height: 0 !important;
+    width: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    overflow: hidden !important;
+  }
+
+  /* Report document container overrides:
+     Ensure zero top margin/padding and avoid page breaks before document start */
+  .printable-report,
+  #investigation-report-document {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    margin-top: 0 !important;
+    padding: 0 !important;
+    padding-top: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    background: #ffffff !important;
+    color: #0f172a !important;
+    overflow: visible !important;
+    break-before: avoid !important;
+    page-break-before: avoid !important;
+  }
+
+  #investigation-report-document > *:first-child,
+  .printable-report > *:first-child {
+    break-before: avoid !important;
+    page-break-before: avoid !important;
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+  }
+
+  /* Remove scroll limitations on tables and grids */
+  .overflow-x-auto,
+  .overflow-y-auto,
+  [class*="max-h-"] {
+    overflow: visible !important;
+    max-height: none !important;
+    height: auto !important;
+  }
+
+  /* Page break rules:
+     - Sections allow page breaks between contents
+     - Section headings stick to their content (break-after: avoid)
+     - Table rows avoid breaking across pages
+     - Signatures and small certification blocks avoid breaking */
+  section {
+    break-inside: auto !important;
+    page-break-inside: auto !important;
+    margin-bottom: 1.5rem !important;
+  }
+
+  section > h2,
+  h2,
+  h3 {
+    break-after: avoid !important;
+    page-break-after: avoid !important;
     break-inside: avoid !important;
-    page-break-inside: avoid !important;
   }
 
   table {
-    page-break-inside: auto;
     width: 100% !important;
-  }
-
-  tr {
-    page-break-inside: avoid !important;
-    page-break-after: auto;
+    border-collapse: collapse !important;
+    page-break-inside: auto !important;
+    break-inside: auto !important;
   }
 
   thead {
     display: table-header-group !important;
   }
 
-  tfoot {
-    display: table-footer-group !important;
+  tbody {
+    display: table-row-group !important;
+  }
+
+  tr {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+    page-break-after: auto !important;
+  }
+
+  th, td {
+    color: #0f172a !important;
+    border-color: #cbd5e1 !important;
+  }
+
+  /* Keep certification & signature card intact */
+  .break-inside-avoid,
+  .print\:break-inside-avoid {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  /* High contrast colors for print */
+  .text-slate-900,
+  .text-slate-800,
+  .text-slate-700,
+  .text-slate-600 {
+    color: #0f172a !important;
+  }
+
+  .text-slate-500,
+  .text-slate-400 {
+    color: #334155 !important;
+  }
+
+  .border-slate-300,
+  .border-slate-200 {
+    border-color: #94a3b8 !important;
+  }
+
+  .bg-slate-50 {
+    background-color: #f8fafc !important;
+  }
+
+  .bg-slate-100 {
+    background-color: #f1f5f9 !important;
+  }
+
+  /* Classification banner in print: ensure dark background and crisp white text */
+  .classification-banner {
+    background-color: #0f172a !important;
+    color: #ffffff !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 }

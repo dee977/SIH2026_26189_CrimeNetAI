@@ -284,7 +284,7 @@ export const TopNav: React.FC = () => {
     : alerts;
 
   return (
-    <header className="h-16 bg-[var(--bg-primary)] border-b border-[var(--border)] px-4 sm:px-6 flex items-center justify-between gap-3 sm:gap-4 z-30 shrink-0 select-none">
+    <header className="h-16 bg-[var(--bg-primary)] border-b border-[var(--border)] px-4 sm:px-6 flex items-center justify-between gap-3 sm:gap-4 z-30 shrink-0 select-none print:hidden">
       
       {/* Left: Hamburger Toggle */}
       <div className="flex items-center gap-2 sm:gap-3 shrink-0">
