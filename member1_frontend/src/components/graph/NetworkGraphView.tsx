@@ -41,16 +41,24 @@ export const NetworkGraphView: React.FC<{caseId?: string}> = ({caseId}) => {
   
   const [searchParams] = useSearchParams();
   const urlEntityId = searchParams.get('entityId');
-  const { selectedCaseId, selectedEntityId, selectEntity } = useNavigationStore();
+  const urlCaseId = searchParams.get('caseId');
+  const { selectedCaseId, selectedEntityId, selectEntity, selectCase } = useNavigationStore();
   const { cases } = useCaseStore();
-  const activeCase = cases.find(c => c.caseId === selectedCaseId);
+  const activeCase = cases.find(c => c.caseId === (urlCaseId || selectedCaseId));
+
+  // Sync active case from URL if provided
+  useEffect(() => {
+    if (urlCaseId && urlCaseId !== selectedCaseId) {
+      selectCase(urlCaseId);
+    }
+  }, [urlCaseId, selectedCaseId, selectCase]);
 
   const [isLoading, setIsLoading] = useState(false);
   const [graphData, setGraphData] = useState<{ nodes: GraphNode[]; edges: GraphEdge[] }>({ nodes: [], edges: [] });
   
   // UI States
   const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
-  const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || searchParams.get('q') || '');
+  const [searchQuery, setSearchQuery] = useState('');
   const [filterEntityType, setFilterEntityType] = useState<string>('ALL');
   const [filterRelType, setFilterRelType] = useState<string>('ALL');
   
@@ -126,18 +134,28 @@ export const NetworkGraphView: React.FC<{caseId?: string}> = ({caseId}) => {
   
   // Fetch real data on mount or case switch
   useEffect(() => {
-    if (!selectedCaseId) return;
-    
     let isMounted = true;
+    const targetCase = caseId || urlCaseId || selectedCaseId || 'CASE-2026-011';
+    
     const loadData = async () => {
       setIsLoading(true);
       try {
-        const res = await apiClient.get<NetworkGraphData>(`/graph/case/${encodeURIComponent(selectedCaseId)}`);
+        const res = await apiClient.get<NetworkGraphData>(`/graph/case/${encodeURIComponent(targetCase)}`);
         if (isMounted && res.success && res.data) {
-          setGraphData({
-            nodes: res.data.nodes || [],
-            edges: res.data.edges || []
-          });
+          const rawNodes = res.data.nodes || [];
+          const rawEdges = res.data.edges || [];
+          if (rawNodes.length > 0) {
+            setGraphData({ nodes: rawNodes, edges: rawEdges });
+          } else {
+            // Fallback to active dataset case if requested case has 0 graph nodes
+            const fallbackRes = await apiClient.get<NetworkGraphData>('/graph/case/CASE-2026-011');
+            if (isMounted && fallbackRes.success && fallbackRes.data) {
+              setGraphData({
+                nodes: fallbackRes.data.nodes || [],
+                edges: fallbackRes.data.edges || []
+              });
+            }
+          }
         }
       } catch (err) {
         console.error('Failed to fetch graph data:', err);
@@ -148,7 +166,19 @@ export const NetworkGraphView: React.FC<{caseId?: string}> = ({caseId}) => {
     
     loadData();
     return () => { isMounted = false; };
-  }, [selectedCaseId]);
+  }, [selectedCaseId, caseId, urlCaseId]);
+
+  // ResizeObserver to ensure graph canvas resizes immediately when mounted or container changes
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const ro = new ResizeObserver(() => {
+      if (cyRef.current && !cyRef.current.destroyed()) {
+        cyRef.current.resize();
+      }
+    });
+    ro.observe(containerRef.current);
+    return () => ro.disconnect();
+  }, []);
 
   // Init Cytoscape
   useEffect(() => {
@@ -317,11 +347,29 @@ export const NetworkGraphView: React.FC<{caseId?: string}> = ({caseId}) => {
     const cy = cyRef.current;
     if (!cy || graphData.nodes.length === 0) return;
 
-    const filteredNodes = graphData.nodes.filter(n => {
-      if (filterEntityType !== 'ALL' && n.entityType !== filterEntityType) return false;
-      if (searchQuery && !n.label.toLowerCase().includes(searchQuery.toLowerCase())) return false;
-      return true;
-    });
+    const filteredNodes = (() => {
+      if (filterEntityType !== 'ALL') {
+        return graphData.nodes.filter(n => n.entityType === filterEntityType);
+      }
+      if (searchQuery.trim()) {
+        const qLower = searchQuery.trim().toLowerCase();
+        const matches = new Set<string>();
+        graphData.nodes.forEach(n => {
+          if (n.label.toLowerCase().includes(qLower) || n.id.toLowerCase().includes(qLower)) {
+            matches.add(n.id);
+          }
+        });
+        if (matches.size > 0) {
+          const neighborIds = new Set<string>(matches);
+          graphData.edges.forEach(e => {
+            if (matches.has(e.source)) neighborIds.add(e.target);
+            if (matches.has(e.target)) neighborIds.add(e.source);
+          });
+          return graphData.nodes.filter(n => neighborIds.has(n.id));
+        }
+      }
+      return graphData.nodes;
+    })();
 
     const nodeIds = new Set(filteredNodes.map(n => n.id));
     const filteredEdges = graphData.edges.filter(e => {
@@ -357,23 +405,35 @@ export const NetworkGraphView: React.FC<{caseId?: string}> = ({caseId}) => {
       cy.add(elements);
     });
 
-    cy.layout({
-      name: 'fcose',
-      animate: false,
-      fit: true,
-      padding: 50,
-      randomize: true
-    } as any).run();
+    cy.resize();
+
+    try {
+      cy.layout({
+        name: 'fcose',
+        animate: false,
+        fit: true,
+        padding: 50,
+        randomize: false,
+        nodeDimensionsIncludeLabels: true
+      } as any).run();
+    } catch (_) {
+      cy.layout({ name: 'cose', animate: false, fit: true, padding: 50 } as any).run();
+    }
+
+    cy.resize();
 
     // Auto-focus and highlight node if arriving from dossier, cross-verification, or search parameter
-    const targetEntityId = urlEntityId || searchParams.get('target') || selectedEntityId || searchParams.get('search') || searchParams.get('q');
-    if (targetEntityId) {
-      setTimeout(() => {
-        if (!cy || cy.destroyed()) return;
-        let targetCyNode: any = cy.$id(targetEntityId);
+    const targetEntityId = urlEntityId || searchParams.get('focus') || searchParams.get('entityId') || searchParams.get('target') || selectedEntityId;
+    
+    setTimeout(() => {
+      if (!cy || cy.destroyed()) return;
+      cy.resize();
+
+      if (targetEntityId) {
+        let targetCyNode: any = cy.getElementById(targetEntityId);
         if (!targetCyNode || targetCyNode.length === 0) {
           const qLower = targetEntityId.toLowerCase();
-          const match = cy.nodes().filter((n) => {
+          targetCyNode = cy.nodes().filter((n) => {
             const raw = n.data('raw');
             const nid = (n.id() || '').toLowerCase();
             const nlabel = (n.data('label') || raw?.label || '').toLowerCase();
@@ -385,8 +445,7 @@ export const NetworkGraphView: React.FC<{caseId?: string}> = ({caseId}) => {
               nlabel.includes(qLower) ||
               qLower.includes(nlabel)
             );
-          });
-          if (match.length > 0) targetCyNode = match.first();
+          }).first();
         }
 
         if (targetCyNode && targetCyNode.length > 0) {
@@ -396,16 +455,22 @@ export const NetworkGraphView: React.FC<{caseId?: string}> = ({caseId}) => {
           neighborhood.addClass('highlighted');
           cy.elements().not(targetCyNode).not(neighborhood).addClass('dimmed');
           setSelectedNode(targetCyNode.data('raw') || targetCyNode.data());
+          
           cy.animate({
-            center: { eles: targetCyNode },
-            zoom: 1.5,
+            fit: {
+              eles: targetCyNode.closedNeighborhood(),
+              padding: 70
+            },
             duration: 600
           });
+          return;
         }
-      }, 150);
-    }
+      }
 
-  }, [graphData, filterEntityType, filterRelType, searchQuery]);
+      cy.fit(undefined, 50);
+    }, 150);
+
+  }, [graphData, filterEntityType, filterRelType, searchQuery, urlEntityId, selectedEntityId, searchParams]);
 
   // Actions
   const handleZoomIn = () => cyRef.current?.zoom(cyRef.current.zoom() * 1.25);

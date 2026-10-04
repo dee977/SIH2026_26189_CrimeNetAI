@@ -337,3 +337,18 @@ async def mark_alerts_read(
     
     db.commit()
     return {"success": True, "updated": len(alerts_to_update)}
+
+@router.get('/unread-count', summary='Count Unread Alerts (hyphen alias)')
+async def get_unread_count_hyphen(
+    current_user: UserProfile = Depends(require_permission('alert:read')),
+    db = Depends(get_db)
+):
+    return await get_unread_count(current_user=current_user, db=db)
+
+@router.post('/mark-read', summary='Mark Alerts as Read (hyphen alias)')
+async def mark_alerts_read_hyphen(
+    req: Optional[AlertMarkReadRequest] = None,
+    current_user: UserProfile = Depends(require_permission('alert:manage')),
+    db = Depends(get_db)
+):
+    return await mark_alerts_read(req=req, current_user=current_user, db=db)

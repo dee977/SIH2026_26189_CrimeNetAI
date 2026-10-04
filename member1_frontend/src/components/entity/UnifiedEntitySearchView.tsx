@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useNavigationStore } from '../../store/navigationStore';
 import { EntityType, AnyEntity } from '../../types/entities';
@@ -53,7 +53,7 @@ export const UnifiedEntitySearchView: React.FC = () => {
   useEffect(() => {
     let isMounted = true;
     
-    const activeCase = selectedCaseId || 'CASE-2025-M3-DATASET';
+    const activeCase = searchParams.get('caseId') || selectedCaseId || 'CASE-2026-011';
 
     setIsLoading(true);
     setError(null);
@@ -152,26 +152,39 @@ export const UnifiedEntitySearchView: React.FC = () => {
   // Fetch detail when entity is selected
   useEffect(() => {
     let isMounted = true;
-    if (!selectedEntityId || !selectedCaseId) {
+    const targetId = selectedEntityId || searchParams.get('entityId');
+    const caseToUse = selectedCaseId || searchParams.get('caseId') || 'CASE-2026-011';
+    if (!targetId) {
       setLiveDetail(null);
       return;
     }
     
     setIsLoading(true);
-    fetchEntityById(selectedEntityId, selectedCaseId).then(res => {
+    fetchEntityById(targetId, caseToUse).then(res => {
       if (isMounted && res.success && res.data) {
         setLiveDetail(res.data);
+        // Ensure the selected entity is also present in liveEntities list
+        setLiveEntities(prev => {
+          if (!prev.some(e => e.id === res.data.id)) {
+            return [res.data, ...prev];
+          }
+          return prev;
+        });
       }
     }).finally(() => {
       if (isMounted) setIsLoading(false);
     });
     return () => { isMounted = false; };
-  }, [selectedEntityId, selectedCaseId]);
+  }, [selectedEntityId, selectedCaseId, searchParams]);
 
-  // Clear selected entity when case changes
+  // Clear selected entity only when case actually changes from a previous case
+  const prevCaseRef = useRef<string | null>(null);
   useEffect(() => {
-    selectEntity('');
-  }, [selectedCaseId, selectEntity]);
+    if (prevCaseRef.current && prevCaseRef.current !== selectedCaseId && !searchParams.get('entityId')) {
+      selectEntity('');
+    }
+    prevCaseRef.current = selectedCaseId;
+  }, [selectedCaseId, selectEntity, searchParams]);
 
   const tabs: { type: EntityType | 'ALL'; label: string }[] = [
     { type: 'ALL', label: 'All Entities' },

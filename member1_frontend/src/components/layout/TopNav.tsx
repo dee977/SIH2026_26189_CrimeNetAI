@@ -12,10 +12,31 @@ import {
   User, 
   Menu,
   X,
-  ArrowRight
+  ArrowRight,
+  ExternalLink
 } from 'lucide-react';
 import { searchEntities, fetchEntities } from '../../services/entityService';
 import { AnyEntity } from '../../types/entities';
+
+const formatRelativeTime = (ts?: string) => {
+  if (!ts) return '';
+  try {
+    const d = new Date(ts);
+    if (isNaN(d.getTime())) return ts;
+    const now = new Date();
+    const diffSec = Math.floor((now.getTime() - d.getTime()) / 1000);
+    if (diffSec < 60) return 'Just now';
+    const diffMin = Math.floor(diffSec / 60);
+    if (diffMin < 60) return `${diffMin}m ago`;
+    const diffHours = Math.floor(diffMin / 60);
+    if (diffHours < 24) return `${diffHours}h ago`;
+    const diffDays = Math.floor(diffHours / 24);
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return ts.slice(0, 10);
+  } catch {
+    return ts;
+  }
+};
 
 export const TopNav: React.FC = () => {
   const navigate = useNavigate();
@@ -25,6 +46,7 @@ export const TopNav: React.FC = () => {
     globalSearchQuery,
     selectedCaseId,
     selectCase,
+    openCase,
     selectEntity,
     isSidebarCollapsed,
     toggleSidebar
@@ -32,7 +54,16 @@ export const TopNav: React.FC = () => {
 
   const { user, logout } = useAuthStore();
   const { cases, fetchCases } = useCaseStore();
-  const { unreadAlertCount, isNotificationDropdownOpen, toggleNotificationDropdown } = useNotificationStore();
+  const { 
+    alerts,
+    unreadAlertCount,
+    isLoadingAlerts,
+    isNotificationDropdownOpen, 
+    toggleNotificationDropdown,
+    closeNotificationDropdown,
+    fetchAlerts,
+    markAllAsRead
+  } = useNotificationStore();
 
   useEffect(() => {
     if (user && cases.length === 0) {
@@ -40,13 +71,21 @@ export const TopNav: React.FC = () => {
     }
   }, [user, cases.length, fetchCases]);
 
+  // Initial fetch of alerts and refetch when selected case changes
+  useEffect(() => {
+    fetchAlerts();
+  }, [fetchAlerts]);
+
   const [searchInput, setSearchInput] = useState(globalSearchQuery || '');
   const [searchResults, setSearchResults] = useState<AnyEntity[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isRoleDropdownOpen, setIsRoleDropdownOpen] = useState(false);
+  const [alertFilter, setAlertFilter] = useState<'all' | 'case'>('all');
 
   const searchContainerRef = useRef<HTMLDivElement>(null);
+  const notificationsContainerRef = useRef<HTMLDivElement>(null);
+  const profileContainerRef = useRef<HTMLDivElement>(null);
 
   // Sync internal searchInput if globalSearchQuery changes externally
   useEffect(() => {
@@ -55,27 +94,38 @@ export const TopNav: React.FC = () => {
     }
   }, [globalSearchQuery]);
 
-  // Click outside listener to dismiss search dropdown
+  // Click outside listener to dismiss search, alerts, and profile dropdowns
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (searchContainerRef.current && !searchContainerRef.current.contains(e.target as Node)) {
+      const target = e.target as Node;
+
+      if (searchContainerRef.current && !searchContainerRef.current.contains(target)) {
         setIsDropdownOpen(false);
       }
+      if (notificationsContainerRef.current && !notificationsContainerRef.current.contains(target)) {
+        closeNotificationDropdown();
+      }
+      if (profileContainerRef.current && !profileContainerRef.current.contains(target)) {
+        setIsRoleDropdownOpen(false);
+      }
     };
+
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  }, [closeNotificationDropdown]);
 
-  // Escape key listener to close dropdown
+  // Escape key listener to close all dropdowns
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         setIsDropdownOpen(false);
+        closeNotificationDropdown();
+        setIsRoleDropdownOpen(false);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [closeNotificationDropdown]);
 
   // Live quick search with debouncing
   useEffect(() => {
@@ -161,6 +211,77 @@ export const TopNav: React.FC = () => {
     setSearchResults([]);
     setIsDropdownOpen(false);
   };
+
+  const handleToggleNotifications = () => {
+    setIsRoleDropdownOpen(false);
+    setIsDropdownOpen(false);
+    toggleNotificationDropdown();
+  };
+
+  const handleToggleProfile = () => {
+    closeNotificationDropdown();
+    setIsDropdownOpen(false);
+    setIsRoleDropdownOpen(prev => !prev);
+  };
+
+  const handleViewAllFeed = (e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    closeNotificationDropdown();
+    setView('alerts');
+    navigate('/alerts');
+    useNotificationStore.getState().fetchAlerts();
+  };
+
+  const handleOpenAlert = (alt: any, e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    closeNotificationDropdown();
+
+    // 1. Cross-source contradiction -> Open Cross-Verification module
+    if (
+      alt.category === 'Cross-source Contradiction' ||
+      alt.title?.toLowerCase().includes('contradiction')
+    ) {
+      if (alt.caseId) {
+        selectCase(alt.caseId);
+      }
+      setView('verification');
+      navigate(`/verification${alt.caseId ? `?caseId=${encodeURIComponent(alt.caseId)}` : ''}`);
+      return;
+    }
+
+    // 2. Evidence Integrity Mismatch -> Open Evidence module
+    if (alt.category === 'Evidence Integrity Mismatch' || alt.sourceRecordId) {
+      if (alt.caseId) {
+        selectCase(alt.caseId);
+      }
+      setView('evidence');
+      navigate(`/evidence${alt.caseId ? `?caseId=${encodeURIComponent(alt.caseId)}` : ''}${alt.sourceRecordId ? `&evidenceId=${encodeURIComponent(alt.sourceRecordId)}` : ''}`);
+      return;
+    }
+
+    // 3. Case workspace lead -> Open related Case Workspace
+    if (alt.caseId) {
+      openCase(alt.caseId);
+      setView('case-workspace');
+      navigate(`/cases/${encodeURIComponent(alt.caseId)}`);
+      return;
+    }
+
+    // 4. Default: Open full detailed alert view
+    setView('alerts');
+    navigate(`/alerts?alertId=${encodeURIComponent(alt.id)}`);
+  };
+
+  // Filtered alerts for the dropdown display
+  const displayedAlerts = (alertFilter === 'case' && selectedCaseId)
+    ? alerts.filter(a => a.caseId === selectedCaseId)
+    : alerts;
 
   return (
     <header className="h-16 bg-[var(--bg-primary)] border-b border-[var(--border)] px-4 sm:px-6 flex items-center justify-between gap-3 sm:gap-4 z-30 shrink-0 select-none">
@@ -281,7 +402,10 @@ export const TopNav: React.FC = () => {
         <span className="hidden lg:inline text-[11px] text-[var(--text-secondary)]">Case:</span>
         <select
           value={selectedCaseId || ''}
-          onChange={(e) => selectCase(e.target.value)}
+          onChange={(e) => {
+            selectCase(e.target.value);
+            fetchAlerts();
+          }}
           className="bg-transparent text-xs font-semibold text-[var(--primary)] focus:outline-none cursor-pointer max-w-[140px] sm:max-w-[180px] lg:max-w-[220px] truncate"
         >
           <option value="" disabled className="bg-white text-[var(--text-secondary)]">Select Active Case...</option>
@@ -297,63 +421,230 @@ export const TopNav: React.FC = () => {
       <div className="flex items-center gap-3 shrink-0">
         
         {/* Notifications Bell */}
-        <div className="relative">
+        <div ref={notificationsContainerRef} className="relative">
           <button
-            onClick={toggleNotificationDropdown}
-            className="p-2 rounded-lg bg-white hover:bg-slate-50 text-[var(--text-secondary)] hover:text-[var(--text-primary)] border border-[var(--border)] transition-colors relative shadow-sm cursor-pointer"
-            title="System Alerts & Cross-Verification Logs"
+            type="button"
+            onClick={handleToggleNotifications}
+            className={`p-2 rounded-xl border transition-all relative shadow-sm cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500/20 ${
+              isNotificationDropdownOpen 
+                ? 'bg-blue-50 border-blue-400 text-blue-600' 
+                : 'bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 border-slate-200'
+            }`}
+            title="Investigative Alerts & Cross-Verification Logs"
+            aria-label="Investigative Alerts"
+            aria-expanded={isNotificationDropdownOpen}
           >
             <Bell className="w-4 h-4" />
-            {unreadAlertCount > 0 && (
-              <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-[var(--danger)] text-white font-mono text-[9px] font-bold flex items-center justify-center animate-pulse shadow-sm">
-                {unreadAlertCount}
+            {unreadAlertCount > 0 ? (
+              <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-600 text-white font-mono text-[9px] font-bold flex items-center justify-center animate-pulse shadow-sm">
+                {unreadAlertCount > 99 ? '99+' : unreadAlertCount}
               </span>
-            )}
+            ) : alerts.length > 0 ? (
+              <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-slate-600 text-white font-mono text-[9px] font-bold flex items-center justify-center shadow-sm">
+                {alerts.length > 99 ? '99+' : alerts.length}
+              </span>
+            ) : null}
           </button>
 
           {/* Notifications Dropdown */}
           {isNotificationDropdownOpen && (
-            <div className="absolute right-0 mt-2 w-80 sm:w-96 rounded-xl bg-white border border-[var(--border)] shadow-lg p-3 z-50 animate-in fade-in slide-in-from-top-2">
-              <div className="flex items-center justify-between pb-2 border-b border-[var(--border)] mb-2">
-                <span className="text-xs font-semibold text-[var(--text-primary)]">Investigative Alerts (0)</span>
-                <button
-                  onClick={() => {
-                    setView('alerts');
-                    toggleNotificationDropdown();
-                  }}
-                  className="text-[11px] text-[var(--primary)] hover:underline font-mono"
-                >
-                  View All Feed ↗
-                </button>
+            <div className="absolute right-0 mt-2 w-80 sm:w-96 rounded-2xl bg-white border border-slate-200 shadow-2xl p-3 z-50 animate-in fade-in slide-in-from-top-2 text-xs select-text">
+              {/* Header */}
+              <div className="flex items-center justify-between pb-2.5 border-b border-slate-100 mb-2">
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-slate-900 text-xs">
+                    Investigative Alerts ({displayedAlerts.length})
+                  </span>
+                  {unreadAlertCount > 0 && (
+                    <span className="px-1.5 py-0.5 rounded-full bg-rose-100 text-rose-700 text-[10px] font-mono font-bold">
+                      {unreadAlertCount} unread
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  {unreadAlertCount > 0 && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        markAllAsRead();
+                      }}
+                      className="text-[10px] text-slate-500 hover:text-slate-800 hover:underline cursor-pointer"
+                    >
+                      Mark all read
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={handleViewAllFeed}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    className="text-[11px] font-semibold text-blue-600 hover:text-blue-700 hover:underline flex items-center gap-1 cursor-pointer"
+                  >
+                    <span>View All Feed</span>
+                    <ExternalLink className="w-3 h-3" />
+                  </button>
+                </div>
               </div>
 
-              <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
-                <div className="text-xs text-[var(--text-secondary)] text-center py-4">No active alerts</div>
-              </div>
+              {/* Case Filter Tabs if a case is selected */}
+              {selectedCaseId && (
+                <div className="flex items-center gap-1 mb-2 bg-slate-100 p-0.5 rounded-lg text-[10px] font-medium">
+                  <button
+                    type="button"
+                    onClick={() => setAlertFilter('all')}
+                    className={`flex-1 py-1 rounded-md transition-colors text-center cursor-pointer ${
+                      alertFilter === 'all' 
+                        ? 'bg-white text-slate-900 font-bold shadow-xs' 
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    All System ({alerts.length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAlertFilter('case')}
+                    className={`flex-1 py-1 rounded-md transition-colors text-center truncate px-1 cursor-pointer ${
+                      alertFilter === 'case' 
+                        ? 'bg-white text-slate-900 font-bold shadow-xs' 
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                    title={`Active Case: ${selectedCaseId}`}
+                  >
+                    Active Case ({alerts.filter(a => a.caseId === selectedCaseId).length})
+                  </button>
+                </div>
+              )}
+
+              {/* Alert List Content */}
+              {isLoadingAlerts ? (
+                <div className="py-8 flex flex-col items-center justify-center gap-2 text-slate-500">
+                  <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                  <span className="text-[11px]">Loading investigative alerts...</span>
+                </div>
+              ) : displayedAlerts.length === 0 ? (
+                <div className="py-8 text-center space-y-1.5">
+                  <div className="w-8 h-8 rounded-full bg-slate-100 text-slate-400 mx-auto flex items-center justify-center">
+                    <Bell className="w-4 h-4" />
+                  </div>
+                  <div className="text-xs font-semibold text-slate-700">No active alerts</div>
+                  <div className="text-[11px] text-slate-400">
+                    {alertFilter === 'case' && alerts.length > 0 ? (
+                      <button
+                        type="button"
+                        onClick={() => setAlertFilter('all')}
+                        className="text-blue-600 hover:underline mt-1 font-medium cursor-pointer"
+                      >
+                        Show {alerts.length} alerts from other cases →
+                      </button>
+                    ) : (
+                      'All intelligence feeds and forensic checks normal'
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
+                  {displayedAlerts.slice(0, 6).map((alt) => (
+                    <div
+                      key={alt.id}
+                      onClick={(e) => handleOpenAlert(alt, e)}
+                      onMouseDown={(e) => e.stopPropagation()}
+                      className={`p-2.5 rounded-xl border transition-all cursor-pointer hover:bg-slate-50 hover:border-blue-300 group text-left ${
+                        !alt.isRead ? 'bg-blue-50/40 border-blue-200' : 'bg-white border-slate-100'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className={`px-1.5 py-0.5 text-[9px] font-mono font-bold rounded uppercase ${
+                            alt.severity === 'CRITICAL' ? 'bg-rose-100 text-rose-700 border border-rose-200' :
+                            alt.severity === 'HIGH' ? 'bg-amber-100 text-amber-700 border border-amber-200' :
+                            'bg-blue-100 text-blue-700 border border-blue-200'
+                          }`}>
+                            {alt.severity}
+                          </span>
+                          <span className="text-[10px] text-slate-500 font-mono">
+                            {alt.category}
+                          </span>
+                        </div>
+                        <span className="text-[10px] text-slate-400 font-mono shrink-0">
+                          {formatRelativeTime(alt.timestamp)}
+                        </span>
+                      </div>
+
+                      <h4 className="text-xs font-bold text-slate-900 group-hover:text-blue-600 transition-colors mt-1 line-clamp-1">
+                        {alt.title}
+                      </h4>
+
+                      <p className="text-[11px] text-slate-600 line-clamp-2 mt-0.5 leading-relaxed">
+                        {alt.explanation}
+                      </p>
+
+                      <div className="mt-2 pt-2 border-t border-slate-100 flex items-center justify-between text-[10px] font-mono text-slate-400">
+                        <span className="truncate max-w-[170px] text-slate-500 font-medium">
+                          {alt.caseId || alt.source}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={(e) => handleOpenAlert(alt, e)}
+                          onMouseDown={(e) => e.stopPropagation()}
+                          className="px-2.5 py-1 rounded-md bg-blue-50 hover:bg-blue-100 text-blue-700 font-semibold text-[11px] border border-blue-200 transition-all flex items-center gap-1 cursor-pointer active:scale-95 shadow-2xs hover:shadow-xs"
+                          title={
+                            alt.category === 'Cross-source Contradiction'
+                              ? 'Open in Cross-Verification'
+                              : alt.caseId
+                              ? `Open Case ${alt.caseId}`
+                              : 'Open Alert Details'
+                          }
+                        >
+                          <span>Open</span>
+                          <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+
+                  {displayedAlerts.length > 6 && (
+                    <button
+                      type="button"
+                      onClick={handleViewAllFeed}
+                      onMouseDown={(e) => e.stopPropagation()}
+                      className="w-full py-2 text-center text-xs font-semibold text-blue-600 hover:text-blue-700 hover:bg-blue-50/50 rounded-xl transition-colors cursor-pointer"
+                    >
+                      View all {displayedAlerts.length} alerts in Alerts Center →
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </div>
 
         {/* Role Switcher & Profile Dropdown */}
-        <div className="relative">
+        <div ref={profileContainerRef} className="relative">
           <button
-            onClick={() => setIsRoleDropdownOpen(!isRoleDropdownOpen)}
-            className="flex items-center gap-2.5 px-3 py-1.5 rounded-xl bg-white hover:bg-slate-50 border border-[var(--border)] text-[var(--text-primary)] transition-all shadow-sm cursor-pointer"
+            type="button"
+            onClick={handleToggleProfile}
+            className={`flex items-center gap-2.5 px-3 py-1.5 rounded-xl border transition-all shadow-sm cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500/20 ${
+              isRoleDropdownOpen 
+                ? 'bg-blue-50 border-blue-400 ring-2 ring-blue-500/20' 
+                : 'bg-white hover:bg-slate-50 border-slate-200 text-slate-900'
+            }`}
+            aria-label="User Profile"
+            aria-expanded={isRoleDropdownOpen}
           >
-            <div className="w-7 h-7 rounded-lg bg-blue-500/20 border border-blue-500/40 flex items-center justify-center text-cyan-400">
+            <div className="w-7 h-7 rounded-lg bg-blue-500/20 border border-blue-500/40 flex items-center justify-center text-blue-600">
               <User className="w-4 h-4" />
             </div>
             <div className="text-left hidden sm:block">
-              <div className="text-[11px] font-bold text-[var(--text-primary)] leading-tight flex items-center gap-1.5">
+              <div className="text-[11px] font-bold text-slate-900 leading-tight flex items-center gap-1.5">
                 <span>{user?.name || user?.email?.split('@')[0] || 'Officer'}</span>
               </div>
               <div className="text-[10px] font-mono flex items-center gap-1">
-                <span className="text-[var(--text-secondary)]">Logged in as:</span>
+                <span className="text-slate-500">Logged in as:</span>
                 <span className={`font-bold px-1.5 py-0.2 rounded text-[9px] uppercase ${
-                  (user?.grantedRole || 'INVESTIGATOR') === 'ADMIN' ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40' :
-                  (user?.grantedRole || 'INVESTIGATOR') === 'INVESTIGATOR' ? 'bg-blue-500/20 text-blue-300 border border-blue-500/40' :
-                  (user?.grantedRole || 'INVESTIGATOR') === 'ANALYST' ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40' :
-                  'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                  (user?.grantedRole || 'INVESTIGATOR') === 'ADMIN' ? 'bg-rose-500/20 text-rose-700 border border-rose-500/40' :
+                  (user?.grantedRole || 'INVESTIGATOR') === 'INVESTIGATOR' ? 'bg-blue-500/20 text-blue-700 border border-blue-500/40' :
+                  (user?.grantedRole || 'INVESTIGATOR') === 'ANALYST' ? 'bg-cyan-500/20 text-cyan-700 border border-cyan-500/40' :
+                  'bg-amber-500/20 text-amber-700 border border-amber-500/40'
                 }`}>
                   {user?.grantedRole || 'INVESTIGATOR'}
                 </span>
@@ -362,36 +653,44 @@ export const TopNav: React.FC = () => {
           </button>
 
           {isRoleDropdownOpen && (
-            <div className="absolute right-0 mt-2 w-72 rounded-2xl bg-white border border-[var(--border)] shadow-2xl p-3 z-50 animate-in fade-in slide-in-from-top-2 text-xs">
-              <div className="pb-3 border-b border-[var(--border)]">
-                <p className="font-bold text-[var(--text-primary)] text-sm">{user?.name || 'Officer'}</p>
-                <p className="text-[11px] text-[var(--text-secondary)] font-mono mt-0.5">{user?.email}</p>
+            <div className="absolute right-0 mt-2 w-72 rounded-2xl bg-white border border-slate-200 shadow-2xl p-3 z-50 animate-in fade-in slide-in-from-top-2 text-xs select-text">
+              <div className="pb-3 border-b border-slate-100">
+                <p className="font-bold text-slate-900 text-sm">{user?.name || 'Officer'}</p>
+                <p className="text-[11px] text-slate-500 font-mono mt-0.5">{user?.email}</p>
                 <div className="mt-2 flex items-center justify-between">
-                  <span className="text-[10px] text-[var(--text-secondary)] font-mono">Statutory Role:</span>
+                  <span className="text-[10px] text-slate-500 font-mono">Statutory Role:</span>
                   <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded border uppercase ${
-                    (user?.grantedRole || 'INVESTIGATOR') === 'ADMIN' ? 'bg-rose-500/20 text-rose-300 border-rose-500/40' :
-                    (user?.grantedRole || 'INVESTIGATOR') === 'INVESTIGATOR' ? 'bg-blue-500/20 text-blue-300 border-blue-500/40' :
-                    (user?.grantedRole || 'INVESTIGATOR') === 'ANALYST' ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40' :
-                    'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                    (user?.grantedRole || 'INVESTIGATOR') === 'ADMIN' ? 'bg-rose-100 text-rose-700 border-rose-300' :
+                    (user?.grantedRole || 'INVESTIGATOR') === 'INVESTIGATOR' ? 'bg-blue-100 text-blue-700 border-blue-300' :
+                    (user?.grantedRole || 'INVESTIGATOR') === 'ANALYST' ? 'bg-cyan-100 text-cyan-700 border-cyan-300' :
+                    'bg-amber-100 text-amber-700 border-amber-300'
                   }`}>
                     {user?.grantedRole || 'INVESTIGATOR'}
                   </span>
                 </div>
               </div>
 
-              <div className="py-2 border-b border-[var(--border)] space-y-1">
-                <div className="text-[10px] font-mono text-[var(--text-secondary)]">Badge: {user?.officerId || 'LEO-7729'}</div>
-                <div className="text-[10px] font-mono text-[var(--text-secondary)]">Unit: {user?.organization || 'CrimeNet State Bureau'}</div>
+              <div className="py-2.5 border-b border-slate-100 space-y-1">
+                <div className="text-[10px] font-mono text-slate-600 flex items-center justify-between">
+                  <span className="text-slate-400">Badge ID:</span>
+                  <span className="font-bold">{user?.officerId || 'LEO-7729'}</span>
+                </div>
+                <div className="text-[10px] font-mono text-slate-600 flex items-center justify-between">
+                  <span className="text-slate-400">Unit:</span>
+                  <span className="font-bold truncate max-w-[160px]">{user?.organization || 'CrimeNet State Bureau'}</span>
+                </div>
               </div>
 
-              <div className="pt-2 space-y-1">
+              <div className="pt-2">
                 <button
+                  type="button"
                   onClick={() => {
                     setIsRoleDropdownOpen(false);
                     logout();
                     setView('login');
+                    navigate('/login');
                   }}
-                  className="w-full text-left px-3 py-2 rounded-xl text-xs text-rose-400 hover:bg-rose-950/30 flex items-center gap-2 transition-colors cursor-pointer"
+                  className="w-full text-left px-3 py-2 rounded-xl text-xs text-rose-600 hover:bg-rose-50 flex items-center gap-2 transition-colors cursor-pointer font-medium"
                 >
                   <LogOut className="w-3.5 h-3.5" />
                   <span>Logout Session</span>

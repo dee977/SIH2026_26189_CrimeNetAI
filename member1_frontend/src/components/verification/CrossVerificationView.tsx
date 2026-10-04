@@ -138,12 +138,29 @@ export const CrossVerificationView: React.FC = () => {
     const title = (disc.title || '').toLowerCase();
     const field = (disc.conflictingField || '').toLowerCase();
 
+    const CASE_SUSPECT_MAP: Record<string, { id: string; name: string }> = {
+      'CASE-2026-011': { id: 'P-SLV-001', name: 'Vikramaditya Rao' },
+      'CASE-2024-001': { id: 'PER-UP-DA284E', name: 'Vikram Malhotra' },
+      'CASE-2026-CTB-005': { id: 'P-CTB-02', name: 'Vikram Malhotra' },
+      'CASE-2026-NRC-003': { id: 'P-NRC-03', name: 'Tariq Butt' },
+      'CASE-2026-HWL-001': { id: 'P-HWL-01', name: 'Rajesh Singhania' },
+      'CASE-2026-CYB-002': { id: 'P-CYB-01', name: 'Deepak Chouhan' },
+      'CASE-2026-VHL-004': { id: 'P-VHL-01', name: 'Gurpreet Singh' },
+      'CASE-2026-DOC-006': { id: 'P-DOC-01', name: 'Arunachalam Murthy' },
+      'CASE-2026-SHL-007': { id: 'P-SHL-01', name: 'Venkat Ramanathan' },
+      'CASE-2026-VOIP-008': { id: 'P-VOIP-01', name: 'Karthik Subramanian' },
+      'CASE-2026-ARM-009': { id: 'P-ARM-01', name: 'Rameshwar Singh' },
+      'CASE-2026-GNG-010': { id: 'P-GNG-01', name: 'Tejpal Bishnoi' },
+      'CASE-2026-013': { id: 'CRR-B001', name: 'CRR-ACC-1202' }
+    };
+
+    if (selectedCaseId && CASE_SUSPECT_MAP[selectedCaseId]) {
+      return CASE_SUSPECT_MAP[selectedCaseId];
+    }
+
     // 1. Alibi vs Telecom Tower contradiction (DISCREPANCY-M3-01)
     if (disc.id === 'DISCREPANCY-M3-01' || title.includes('alibi') || field.includes('suspect location')) {
-      if (selectedCaseId === 'CASE-2026-011') {
-        return { id: 'P-SLV-001', name: 'Vikramaditya Rao' };
-      }
-      return { id: 'ENT-PERS-001', name: 'Vikram Malhotra' };
+      return { id: 'P-SLV-001', name: 'Vikramaditya Rao' };
     }
 
     // 2. Cargo declaration vs weighbridge (DISCREPANCY-M3-02)
@@ -153,28 +170,25 @@ export const CrossVerificationView: React.FC = () => {
 
     // 3. Financial Income vs RTGS Hawala (DISCREPANCY-V1-01)
     if (disc.id === 'DISCREPANCY-V1-01' || title.includes('income') || title.includes('rtgs')) {
-      return { id: 'P00101_CASE-VIDEO-001', name: 'Person_00101' };
+      return { id: 'P-HWL-01', name: 'Rajesh Singhania' };
     }
 
     // 4. Vessel AIS Tracker (DISCREPANCY-V2-01)
     if (disc.id === 'DISCREPANCY-V2-01' || title.includes('vessel') || title.includes('ais')) {
-      return { id: 'P00201_CASE-VIDEO-002', name: 'Tariq Butt' };
+      return { id: 'P-NRC-03', name: 'Tariq Butt' };
     }
 
     // 5. Domain WHOIS / Tor Server (DISCREPANCY-V3-01)
     if (disc.id === 'DISCREPANCY-V3-01' || title.includes('whois') || title.includes('tls')) {
-      return { id: 'P00301_CASE-VIDEO-003', name: 'Ramesh Patel' };
+      return { id: 'P-CYB-01', name: 'Deepak Chouhan' };
     }
 
     // 6. Fastag Toll Booth (DISCREPANCY-V4-01)
     if (disc.id === 'DISCREPANCY-V4-01' || title.includes('fastag') || title.includes('toll')) {
-      return { id: 'P00401_CASE-VIDEO-004', name: 'Person_00401' };
+      return { id: 'P-VHL-01', name: 'Gurpreet Singh' };
     }
 
-    if (selectedCaseId === 'CASE-2026-011') {
-      return { id: 'P-SLV-001', name: 'Vikramaditya Rao' };
-    }
-    return { id: 'ENT-PERS-001', name: 'Vikram Malhotra' };
+    return { id: 'P-SLV-001', name: 'Vikramaditya Rao' };
   };
 
   // Resolves the evidence vault record associated with the contradiction
@@ -205,11 +219,11 @@ export const CrossVerificationView: React.FC = () => {
     addToast({
       type: 'info',
       title: 'Dossier Query Initiated',
-      message: `Navigating to Dossier search for "${query}"...`,
+      message: `Loading dossier for ${query} (${target.id})...`,
       duration: 2500
     });
 
-    navigate(`/entities?q=${encodeURIComponent(query)}&entityId=${encodeURIComponent(target.id)}`);
+    navigate(`/entities?q=${encodeURIComponent(query)}&entityId=${encodeURIComponent(target.id)}&caseId=${encodeURIComponent(selectedCaseId || '')}`);
   };
 
   const handleOpenEvidenceVault = () => {
@@ -242,11 +256,11 @@ export const CrossVerificationView: React.FC = () => {
     addToast({
       type: 'info',
       title: 'Network Graph Centering',
-      message: `Focusing graph on ${target.name} (${target.id})...`,
+      message: `Focusing graph on ${target.name} and connected contradiction nodes...`,
       duration: 2500
     });
 
-    navigate(`/graph?entityId=${encodeURIComponent(target.id)}&search=${encodeURIComponent(target.name)}`);
+    navigate(`/graph?entityId=${encodeURIComponent(target.id)}&caseId=${encodeURIComponent(selectedCaseId || '')}&focus=${encodeURIComponent(target.id)}`);
   };
 
   if (!selectedCaseId) {

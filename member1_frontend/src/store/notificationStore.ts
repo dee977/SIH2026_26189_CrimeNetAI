@@ -1,4 +1,6 @@
 import { create } from 'zustand';
+import { AlertItem } from '../types/alerts';
+import { alertService } from '../services/alertService';
 
 export interface ToastMessage {
   id: string;
@@ -10,18 +12,26 @@ export interface ToastMessage {
 
 interface NotificationState {
   toasts: ToastMessage[];
+  alerts: AlertItem[];
   unreadAlertCount: number;
+  isLoadingAlerts: boolean;
   isNotificationDropdownOpen: boolean;
   
   addToast: (toast: Omit<ToastMessage, 'id'>) => void;
   removeToast: (id: string) => void;
   toggleNotificationDropdown: () => void;
+  setNotificationDropdownOpen: (open: boolean) => void;
+  closeNotificationDropdown: () => void;
   setUnreadAlertCount: (count: number) => void;
+  fetchAlerts: (caseId?: string) => Promise<void>;
+  markAllAsRead: () => Promise<void>;
 }
 
-export const useNotificationStore = create<NotificationState>((set) => ({
+export const useNotificationStore = create<NotificationState>((set, get) => ({
   toasts: [],
+  alerts: [],
   unreadAlertCount: 0,
+  isLoadingAlerts: false,
   isNotificationDropdownOpen: false,
 
   addToast: (toast) => {
@@ -41,10 +51,51 @@ export const useNotificationStore = create<NotificationState>((set) => ({
   },
 
   toggleNotificationDropdown: () => {
-    set(state => ({ isNotificationDropdownOpen: !state.isNotificationDropdownOpen }));
+    const nextState = !get().isNotificationDropdownOpen;
+    set({ isNotificationDropdownOpen: nextState });
+    if (nextState) {
+      get().fetchAlerts();
+    }
+  },
+
+  setNotificationDropdownOpen: (open: boolean) => {
+    set({ isNotificationDropdownOpen: open });
+    if (open) {
+      get().fetchAlerts();
+    }
+  },
+
+  closeNotificationDropdown: () => {
+    set({ isNotificationDropdownOpen: false });
   },
 
   setUnreadAlertCount: (count) => {
     set({ unreadAlertCount: count });
+  },
+
+  fetchAlerts: async (caseId?: string) => {
+    set({ isLoadingAlerts: true });
+    try {
+      const items = await alertService.fetchAlerts(caseId);
+      const unread = items.filter(a => !a.isRead && !a.isReviewed).length;
+      set({ 
+        alerts: items, 
+        unreadAlertCount: unread,
+        isLoadingAlerts: false 
+      });
+    } catch {
+      set({ isLoadingAlerts: false });
+    }
+  },
+
+  markAllAsRead: async () => {
+    const unreadIds = get().alerts.filter(a => !a.isRead).map(a => a.id);
+    if (unreadIds.length > 0) {
+      await alertService.markAlertsAsRead(unreadIds);
+    }
+    set(state => ({
+      unreadAlertCount: 0,
+      alerts: state.alerts.map(a => ({ ...a, isRead: true }))
+    }));
   }
 }));

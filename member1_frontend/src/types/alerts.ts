@@ -21,6 +21,7 @@ export interface AlertItem {
   sourceRecordId?: string;
   timestamp: string;
   isReviewed: boolean;
+  isRead?: boolean;
   reviewedBy?: string;
   reviewedAt?: string;
   reviewNotes?: string;
