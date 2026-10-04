@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useNavigationStore } from '../../store/navigationStore';
 import { apiClient } from '../../services/apiClient';
 import { 
@@ -27,6 +28,7 @@ interface EntityData {
 }
 
 export const CommunityView: React.FC = () => {
+  const navigate = useNavigate();
   const { selectEntity, setView, selectedCaseId } = useNavigationStore();
   
   const [clusters, setClusters] = useState<Cluster[]>([]);
@@ -146,22 +148,33 @@ export const CommunityView: React.FC = () => {
               onClick={() => setSelectedClusterId(cluster.clusterId)}
               className={`p-5 rounded-2xl cursor-pointer transition-all ${
                 isSelected
-                  ? 'bg-white shadow-md border-2 border-[#0a192f]'
-                  : 'bg-white shadow-sm border-2 border-transparent hover:border-slate-300'
+                  ? 'bg-blue-50/90 border-2 border-blue-600 shadow-md ring-2 ring-blue-500/20'
+                  : 'bg-white shadow-sm border-2 border-slate-200 hover:border-blue-300 hover:bg-slate-50/70'
               }`}
             >
               <div className="flex items-center justify-between mb-2">
-                <span className={`text-xs font-mono font-bold px-2 py-0.5 rounded border ${isSelected ? 'bg-[#0a192f] text-[var(--text-primary)] border-[#0a192f]' : 'bg-slate-100 text-slate-700 border-slate-200'}`}>
-                  {cluster.clusterId}
-                </span>
-                <span className="text-xs font-mono text-[var(--text-muted)] flex items-center">
-                  <Users className="w-3.5 h-3.5 mr-1" />
+                <div className="flex items-center gap-2">
+                  <span className={`text-xs font-mono font-bold px-2.5 py-1 rounded-md border ${
+                    isSelected 
+                      ? 'bg-blue-600 text-white border-blue-600 shadow-xs' 
+                      : 'bg-slate-100 text-slate-700 border-slate-200'
+                  }`}>
+                    {cluster.clusterId}
+                  </span>
+                  {isSelected && (
+                    <span className="text-[10px] font-bold font-mono px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 border border-blue-300">
+                      SELECTED
+                    </span>
+                  )}
+                </div>
+                <span className={`text-xs font-mono flex items-center font-medium ${isSelected ? 'text-blue-900 font-semibold' : 'text-slate-500'}`}>
+                  <Users className={`w-3.5 h-3.5 mr-1 ${isSelected ? 'text-blue-600' : 'text-slate-400'}`} />
                   {cluster.memberCount} Members
                 </span>
               </div>
 
-              <div className="flex items-center gap-3 text-[11px] text-[var(--text-muted)] mt-3 pt-2 border-t border-slate-100 font-mono">
-                <div>Density: <span className="text-[#0a192f] font-bold">{cluster.density ? cluster.density.toFixed(3) : '0.000'}</span></div>
+              <div className={`flex items-center gap-3 text-[11px] mt-3 pt-2 border-t font-mono ${isSelected ? 'border-blue-200/80 text-blue-800' : 'border-slate-100 text-slate-500'}`}>
+                <div>Density: <span className={`font-bold ${isSelected ? 'text-blue-950 font-mono' : 'text-slate-900'}`}>{cluster.density ? cluster.density.toFixed(3) : '0.000'}</span></div>
               </div>
             </div>
           );
@@ -171,18 +184,27 @@ export const CommunityView: React.FC = () => {
       {/* Active Community Members & Analysis */}
       {activeCluster && (
         <div className="bg-white shadow-sm rounded-2xl p-6 border border-slate-200 space-y-4">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
             <div>
-              <h3 className="text-sm font-semibold text-[#0a192f]">
+              <h3 className="text-sm font-semibold text-slate-900">
                 {activeCluster.clusterId} Member Entities
               </h3>
+              <p className="text-xs text-slate-500 font-mono mt-0.5">
+                {activeMembers.length} identified network nodes in this cluster
+              </p>
             </div>
             <button
-              onClick={() => setView('graph')}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#0a192f] text-[var(--text-primary)] hover:bg-[var(--bg-card)] font-bold text-xs transition-colors shadow-sm"
+              type="button"
+              onClick={() => {
+                setView('graph');
+                navigate(`/graph?caseId=${encodeURIComponent(selectedCaseId)}&cluster=${encodeURIComponent(activeCluster.clusterId)}&isolate=${encodeURIComponent(activeCluster.nodeIds.join(','))}`);
+              }}
+              style={{ backgroundColor: '#FFFFFF' }}
+              className="flex items-center gap-2 px-3.5 py-2 rounded-lg bg-white border border-slate-300 hover:border-blue-600 hover:bg-slate-50 text-slate-800 hover:text-slate-950 font-bold text-xs transition-all shadow-sm cursor-pointer shrink-0"
+              title="Isolate and inspect this cluster in the Network Graph Canvas"
             >
-              <Share2 className="w-3.5 h-3.5" />
-              <span>Isolate in Graph Canvas</span>
+              <Share2 className="w-3.5 h-3.5 text-blue-600" />
+              <span>Isolate Graph in Canvas</span>
             </button>
           </div>
 
@@ -190,29 +212,37 @@ export const CommunityView: React.FC = () => {
             {activeMembers.map(member => (
               <div
                 key={member.id}
-                className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 hover:border-[#0a192f] hover:bg-white transition-colors group flex flex-col justify-between"
+                onClick={() => {
+                  selectEntity(member.id);
+                  setView('entity');
+                  navigate(`/entities?entityId=${encodeURIComponent(member.id)}`);
+                }}
+                className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 hover:border-blue-500 hover:bg-blue-50/20 transition-all group flex flex-col justify-between cursor-pointer"
               >
                 <div>
                   <div className="flex items-center justify-between text-[10px] font-mono mb-1">
-                    <span className="text-[#0a192f] font-semibold px-1.5 py-0.5 bg-slate-200 rounded">
+                    <span className="text-blue-700 font-semibold px-2 py-0.5 bg-blue-50 border border-blue-200 rounded">
                       {member.entity_type || member.type || 'Entity'}
                     </span>
                   </div>
-                  <h4 className="text-xs font-bold text-slate-900 truncate mt-2">
+                  <h4 className="text-xs font-bold text-slate-900 truncate mt-2 group-hover:text-blue-600 transition-colors">
                     {member.canonical_name || member.label || member.name || member.id}
                   </h4>
-                  <p className="text-[10px] text-[var(--text-muted)] font-mono truncate mt-0.5">{member.id}</p>
+                  <p className="text-[10px] text-slate-500 font-mono truncate mt-0.5">{member.id}</p>
                 </div>
                 
                 <div className="mt-3 pt-2 border-t border-slate-200 flex justify-end">
                   <button
-                    onClick={() => {
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
                       selectEntity(member.id);
-                      setView('case-workspace');
+                      setView('entity');
+                      navigate(`/entities?entityId=${encodeURIComponent(member.id)}`);
                     }}
-                    className="flex items-center text-[10px] font-bold text-[#0a192f] hover:text-blue-600 transition-colors"
+                    className="flex items-center text-xs font-bold text-blue-600 hover:text-blue-800 transition-colors cursor-pointer py-1 px-2 rounded hover:bg-blue-100/50"
                   >
-                    View Dossier <ExternalLink className="w-3 h-3 ml-1" />
+                    View Dossier <ExternalLink className="w-3.5 h-3.5 ml-1.5" />
                   </button>
                 </div>
               </div>

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import cytoscape, { Core, EventObject } from 'cytoscape';
 // @ts-ignore
 import fcose from 'cytoscape-fcose';
@@ -40,8 +40,11 @@ export const NetworkGraphView: React.FC<{caseId?: string}> = ({caseId}) => {
   const cyRef = useRef<Core | null>(null);
   
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const urlEntityId = searchParams.get('entityId');
   const urlCaseId = searchParams.get('caseId');
+  const urlCluster = searchParams.get('cluster');
+  const urlIsolate = searchParams.get('isolate');
   const { selectedCaseId, selectedEntityId, selectEntity, selectCase } = useNavigationStore();
   const { cases } = useCaseStore();
   const activeCase = cases.find(c => c.caseId === (urlCaseId || selectedCaseId));
@@ -347,14 +350,35 @@ export const NetworkGraphView: React.FC<{caseId?: string}> = ({caseId}) => {
     const cy = cyRef.current;
     if (!cy || graphData.nodes.length === 0) return;
 
+    const isolateParam = searchParams.get('isolate');
+    const clusterParam = searchParams.get('cluster');
+
     const filteredNodes = (() => {
+      let baseNodes = graphData.nodes;
+
+      if (isolateParam) {
+        const isolatedIds = new Set(
+          isolateParam.split(',').map(s => s.trim().toLowerCase()).filter(Boolean)
+        );
+        if (isolatedIds.size > 0) {
+          const matched = baseNodes.filter(n => {
+            const raw = n.analytics || (n as any).raw || {};
+            const canonical = (raw.canonicalName || (n as any).canonical_name || n.label || '').toLowerCase();
+            return isolatedIds.has(n.id.toLowerCase()) || isolatedIds.has(canonical);
+          });
+          if (matched.length > 0) {
+            baseNodes = matched;
+          }
+        }
+      }
+
       if (filterEntityType !== 'ALL') {
-        return graphData.nodes.filter(n => n.entityType === filterEntityType);
+        return baseNodes.filter(n => n.entityType === filterEntityType);
       }
       if (searchQuery.trim()) {
         const qLower = searchQuery.trim().toLowerCase();
         const matches = new Set<string>();
-        graphData.nodes.forEach(n => {
+        baseNodes.forEach(n => {
           if (n.label.toLowerCase().includes(qLower) || n.id.toLowerCase().includes(qLower)) {
             matches.add(n.id);
           }
@@ -365,10 +389,10 @@ export const NetworkGraphView: React.FC<{caseId?: string}> = ({caseId}) => {
             if (matches.has(e.source)) neighborIds.add(e.target);
             if (matches.has(e.target)) neighborIds.add(e.source);
           });
-          return graphData.nodes.filter(n => neighborIds.has(n.id));
+          return baseNodes.filter(n => neighborIds.has(n.id));
         }
       }
-      return graphData.nodes;
+      return baseNodes;
     })();
 
     const nodeIds = new Set(filteredNodes.map(n => n.id));
@@ -428,6 +452,12 @@ export const NetworkGraphView: React.FC<{caseId?: string}> = ({caseId}) => {
     setTimeout(() => {
       if (!cy || cy.destroyed()) return;
       cy.resize();
+
+      if (isolateParam || clusterParam) {
+        cy.elements().removeClass('dimmed').addClass('highlighted');
+        cy.fit(undefined, 70);
+        return;
+      }
 
       if (targetEntityId) {
         let targetCyNode: any = cy.getElementById(targetEntityId);
@@ -540,6 +570,12 @@ export const NetworkGraphView: React.FC<{caseId?: string}> = ({caseId}) => {
     setFilterRelType('ALL');
     setPathSource('');
     setPathTarget('');
+    if (searchParams.get('cluster') || searchParams.get('isolate')) {
+      const newParams = new URLSearchParams(searchParams);
+      newParams.delete('cluster');
+      newParams.delete('isolate');
+      navigate({ search: newParams.toString() });
+    }
     handleFit();
   };
 
@@ -787,6 +823,31 @@ export const NetworkGraphView: React.FC<{caseId?: string}> = ({caseId}) => {
               <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
             </div>
           )}
+
+          {/* Isolated Cluster Overlay Pill */}
+          {(urlCluster || urlIsolate) && (
+            <div className="absolute top-4 left-6 z-10 flex items-center gap-3 bg-white/95 backdrop-blur-md px-4 py-2.5 rounded-xl shadow-lg border border-blue-200">
+              <div className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-blue-600 animate-pulse" />
+                <span className="text-xs font-bold text-slate-800 font-mono">
+                  Isolated Cluster: {urlCluster || 'Community Subgraph'}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  const newParams = new URLSearchParams(searchParams);
+                  newParams.delete('cluster');
+                  newParams.delete('isolate');
+                  navigate({ search: newParams.toString() });
+                }}
+                className="text-xs text-blue-600 hover:text-blue-800 font-bold underline cursor-pointer ml-1"
+              >
+                Show Full Graph
+              </button>
+            </div>
+          )}
+
           <div ref={containerRef} className="absolute inset-0" />
 
           {/* Floating Canvas Controls */}
