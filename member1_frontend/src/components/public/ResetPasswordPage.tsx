@@ -75,7 +75,7 @@ export const ResetPasswordPage: React.FC = () => {
 
         <div className="relative z-10">
           <div className="flex items-center gap-3 mb-8">
-            <img src="/logo.png" alt="CrimeNet AI" className="h-10 object-contain" style={{ filter: 'invert(1)', mixBlendMode: 'screen' }} />
+            <img src="/logo.png" alt="CrimeNet AI" className="h-12 sm:h-14 w-auto object-contain" />
           </div>
           <h1 className="text-4xl font-bold tracking-tight text-[var(--text-primary)] leading-tight mb-4 max-w-lg">
             Credential Reset

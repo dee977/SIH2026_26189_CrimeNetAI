@@ -54,7 +54,7 @@ export const PendingApprovalView: React.FC = () => {
         
         {/* CrimeNet AI Header */}
         <div className="flex items-center justify-center gap-3">
-          <img src="/logo.png" alt="CrimeNet AI" className="h-10 object-contain" />
+          <img src="/logo.png" alt="CrimeNet AI" className="h-12 w-auto object-contain" />
           <div className="text-left">
             <span className="text-sm font-black tracking-wider uppercase text-white block">CrimeNet AI</span>
             <span className="text-[10px] font-mono text-cyan-400 block">SIH26189 • Statutory Clearance Gate</span>

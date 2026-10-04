@@ -242,7 +242,7 @@ export const LoginPage: React.FC = () => {
 
         <div className="relative z-10">
                       <div className="flex items-center gap-3 mb-8">
-              <img src="/logo.png" alt="CrimeNet AI" className="h-12 object-contain" />
+              <img src="/logo.png" alt="CrimeNet AI" className="h-14 sm:h-16 w-auto object-contain" />
               <div>
                 <span className="block text-[10px] text-cyan-400 font-mono mt-1">SIH2026 • SIH26189</span>
               </div>

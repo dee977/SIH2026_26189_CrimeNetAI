@@ -28,7 +28,7 @@ export const LandingPage: React.FC = () => {
       {/* Top Header */}
       <nav className="border-b border-[var(--border)] bg-[var(--bg-card)] backdrop-blur-md sticky top-0 z-30 px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <img src="/logo.png" alt="CrimeNet AI" className="h-10 object-contain" />
+          <img src="/logo-dark.png" alt="CrimeNet AI" className="h-12 sm:h-14 w-auto object-contain" />
             <div>
               <div className="flex items-center gap-2">
                 <span className="font-bold text-base text-[var(--text-primary)] tracking-tight hidden">CrimeNet AI</span>

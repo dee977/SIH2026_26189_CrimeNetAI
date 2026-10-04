@@ -138,7 +138,7 @@ export const Sidebar: React.FC = () => {
           {/* Brand Header */}
           <div className="p-4 border-b border-[var(--sidebar-hover)] flex items-center justify-between">
             <div className="flex flex-col gap-1.5 flex-1 min-w-0">
-              <img src="/logo.png" alt="CrimeNet AI" className="h-8 object-contain object-left" style={{ filter: 'invert(1)', mixBlendMode: 'screen' }} />
+              <img src="/logo.png" alt="CrimeNet AI" className="h-10 w-auto max-w-[210px] object-contain object-left" />
               <div className="flex items-center gap-1.5 mt-1">
                 <p className="text-[10px] text-[var(--sidebar-text-muted)] font-mono">SIH26189 Statutory Engine</p>
                 <span className="text-[10px] px-1.5 py-0.2 rounded bg-[var(--primary)]/20 text-[var(--accent)] font-mono font-semibold ml-auto">RBAC</span>

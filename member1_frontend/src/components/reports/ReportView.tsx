@@ -280,7 +280,7 @@ export const ReportView: React.FC = () => {
 
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex items-center gap-4">
-              <img src="/logo.png" alt="CrimeNet AI Logo" className="h-14 w-auto object-contain" />
+              <img src="/logo-dark.png" alt="CrimeNet AI Logo" className="h-16 sm:h-20 w-auto object-contain" />
               <div>
                 <div className="text-[11px] font-bold text-blue-700 tracking-wider uppercase font-mono">
                   CrimeNet AI &mdash; Criminal Network Analysis System
