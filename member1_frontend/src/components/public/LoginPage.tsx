@@ -230,7 +230,6 @@ export const LoginPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)] flex overflow-hidden select-none">
-      
       {/* Left side abstract visual treatment */}
       <div className="hidden lg:flex flex-col justify-between w-5/12 p-12 relative overflow-hidden bg-[var(--sidebar-bg)] border-r border-[var(--sidebar-hover)]">
         {/* Abstract shapes / glow */}
@@ -241,17 +240,24 @@ export const LoginPage: React.FC = () => {
         </div>
 
         <div className="relative z-10">
-                      <div className="flex items-center gap-3 mb-8">
-              <img src="/logo.png" alt="CrimeNet AI" className="h-14 sm:h-16 w-auto object-contain" />
-              <div>
-                <span className="block text-[10px] text-cyan-400 font-mono mt-1">SIH2026 • SIH26189</span>
-              </div>
+          <div className="flex items-center gap-3 mb-8">
+            <img
+              src="/logo.png"
+              alt="CrimeNet AI"
+              className="h-14 sm:h-16 w-auto object-contain"
+            />
+            <div>
+              <span className="block text-[10px] text-cyan-400 font-mono mt-1">
+                SIH2026 • SIH26189
+              </span>
             </div>
+          </div>
           <h1 className="text-3xl font-bold tracking-tight text-white leading-tight mb-4 max-w-lg">
             Statutory RBAC & Multi-Role Investigative Command
           </h1>
           <p className="text-sm text-[var(--sidebar-text-muted)] max-w-md font-medium leading-relaxed">
-            Role-based operational clearance compliant with Bharatiya Sakshya Adhiniyam §63 and BNSS evidentiary standards.
+            Role-based operational clearance compliant with Bharatiya Sakshya
+            Adhiniyam §63 and BNSS evidentiary standards.
           </p>
         </div>
 
@@ -260,26 +266,32 @@ export const LoginPage: React.FC = () => {
           <p className="text-[11px] font-mono uppercase text-slate-400 tracking-wider font-semibold">
             Statutory Clearance Profiles:
           </p>
-          {ROLE_OPTIONS.map(r => (
-            <div 
+          {ROLE_OPTIONS.map((r) => (
+            <div
               key={r.id}
               onClick={() => handleSelectRole(r.id)}
               className={`p-3 rounded-xl border cursor-pointer transition-all ${
-                selectedRole === r.id 
-                  ? `${r.activeBg} ${r.activeBorder} shadow-lg` 
-                  : 'bg-slate-900/40 border-slate-800/80 hover:border-slate-700'
+                selectedRole === r.id
+                  ? `${r.activeBg} ${r.activeBorder} shadow-lg`
+                  : "bg-slate-900/40 border-slate-800/80 hover:border-slate-700"
               }`}
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   {r.icon}
-                  <span className={`text-xs font-bold ${r.color}`}>{r.title}</span>
+                  <span className={`text-xs font-bold ${r.color}`}>
+                    {r.title}
+                  </span>
                 </div>
                 <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-black/60 text-slate-200 border border-slate-700 font-semibold">
                   {r.badge}
                 </span>
               </div>
-              <p className={`text-[11px] mt-1 leading-snug ${selectedRole === r.id ? 'text-slate-700 font-medium' : 'text-slate-300'}`}>{r.desc}</p>
+              <p
+                className={`text-[11px] mt-1 leading-snug ${selectedRole === r.id ? "text-slate-700 font-medium" : "text-slate-300"}`}
+              >
+                {r.desc}
+              </p>
             </div>
           ))}
         </div>
@@ -298,18 +310,19 @@ export const LoginPage: React.FC = () => {
       {/* Right side login form */}
       <div className="w-full lg:w-7/12 flex items-center justify-center p-6 sm:p-10 bg-[var(--bg-primary)] overflow-y-auto">
         <div className="w-full max-w-xl animate-in fade-in slide-in-from-bottom-4 duration-500 py-6">
-          
           <div className="bg-[var(--bg-card)] shadow-xl shadow-black/10 border border-[var(--border)] rounded-3xl p-6 sm:p-8 space-y-6">
-            
             <div>
               <div className="flex items-center justify-between">
-                <h2 className="text-xl font-bold text-[var(--text-primary)]">Sign In with Statutory Role</h2>
+                <h2 className="text-xl font-bold text-[var(--text-primary)]">
+                  Sign In with Statutory Role
+                </h2>
                 <span className="text-[10px] font-mono px-2.5 py-1 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20 font-semibold">
-                   RBAC Clearance
+                  RBAC Clearance
                 </span>
               </div>
               <p className="text-xs text-[var(--text-secondary)] mt-1">
-                Select your assigned jurisdictional clearance profile before authentication.
+                Select your assigned jurisdictional clearance profile before
+                authentication.
               </p>
             </div>
 
@@ -319,7 +332,7 @@ export const LoginPage: React.FC = () => {
                 Step 1: Choose Operational Role
               </label>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                {ROLE_OPTIONS.map(r => {
+                {ROLE_OPTIONS.map((r) => {
                   const isSelected = selectedRole === r.id;
                   return (
                     <button
@@ -329,7 +342,7 @@ export const LoginPage: React.FC = () => {
                       className={`p-3 sm:p-3.5 rounded-2xl border text-left transition-all relative cursor-pointer min-w-0 flex flex-col justify-between min-h-[108px] ${
                         isSelected
                           ? `border-2 ${r.activeBorder} ${r.activeBg} shadow-lg shadow-black/20`
-                          : 'border-slate-300 bg-white hover:border-slate-400 hover:bg-slate-50'
+                          : "border-slate-300 bg-white hover:border-slate-400 hover:bg-slate-50"
                       }`}
                     >
                       {isSelected && (
@@ -343,11 +356,11 @@ export const LoginPage: React.FC = () => {
                           {r.title}
                         </div>
                       </div>
-                      <div className={`text-[11px] font-semibold mt-1.5 leading-snug ${
-                        isSelected
-                          ? 'text-slate-900'
-                          : 'text-slate-600'
-                      }`}>
+                      <div
+                        className={`text-[11px] font-semibold mt-1.5 leading-snug ${
+                          isSelected ? "text-slate-900" : "text-slate-600"
+                        }`}
+                      >
                         {r.badge}
                       </div>
                     </button>
@@ -366,21 +379,28 @@ export const LoginPage: React.FC = () => {
             </div>
 
             {errorMessage && (
-              <div className={`p-4 rounded-2xl border flex items-start gap-3 text-xs leading-relaxed font-semibold shadow-md ${
-                errorMessage.includes('pending') || errorMessage.includes('clearance')
-                  ? 'bg-amber-500/15 border-amber-500/50 text-amber-950'
-                  : 'bg-red-500/15 border-red-500/50 text-red-950'
-              }`}>
-                <AlertCircle className={`w-5 h-5 shrink-0 mt-0.5 ${
-                  errorMessage.includes('pending') || errorMessage.includes('clearance')
-                    ? 'text-amber-600'
-                    : 'text-red-600'
-                }`} />
+              <div
+                className={`p-4 rounded-2xl border flex items-start gap-3 text-xs leading-relaxed font-semibold shadow-md ${
+                  errorMessage.includes("pending") ||
+                  errorMessage.includes("clearance")
+                    ? "bg-amber-500/15 border-amber-500/50 text-amber-950"
+                    : "bg-red-500/15 border-red-500/50 text-red-950"
+                }`}
+              >
+                <AlertCircle
+                  className={`w-5 h-5 shrink-0 mt-0.5 ${
+                    errorMessage.includes("pending") ||
+                    errorMessage.includes("clearance")
+                      ? "text-amber-600"
+                      : "text-red-600"
+                  }`}
+                />
                 <div>
                   <div className="font-extrabold text-xs uppercase tracking-wider mb-0.5">
-                    {errorMessage.includes('pending') || errorMessage.includes('clearance')
-                      ? 'Clearance Gate • Action Required'
-                      : 'Authentication Alert'}
+                    {errorMessage.includes("pending") ||
+                    errorMessage.includes("clearance")
+                      ? "Clearance Gate • Action Required"
+                      : "Authentication Alert"}
                   </div>
                   <div className="font-medium">{errorMessage}</div>
                 </div>
@@ -388,7 +408,11 @@ export const LoginPage: React.FC = () => {
             )}
 
             {/* Step 2: Credentials Form */}
-            <form onSubmit={handleSubmit} autoComplete="off" className="space-y-4">
+            <form
+              onSubmit={handleSubmit}
+              autoComplete="off"
+              className="space-y-4"
+            >
               <div>
                 <label className="block text-xs font-semibold text-[var(--text-primary)] mb-1">
                   Step 2: Officer Email Address
@@ -426,9 +450,9 @@ export const LoginPage: React.FC = () => {
               </div>
 
               <div className="flex justify-end text-xs pt-1">
-                <button 
-                  type="button" 
-                  onClick={() => navigate('/forgot-password')}
+                <button
+                  type="button"
+                  onClick={() => navigate("/forgot-password")}
                   className="text-blue-400 hover:underline font-medium"
                 >
                   Forgot Password?
@@ -450,14 +474,51 @@ export const LoginPage: React.FC = () => {
                 )}
               </button>
             </form>
-            
+            {/* Demo Credentials Box */}
+            <div className="mt-4 p-4 rounded-xl border border-blue-300 bg-blue-50/70">
+              <h3 className="text-sm font-extrabold text-blue-800 mb-1">
+                🚀 Use These Accounts for Demo
+              </h3>
+
+              <p className="text-xs text-slate-600 mb-3">
+                Demo login credentials for SIH2026 evaluators.
+              </p>
+
+              <div className="space-y-2 text-xs font-mono">
+                <div className="bg-white rounded-lg p-2.5 border border-rose-200">
+                  <span className="font-bold text-rose-600">ADMIN</span>
+                  <p className="text-slate-700">yakshvachhani1@gmail.com</p>
+                  <p className="text-slate-500">Password: 123456</p>
+                </div>
+
+                <div className="bg-white rounded-lg p-2.5 border border-blue-200">
+                  <span className="font-bold text-blue-600">INVESTIGATOR</span>
+                  <p className="text-slate-700">hetpatel@gmail.com</p>
+                  <p className="text-slate-500">Password: 123456</p>
+                </div>
+
+                <div className="bg-white rounded-lg p-2.5 border border-teal-200">
+                  <span className="font-bold text-teal-600">ANALYST</span>
+                  <p className="text-slate-700">deep2007@gmail.com</p>
+                  <p className="text-slate-500">Password: 123456</p>
+                </div>
+
+                <div className="bg-white rounded-lg p-2.5 border border-amber-200">
+                  <span className="font-bold text-amber-600">AUDITOR</span>
+                  <p className="text-slate-700">palpatel@gmail.com</p>
+                  <p className="text-slate-500">Password: 123456</p>
+                </div>
+              </div>
+            </div>
             <div className="pt-2 text-center text-xs text-[var(--text-secondary)] border-t border-[var(--border)]">
-              Need new credentials or clearance upgrade?{' '}
-              <button onClick={() => navigate('/register')} className="text-blue-400 font-semibold hover:underline">
+              Need new credentials or clearance upgrade?{" "}
+              <button
+                onClick={() => navigate("/register")}
+                className="text-blue-400 font-semibold hover:underline"
+              >
                 Submit Clearance Request
               </button>
             </div>
-
           </div>
         </div>
       </div>
